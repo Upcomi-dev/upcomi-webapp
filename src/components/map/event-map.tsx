@@ -35,7 +35,7 @@ const MAP_STYLE = {
       maxzoom: 20,
     },
   ],
-} as const;
+} satisfies import("maplibre-gl").StyleSpecification;
 
 const FRANCE_VIEW = {
   longitude: 2.2137,
