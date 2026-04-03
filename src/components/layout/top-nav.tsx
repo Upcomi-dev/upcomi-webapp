@@ -5,18 +5,30 @@ import Link from "next/link";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
 import { FavoritesDropdown } from "@/components/favorites/favorites-dropdown";
+import { ProfileDropdown } from "@/components/layout/profile-dropdown";
 
 export function TopNav() {
   const { openAuthModal } = useAuthModal();
-  const { count } = useFavorites();
+  const { count, isAuthenticated } = useFavorites();
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   const toggleFavorites = useCallback(() => {
     setShowFavorites((prev) => !prev);
+    setShowProfile(false);
   }, []);
 
   const closeFavorites = useCallback(() => {
     setShowFavorites(false);
+  }, []);
+
+  const toggleProfile = useCallback(() => {
+    setShowProfile((prev) => !prev);
+    setShowFavorites(false);
+  }, []);
+
+  const closeProfile = useCallback(() => {
+    setShowProfile(false);
   }, []);
 
   return (
@@ -51,13 +63,28 @@ export function TopNav() {
             {showFavorites && <FavoritesDropdown onClose={closeFavorites} />}
           </div>
 
-          <button
-            type="button"
-            onClick={() => openAuthModal()}
-            className="inline-flex h-10 items-center justify-center rounded-full border border-white/50 bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] px-4 text-[12px] font-semibold tracking-[0.18em] text-orange-dark uppercase transition-all hover:-translate-y-0.5 hover:border-orange/55 hover:text-coral"
-          >
-            Mon compte
-          </button>
+          {isAuthenticated ? (
+            /* Logged in: profile button */
+            <div className="relative">
+              <button
+                type="button"
+                onClick={toggleProfile}
+                className="inline-flex h-10 items-center justify-center rounded-full border border-white/50 bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] px-4 text-[12px] font-semibold tracking-[0.18em] text-orange-dark uppercase transition-all hover:-translate-y-0.5 hover:border-orange/55 hover:text-coral"
+              >
+                Mon compte
+              </button>
+              {showProfile && <ProfileDropdown onClose={closeProfile} />}
+            </div>
+          ) : (
+            /* Not logged in: open auth modal */
+            <button
+              type="button"
+              onClick={() => openAuthModal()}
+              className="inline-flex h-10 items-center justify-center rounded-full border border-white/50 bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] px-4 text-[12px] font-semibold tracking-[0.18em] text-orange-dark uppercase transition-all hover:-translate-y-0.5 hover:border-orange/55 hover:text-coral"
+            >
+              Connexion
+            </button>
+          )}
         </div>
       </div>
     </nav>

@@ -14,9 +14,10 @@ interface EventCardProps {
   villeDepart: string | null;
   paysDepart: string | null;
   distance?: string | null;
-  variant?: "grid" | "list";
+  variant?: "grid" | "list" | "carousel";
   isSelected?: boolean;
   onEventClick?: (id: number) => void;
+  onEventHover?: (id: number | null) => void;
 }
 
 export function EventCard({
@@ -31,6 +32,7 @@ export function EventCard({
   variant = "grid",
   isSelected = false,
   onEventClick,
+  onEventHover,
 }: EventCardProps) {
   const slug = makeEventSlug(id, nomEvent);
   const typeColor = getEventTypeColor(type_event);
@@ -44,6 +46,65 @@ export function EventCard({
     : null;
 
   const location = [villeDepart, paysDepart].filter(Boolean).join(", ");
+
+  if (variant === "carousel") {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        className="group flex h-[280px] w-[260px] flex-none cursor-pointer snap-start flex-col overflow-hidden rounded-[22px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.92),rgba(248,240,230,0.82))] shadow-[var(--shadow-sm)] transition-all duration-300 hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-[var(--shadow-md)]"
+        onClick={() => onEventClick?.(id)}
+        onKeyDown={(e) => { if (e.key === "Enter") onEventClick?.(id); }}
+        onMouseEnter={() => onEventHover?.(id)}
+        onMouseLeave={() => onEventHover?.(null)}
+      >
+        <div className="relative h-[160px] w-full flex-none overflow-hidden">
+          {image ? (
+            <>
+              <Image
+                src={image}
+                alt={name}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="260px"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,10,0.04),rgba(20,14,10,0.34))]" />
+            </>
+          ) : (
+            <div
+              className="flex h-full items-end p-3"
+              style={{
+                backgroundImage: `radial-gradient(circle at top left, ${typeColor}55, transparent 35%), linear-gradient(140deg, ${typeColor}, ${typeColor}bb)`,
+              }}
+            />
+          )}
+          <div className="absolute right-2.5 top-2.5 z-10">
+            <FavouriteButton eventId={id} />
+          </div>
+          {type_event && (
+            <div className="absolute bottom-2.5 left-2.5 z-10">
+              <span
+                className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm"
+                style={{ backgroundColor: `${typeColor}de` }}
+              >
+                {type_event}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-1 flex-col justify-between p-3">
+          <h3 className="line-clamp-2 font-serif text-[16px] leading-[1.15] text-foreground">
+            {name}
+          </h3>
+          <div className="flex items-center gap-2 text-[11px] text-foreground/55">
+            <span>{formattedDate || "À venir"}</span>
+            <span className="text-coral/55">·</span>
+            <span className="truncate">{location || "Lieu à confirmer"}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (variant === "list") {
     const cardClassName = `group block overflow-hidden rounded-[28px] border p-2 transition-all duration-300 hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-[var(--shadow-md)] ${
@@ -60,6 +121,8 @@ export function EventCard({
             className={`${cardClassName} cursor-pointer`}
             onClick={() => onEventClick(id)}
             onKeyDown={(e) => { if (e.key === "Enter") onEventClick(id); }}
+            onMouseEnter={() => onEventHover?.(id)}
+            onMouseLeave={() => onEventHover?.(null)}
           >
             {c}
           </div>

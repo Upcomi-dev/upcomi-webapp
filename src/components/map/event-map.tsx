@@ -49,6 +49,9 @@ const SPIDER_RADIUS_PX = 40;
 interface EventMapProps {
   events: MapEvent[];
   selectedEventId?: number | null;
+  hoveredEventId?: number | null;
+  dimOtherMarkers?: boolean;
+  flyToEventId?: number | null;
   onEventSelect?: (eventId: number | null) => void;
 }
 
@@ -82,7 +85,7 @@ function spiderPositions(
   });
 }
 
-export function EventMap({ events, selectedEventId, onEventSelect }: EventMapProps) {
+export function EventMap({ events, selectedEventId, hoveredEventId, dimOtherMarkers = false, flyToEventId, onEventSelect }: EventMapProps) {
   const mapRef = useRef<MapRef>(null);
   const [spiderfied, setSpiderfied] = useState<{
     key: string;
@@ -119,6 +122,7 @@ export function EventMap({ events, selectedEventId, onEventSelect }: EventMapPro
       const first = group[0];
       byId.set(first.id, group);
       const groupContainsSelected = selectedEventId != null && group.some((e) => e.id === selectedEventId);
+      const groupContainsHovered = hoveredEventId != null && group.some((e) => e.id === hoveredEventId);
       features.push({
         type: "Feature",
         geometry: {
@@ -129,6 +133,7 @@ export function EventMap({ events, selectedEventId, onEventSelect }: EventMapPro
           id: first.id,
           count: group.length,
           isSelected: groupContainsSelected ? 1 : 0,
+          isHovered: groupContainsHovered ? 1 : 0,
         },
       });
     }
@@ -137,7 +142,7 @@ export function EventMap({ events, selectedEventId, onEventSelect }: EventMapPro
       geojson: { type: "FeatureCollection" as const, features },
       groupedById: byId,
     };
-  }, [validEvents, selectedEventId]);
+  }, [validEvents, selectedEventId, hoveredEventId]);
 
   // GeoJSON for spider legs + dots
   const spiderGeojson = useMemo<GeoJSON.FeatureCollection>(() => {
@@ -229,9 +234,31 @@ export function EventMap({ events, selectedEventId, onEventSelect }: EventMapPro
     }
   }, [validEvents]);
 
+  // Center on events only once on mount
+  const hasFittedBounds = useRef(false);
   useEffect(() => {
+    if (hasFittedBounds.current) return;
+    if (validEvents.length === 0) return;
+    hasFittedBounds.current = true;
     centerOnEvents();
   }, [centerOnEvents]);
+
+  // Fly to event when clicked from panel
+  const prevFlyTo = useRef<number | null>(null);
+  useEffect(() => {
+    if (flyToEventId == null) return;
+    if (flyToEventId === prevFlyTo.current) return;
+    prevFlyTo.current = flyToEventId;
+    const map = mapRef.current;
+    if (!map) return;
+    const event = validEvents.find((e) => e.id === flyToEventId);
+    if (!event) return;
+    map.flyTo({
+      center: [event.longitude, event.latitude],
+      zoom: 7,
+      duration: 1000,
+    });
+  }, [flyToEventId, validEvents]);
 
   // Close spider on zoom/move
   useEffect(() => {
@@ -329,6 +356,19 @@ export function EventMap({ events, selectedEventId, onEventSelect }: EventMapPro
     >
       {/* Main dots */}
       <Source id="events" type="geojson" data={geojson}>
+        {/* Hovered dot highlight ring */}
+        <Layer
+          id="event-dots-hover"
+          type="circle"
+          filter={["==", ["get", "isHovered"], 1]}
+          paint={{
+            "circle-color": "rgba(235, 95, 59, 0.10)",
+            "circle-radius": 18,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#eb5f3b",
+            "circle-stroke-opacity": 0.4,
+          }}
+        />
         {/* Selected dot highlight ring (behind the dot) */}
         <Layer
           id="event-dots-highlight"
@@ -347,9 +387,24 @@ export function EventMap({ events, selectedEventId, onEventSelect }: EventMapPro
           type="circle"
           paint={{
             "circle-color": "#eb5f3b",
-            "circle-radius": 6,
-            "circle-stroke-width": 0,
-            "circle-opacity": 0.85,
+            "circle-radius": [
+              "case",
+              ["==", ["get", "isSelected"], 1], 8,
+              ["==", ["get", "isHovered"], 1], 7,
+              6,
+            ],
+            "circle-stroke-width": [
+              "case",
+              ["==", ["get", "isSelected"], 1], 2,
+              0,
+            ],
+            "circle-stroke-color": "#ffffff",
+            "circle-opacity": [
+              "case",
+              ["==", ["get", "isSelected"], 1], 1,
+              ["==", ["get", "isHovered"], 1], 1,
+              dimOtherMarkers ? 0.25 : 0.85,
+            ],
           }}
         />
       </Source>

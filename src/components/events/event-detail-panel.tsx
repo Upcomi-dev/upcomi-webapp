@@ -140,18 +140,6 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
         />
       </div>
 
-      {/* CTA */}
-      {fullEvent?.URL && (
-        <a
-          href={fullEvent!.URL!}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block w-full rounded-[var(--radius-sm)] bg-coral py-3 text-center text-[14px] font-semibold text-white shadow-[0_4px_20px_rgba(255,94,65,0.35)] transition-all hover:bg-coral-dark hover:shadow-[0_6px_24px_rgba(255,94,65,0.45)]"
-        >
-          S&apos;inscrire →
-        </a>
-      )}
-
       {/* Summary card */}
       <div className="glass rounded-[var(--radius-sm)] p-4">
         <div className="space-y-2">
@@ -266,6 +254,20 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
           </span>
         )}
       </div>
+
+      {/* CTA — sticky at bottom */}
+      {fullEvent?.URL && (
+        <div className="sticky bottom-0 -mx-4 mt-4 border-t border-white/30 bg-white/80 px-4 py-4 backdrop-blur-md md:-mx-5 md:px-5">
+          <a
+            href={fullEvent!.URL!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full rounded-[var(--radius-sm)] bg-coral py-3 text-center text-[14px] font-semibold text-white shadow-[0_4px_20px_rgba(255,94,65,0.35)] transition-all hover:bg-coral-dark hover:shadow-[0_6px_24px_rgba(255,94,65,0.45)]"
+          >
+            S&apos;inscrire →
+          </a>
+        </div>
+      )}
     </div>
   );
 }

@@ -34,10 +34,11 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect /favorites route
+  // Protect /favorites and /admin routes
   if (
     !user &&
-    request.nextUrl.pathname.startsWith("/favorites")
+    (request.nextUrl.pathname.startsWith("/favorites") ||
+     request.nextUrl.pathname.startsWith("/admin"))
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";

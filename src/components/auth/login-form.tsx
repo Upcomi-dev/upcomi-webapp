@@ -29,6 +29,7 @@ export function LoginForm({
     setLoading(true);
 
     const supabase = createClient();
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -46,9 +47,10 @@ export function LoginForm({
       return;
     }
 
+    onSuccess?.();
     router.push(redirectTo);
     router.refresh();
-    onSuccess?.();
+    setLoading(false);
   }
 
   return (

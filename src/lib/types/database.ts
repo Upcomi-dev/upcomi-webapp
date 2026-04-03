@@ -74,6 +74,22 @@ export interface FavouriteEvent {
   event: number;
 }
 
+export interface Collection {
+  id: string;
+  name: string;
+  description: string | null;
+  order: number;
+  is_auto: boolean;
+  is_active: boolean;
+  auto_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollectionWithEvents extends Collection {
+  events: MapEvent[];
+}
+
 export type EventTypeColor = {
   [key: string]: string;
 };

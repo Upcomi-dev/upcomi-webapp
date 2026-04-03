@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -36,6 +37,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const [favoriteEvents, setFavoriteEvents] = useState<FavoriteEvent[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const userIdRef = useRef<string | null>(null);
 
   const loadFavorites = useCallback(async (uid: string) => {
     const supabase = createClient();
@@ -50,7 +52,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const ids = favRows.map((r) => r.event);
+    const ids = favRows.map((r: { event: number }) => r.event);
     setFavoriteIds(new Set(ids));
 
     const { data: events } = await supabase
@@ -74,6 +76,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         setReady(true);
         return;
       }
+      userIdRef.current = user.id;
       setUserId(user.id);
       await loadFavorites(user.id);
       setReady(true);
@@ -82,11 +85,18 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes (login/logout)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event: string, session: { user: { id: string } } | null) => {
+      if (event === "INITIAL_SESSION") return;
+      if (event === "TOKEN_REFRESHED") return;
+
       if (session?.user) {
-        setUserId(session.user.id);
-        await loadFavorites(session.user.id);
-      } else {
+        if (session.user.id !== userIdRef.current) {
+          userIdRef.current = session.user.id;
+          setUserId(session.user.id);
+          await loadFavorites(session.user.id);
+        }
+      } else if (event === "SIGNED_OUT") {
+        userIdRef.current = null;
         setUserId(null);
         setFavoriteIds(new Set());
         setFavoriteEvents([]);
