@@ -103,6 +103,14 @@ export const EVENT_TYPE_COLORS: EventTypeColor = {
   Evènement: "#f59e42",
 };
 
+export const EVENT_TYPE_LEGEND = [
+  { label: "Course", color: EVENT_TYPE_COLORS.Course },
+  { label: "Aventure", color: EVENT_TYPE_COLORS.Aventure },
+  { label: "Brevet", color: EVENT_TYPE_COLORS.Brevet },
+  { label: "Social Ride", color: EVENT_TYPE_COLORS["Social Ride"] },
+  { label: "Evènement", color: EVENT_TYPE_COLORS.Evènement },
+] as const;
+
 export function getEventTypeColor(type: string | null): string {
   if (!type) return "#f59e42";
   return EVENT_TYPE_COLORS[type] || "#f59e42";

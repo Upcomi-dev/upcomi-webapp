@@ -8,7 +8,19 @@ import Map, {
   type MapLayerMouseEvent,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { MapEvent } from "@/lib/types/database";
+import {
+  EVENT_TYPE_LEGEND,
+  getEventTypeColor,
+  type MapEvent,
+} from "@/lib/types/database";
+
+const BIKE_TYPE_FILTERS = ["Gravel", "VTT", "Route"] as const;
+const DISTANCE_FILTERS = [
+  { label: "< 200 km", value: "Moins de 200km" },
+  { label: "200-500 km", value: "Entre 200 et 500km" },
+  { label: "500-1000 km", value: "Entre 500 et 1000km" },
+  { label: "> 1000 km", value: "Plus de 1000km" },
+] as const;
 
 const MAP_STYLE = {
   version: 8,
@@ -52,7 +64,13 @@ interface EventMapProps {
   hoveredEventId?: number | null;
   dimOtherMarkers?: boolean;
   flyToEventId?: number | null;
+  activeEventTypes?: string[];
+  activeBikeTypes?: string[];
+  activeDistances?: string[];
   onEventSelect?: (eventId: number | null) => void;
+  onToggleEventType?: (eventType: string) => void;
+  onToggleBikeType?: (bikeType: string) => void;
+  onToggleDistance?: (distance: string) => void;
 }
 
 /** Round coordinates to ~11m precision to group co-located events. */
@@ -85,7 +103,20 @@ function spiderPositions(
   });
 }
 
-export function EventMap({ events, selectedEventId, hoveredEventId, dimOtherMarkers = false, flyToEventId, onEventSelect }: EventMapProps) {
+export function EventMap({
+  events,
+  selectedEventId,
+  hoveredEventId,
+  dimOtherMarkers = false,
+  flyToEventId,
+  activeEventTypes = [],
+  activeBikeTypes = [],
+  activeDistances = [],
+  onEventSelect,
+  onToggleEventType,
+  onToggleBikeType,
+  onToggleDistance,
+}: EventMapProps) {
   const mapRef = useRef<MapRef>(null);
   const [spiderfied, setSpiderfied] = useState<{
     key: string;
@@ -134,6 +165,7 @@ export function EventMap({ events, selectedEventId, hoveredEventId, dimOtherMark
           count: group.length,
           isSelected: groupContainsSelected ? 1 : 0,
           isHovered: groupContainsHovered ? 1 : 0,
+          typeColor: getEventTypeColor(first.type_event),
         },
       });
     }
@@ -179,7 +211,11 @@ export function EventMap({ events, selectedEventId, hoveredEventId, dimOtherMark
           type: "Point",
           coordinates: [pos.lng, pos.lat],
         },
-        properties: { _type: "dot", id: event.id },
+        properties: {
+          _type: "dot",
+          id: event.id,
+          typeColor: getEventTypeColor(event.type_event),
+        },
       });
     });
 
@@ -386,7 +422,7 @@ export function EventMap({ events, selectedEventId, hoveredEventId, dimOtherMark
           id="event-dots"
           type="circle"
           paint={{
-            "circle-color": "#eb5f3b",
+            "circle-color": ["coalesce", ["get", "typeColor"], "#eb5f3b"],
             "circle-radius": [
               "case",
               ["==", ["get", "isSelected"], 1], 8,
@@ -426,7 +462,7 @@ export function EventMap({ events, selectedEventId, hoveredEventId, dimOtherMark
           type="circle"
           filter={["==", ["get", "_type"], "dot"]}
           paint={{
-            "circle-color": "#eb5f3b",
+            "circle-color": ["coalesce", ["get", "typeColor"], "#eb5f3b"],
             "circle-radius": 6,
             "circle-stroke-width": 1.5,
             "circle-stroke-color": "#ffffff",
@@ -435,6 +471,110 @@ export function EventMap({ events, selectedEventId, hoveredEventId, dimOtherMark
         />
       </Source>
 
+      <div className="absolute top-4 right-4 z-10 flex max-w-[240px] flex-col gap-2.5">
+        <MapFilterCard>
+          <div className="grid gap-2">
+            {EVENT_TYPE_LEGEND.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => onToggleEventType?.(item.label)}
+                className="pointer-events-auto flex cursor-pointer items-center gap-2.5 rounded-full px-2 py-1 text-[13px] text-foreground/72 transition-colors hover:bg-white/32"
+                style={{
+                  opacity:
+                    activeEventTypes.length === 0 || activeEventTypes.includes(item.label)
+                      ? 1
+                      : 0.45,
+                }}
+              >
+                <span
+                  className="block h-3 w-3 rounded-full border border-white/80 shadow-[0_0_0_1px_rgba(36,23,15,0.06)]"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </MapFilterCard>
+
+        <MapFilterCard>
+          <MapFilterTitle>Vélo</MapFilterTitle>
+          <MapPillGroup>
+            {BIKE_TYPE_FILTERS.map((item) => (
+              <MapFilterPill
+                key={item}
+                label={item}
+                active={activeBikeTypes.includes(item)}
+                dimmed={activeBikeTypes.length > 0 && !activeBikeTypes.includes(item)}
+                onClick={() => onToggleBikeType?.(item)}
+              />
+            ))}
+          </MapPillGroup>
+        </MapFilterCard>
+
+        <MapFilterCard>
+          <MapFilterTitle>Distance</MapFilterTitle>
+          <MapPillGroup>
+            {DISTANCE_FILTERS.map((item) => (
+              <MapFilterPill
+                key={item.value}
+                label={item.label}
+                active={activeDistances.includes(item.value)}
+                dimmed={activeDistances.length > 0 && !activeDistances.includes(item.value)}
+                onClick={() => onToggleDistance?.(item.value)}
+              />
+            ))}
+          </MapPillGroup>
+        </MapFilterCard>
+      </div>
+
     </Map>
+  );
+}
+
+function MapFilterCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[22px] border border-white/28 bg-[rgba(255,251,246,0.44)] p-3 shadow-[0_8px_24px_rgba(36,23,15,0.05)] backdrop-blur-md">
+      {children}
+    </div>
+  );
+}
+
+function MapFilterTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground/42">
+      {children}
+    </p>
+  );
+}
+
+function MapPillGroup({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-wrap gap-1.5">{children}</div>;
+}
+
+function MapFilterPill({
+  label,
+  active,
+  dimmed,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  dimmed: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="pointer-events-auto cursor-pointer rounded-full border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/72 transition-colors hover:bg-white/32"
+      style={{
+        backgroundColor: active ? "rgba(255,255,255,0.52)" : "rgba(255,255,255,0.18)",
+        borderColor: active ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.34)",
+        opacity: dimmed ? 0.45 : 1,
+      }}
+    >
+      {label}
+    </button>
   );
 }

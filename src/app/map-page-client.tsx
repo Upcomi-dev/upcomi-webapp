@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useMemo, useReducer, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { MapEvent, CollectionWithEvents } from "@/lib/types/database";
 
@@ -76,6 +76,7 @@ interface MapPageClientProps {
 }
 
 function MapPageContent({ initialEvents, collections = [], hasFilters = false }: MapPageClientProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const listRef = useRef<HTMLDivElement>(null);
   const [hoveredEventId, setHoveredEventId] = useState<number | null>(null);
@@ -89,6 +90,41 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   });
 
   const sort = searchParams.get("sort");
+  const activeEventTypes = useMemo(
+    () => searchParams.get("type_event")?.split(",").filter(Boolean) ?? [],
+    [searchParams]
+  );
+  const activeBikeTypes = useMemo(
+    () => searchParams.get("bike_type")?.split(",").filter(Boolean) ?? [],
+    [searchParams]
+  );
+  const activeDistances = useMemo(
+    () => searchParams.get("distance")?.split(",").filter(Boolean) ?? [],
+    [searchParams]
+  );
+
+  const toggleMultiFilter = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      const current = params.get(key)?.split(",").filter(Boolean) ?? [];
+
+      if (current.includes(value)) {
+        const next = current.filter((item) => item !== value);
+        if (next.length > 0) {
+          params.set(key, next.join(","));
+        } else {
+          params.delete(key);
+        }
+      } else {
+        params.set(key, [...current, value].join(","));
+      }
+
+      const query = params.toString();
+      router.push(query ? `/?${query}` : "/", { scroll: false });
+    },
+    [router, searchParams]
+  );
+
   const sortedEvents = useMemo(() => {
     const list = [...initialEvents];
 
@@ -300,7 +336,13 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
             hoveredEventId={hoveredEventId}
             dimOtherMarkers={panel.mode === "detail"}
             flyToEventId={flyToEventId}
+            activeEventTypes={activeEventTypes}
+            activeBikeTypes={activeBikeTypes}
+            activeDistances={activeDistances}
             onEventSelect={handleMapEventSelect}
+            onToggleEventType={(eventType) => toggleMultiFilter("type_event", eventType)}
+            onToggleBikeType={(bikeType) => toggleMultiFilter("bike_type", bikeType)}
+            onToggleDistance={(distance) => toggleMultiFilter("distance", distance)}
           />
         </main>
       </div>
