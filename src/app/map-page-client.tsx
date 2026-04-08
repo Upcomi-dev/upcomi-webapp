@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useReducer, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { MapEvent, CollectionWithEvents } from "@/lib/types/database";
@@ -81,6 +81,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   const listRef = useRef<HTMLDivElement>(null);
   const [hoveredEventId, setHoveredEventId] = useState<number | null>(null);
   const [flyToEventId, setFlyToEventId] = useState<number | null>(null);
+  const [listReferenceTime] = useState(() => Date.now());
 
   const [panel, dispatch] = useReducer(panelReducer, {
     mode: hasFilters ? "filtered" : "collections",
@@ -90,6 +91,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   });
 
   const sort = searchParams.get("sort");
+  const eventParam = searchParams.get("event");
   const activeEventTypes = useMemo(
     () => searchParams.get("type_event")?.split(",").filter(Boolean) ?? [],
     [searchParams]
@@ -102,6 +104,28 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
     () => searchParams.get("distance")?.split(",").filter(Boolean) ?? [],
     [searchParams]
   );
+  const routeEventId = useMemo(() => {
+    if (!eventParam) return null;
+    const parsed = Number(eventParam);
+    return Number.isInteger(parsed) ? parsed : null;
+  }, [eventParam]);
+  const detailEvents = useMemo(() => {
+    const eventMap = new Map<number, MapEvent>();
+
+    for (const event of initialEvents) {
+      eventMap.set(event.id, event);
+    }
+
+    for (const collection of collections) {
+      for (const event of collection.events) {
+        if (!eventMap.has(event.id)) {
+          eventMap.set(event.id, event);
+        }
+      }
+    }
+
+    return Array.from(eventMap.values());
+  }, [collections, initialEvents]);
 
   const toggleMultiFilter = useCallback(
     (key: string, value: string) => {
@@ -126,7 +150,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   );
 
   const sortedEvents = useMemo(() => {
-    const list = [...initialEvents];
+    const list = [...detailEvents];
 
     switch (sort) {
       case "date-asc":
@@ -159,17 +183,23 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
     }
 
     return list;
-  }, [initialEvents, sort, panel.selectedEventId]);
+  }, [detailEvents, sort, panel.selectedEventId]);
 
-  // Scroll to selected card
-  const prevSelectedRef = useRef<number | null>(null);
-  if (panel.selectedEventId !== prevSelectedRef.current) {
-    prevSelectedRef.current = panel.selectedEventId;
-    if (panel.selectedEventId != null && listRef.current) {
-      const card = listRef.current.querySelector(`[data-event-id="${panel.selectedEventId}"]`);
-      card?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }
+  const listEvents = useMemo(() => {
+    return initialEvents
+      .filter((event) => {
+        if (!event.dateEvent) return false;
+        return new Date(event.dateEvent).getTime() >= listReferenceTime;
+      })
+      .sort((a, b) => new Date(a.dateEvent!).getTime() - new Date(b.dateEvent!).getTime());
+  }, [initialEvents, listReferenceTime]);
+
+  // Scroll to selected card after selection changes.
+  useEffect(() => {
+    if (panel.selectedEventId == null || !listRef.current) return;
+    const card = listRef.current.querySelector(`[data-event-id="${panel.selectedEventId}"]`);
+    card?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [panel.selectedEventId]);
 
   const handleEventClick = useCallback((eventId: number) => {
     dispatch({ type: "SELECT_EVENT", eventId });
@@ -183,13 +213,30 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   const handleBackFromDetail = useCallback(() => {
     dispatch({ type: "BACK_FROM_DETAIL" });
     setFlyToEventId(null);
-  }, []);
+    if (searchParams.get("event")) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("event");
+      const query = params.toString();
+      router.replace(query ? `/?${query}` : "/", { scroll: false });
+    }
+  }, [router, searchParams]);
+
+  useEffect(() => {
+    if (!eventParam) return;
+
+    if (routeEventId == null) return;
+
+    const eventExists = detailEvents.some((event) => event.id === routeEventId);
+    if (!eventExists) return;
+
+    dispatch({ type: "SELECT_EVENT", eventId: routeEventId });
+  }, [detailEvents, eventParam, routeEventId]);
 
   /* ── Panel content renderer ── */
   const renderPanelContent = () => {
     // Detail mode
     if (panel.mode === "detail" && panel.detailEventId != null) {
-      const detailEvent = sortedEvents.find((e) => e.id === panel.detailEventId);
+      const detailEvent = detailEvents.find((e) => e.id === panel.detailEventId);
       if (detailEvent) {
         return (
           <EventDetailPanel
@@ -255,7 +302,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
             </div>
           </div>
 
-          {sortedEvents.length === 0 ? (
+          {listEvents.length === 0 ? (
             <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/36 px-6 py-12 text-center">
               <p className="text-sm font-semibold text-foreground">Aucun événement</p>
               <p className="mt-1 text-xs uppercase tracking-[0.16em] text-foreground/45">
@@ -264,7 +311,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
             </div>
           ) : (
             <div ref={listRef} className="space-y-3">
-              {sortedEvents.map((event) => (
+              {listEvents.map((event) => (
                 <div key={event.id} data-event-id={event.id}>
                   <EventCard
                     id={event.id}
@@ -313,7 +360,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
                 Des événements vélo mieux choisis, mieux présentés.
               </h1>
               <div className="mt-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/50">
-                <span>{sortedEvents.length} résultats</span>
+                <span>{listEvents.length} résultats</span>
               </div>
             </section>
           </div>
@@ -321,7 +368,8 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
           {/* Mobile bottom sheet */}
           <MobileBottomSheet
             collections={collections}
-            events={sortedEvents}
+            events={detailEvents}
+            listEvents={listEvents}
             hasFilters={hasFilters}
             panelMode={panel.mode}
             selectedEventId={panel.selectedEventId}
@@ -335,7 +383,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
             selectedEventId={panel.selectedEventId}
             hoveredEventId={hoveredEventId}
             dimOtherMarkers={panel.mode === "detail"}
-            flyToEventId={flyToEventId}
+            flyToEventId={flyToEventId ?? routeEventId}
             activeEventTypes={activeEventTypes}
             activeBikeTypes={activeBikeTypes}
             activeDistances={activeDistances}

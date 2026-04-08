@@ -26,7 +26,7 @@ export function CollectionsView({ collections, onEventClick, onEventHover }: Col
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-0">
       {visibleCollections.map((collection) => (
         <CollectionCarousel
           key={collection.id}

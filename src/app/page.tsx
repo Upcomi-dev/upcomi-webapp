@@ -4,7 +4,16 @@ import { MapPageClient } from "./map-page-client";
 
 export const revalidate = 300;
 
-const FILTER_KEYS = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to"] as const;
+const FILTER_KEYS = [
+  "q",
+  "bike_type",
+  "type_event",
+  "distance",
+  "region",
+  "budget",
+  "date_from",
+  "date_to",
+] as const;
 
 interface HomePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -57,6 +66,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const budget = typeof params.budget === "string" ? params.budget : null;
   if (budget) {
     query = query.eq("budget", budget);
+  }
+
+  const searchTerm = typeof params.q === "string" ? params.q.trim() : null;
+  if (searchTerm) {
+    query = query.ilike("nomEvent", `%${searchTerm}%`);
   }
 
   const dateFrom = typeof params.date_from === "string" ? params.date_from : null;
@@ -151,7 +165,7 @@ async function fetchCollections(
     const allManualEventIds = [...new Set((junctionData || []).map((j) => j.event_id as number))];
 
     // Fetch these events directly (they may not have coordinates, so not in allEvents)
-    let manualEventsMap = new Map<number, MapEvent>();
+    const manualEventsMap = new Map<number, MapEvent>();
     if (allManualEventIds.length > 0) {
       const { data: manualEventsData } = await supabase
         .from("events")

@@ -13,6 +13,7 @@ type SnapLevel = "peek" | "half" | "full";
 interface MobileBottomSheetProps {
   collections: CollectionWithEvents[];
   events: MapEvent[];
+  listEvents: MapEvent[];
   hasFilters: boolean;
   panelMode: string;
   selectedEventId: number | null;
@@ -27,6 +28,7 @@ const BOTTOM_NAV_HEIGHT = 73;
 export function MobileBottomSheet({
   collections,
   events,
+  listEvents,
   hasFilters,
   detailEventId,
   onEventClick,
@@ -164,7 +166,7 @@ export function MobileBottomSheet({
             {detailEvent ? (detailEvent.nomEvent || "Événement") : "Explorer"}
           </h2>
           <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/42">
-            {events.length} événements
+            {listEvents.length} événements
           </span>
         </div>
       </div>
@@ -188,13 +190,13 @@ export function MobileBottomSheet({
               <h3 className="font-serif text-[18px] text-foreground">Résultats</h3>
               <SortControl />
             </div>
-            {events.length === 0 ? (
+            {listEvents.length === 0 ? (
               <div className="rounded-[20px] border border-dashed border-foreground/12 bg-white/36 px-4 py-8 text-center">
                 <p className="text-sm font-semibold text-foreground">Aucun événement</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {events.map((event) => (
+                {listEvents.map((event) => (
                   <EventCard
                     key={event.id}
                     id={event.id}
@@ -224,7 +226,7 @@ export function MobileBottomSheet({
               />
             ) : (
               <div className="space-y-3">
-                {events.slice(0, 10).map((event) => (
+                {listEvents.slice(0, 10).map((event) => (
                   <EventCard
                     key={event.id}
                     id={event.id}

@@ -7,6 +7,7 @@ import { getEventTypeColor } from "@/lib/types/database";
 import type { Event, SousEvent } from "@/lib/types/database";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { ShareButton } from "@/components/events/share-button";
+import { EventCard } from "@/components/events/event-card";
 import { TopNav } from "@/components/layout/top-nav";
 
 interface PageProps {
@@ -66,6 +67,9 @@ export default async function EventPage({ params }: PageProps) {
   const sousEvents = (sousEventsResult.data as SousEvent[]) || [];
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = makeEventSlug(event.id, event.nomEvent);
+  const relatedEvents = event.organisateur
+    ? await fetchOrganizerEvents(supabase, event.organisateur, event.id)
+    : [];
 
   const formattedDate = event.dateEvent
     ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
@@ -268,6 +272,29 @@ export default async function EventPage({ params }: PageProps) {
               </div>
             )}
 
+            {relatedEvents.length > 0 && (
+              <div className="mb-6">
+                <h2 className="mb-3 text-[15px] font-semibold text-foreground">
+                  Autres événements de cette organisation
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {relatedEvents.map((relatedEvent) => (
+                    <EventCard
+                      key={relatedEvent.id}
+                      id={relatedEvent.id}
+                      nomEvent={relatedEvent.nomEvent}
+                      dateEvent={relatedEvent.dateEvent}
+                      image={relatedEvent.image}
+                      bike_type={relatedEvent.bike_type}
+                      type_event={relatedEvent.type_event}
+                      villeDepart={relatedEvent.villeDepart}
+                      paysDepart={relatedEvent.paysDepart}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Extra tags */}
             <div className="flex flex-wrap gap-2 text-sm">
               {event.Dotwatching && (
@@ -366,4 +393,21 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
       <span className="font-semibold text-foreground">{value}</span>
     </div>
   );
+}
+
+async function fetchOrganizerEvents(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  organizer: string,
+  currentEventId: number
+) {
+  const { data } = await supabase
+    .from("events")
+    .select("id, nomEvent, dateEvent, image, bike_type, type_event, villeDepart, paysDepart")
+    .eq("organisateur", organizer)
+    .neq("id", currentEventId)
+    .not("dateEvent", "is", null)
+    .order("dateEvent", { ascending: true })
+    .limit(6);
+
+  return data ?? [];
 }

@@ -83,7 +83,7 @@ export function CollectionCarousel({ collection, onEventClick, onEventHover }: C
 
       <div
         ref={scrollRef}
-        className="scrollbar-hide -mx-4 flex gap-3 overflow-x-auto px-4 snap-x snap-mandatory md:-mx-5 md:px-5"
+        className="scrollbar-hide -mr-4 flex gap-3 overflow-x-auto snap-x snap-mandatory md:-mr-5"
       >
         {collection.events.map((event) => (
           <EventCard

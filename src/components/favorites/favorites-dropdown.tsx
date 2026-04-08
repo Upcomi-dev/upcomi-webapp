@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useFavorites } from "./favorites-context";
 import { FavouriteButton } from "@/components/events/favourite-button";
-import { makeEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 
 interface FavoritesDropdownProps {
@@ -89,7 +88,6 @@ export function FavoritesDropdown({ onClose }: FavoritesDropdownProps) {
         ) : (
           <div className="py-1.5">
             {favoriteEvents.map((event) => {
-              const slug = makeEventSlug(event.id, event.nomEvent);
               const typeColor = getEventTypeColor(event.type_event);
 
               return (
@@ -98,7 +96,7 @@ export function FavoritesDropdown({ onClose }: FavoritesDropdownProps) {
                   className="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-foreground/[0.03]"
                 >
                   <Link
-                    href={`/event/${slug}`}
+                    href={`/?event=${event.id}`}
                     onClick={onClose}
                     className="flex flex-1 items-center gap-3 min-w-0"
                   >
