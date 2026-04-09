@@ -10,18 +10,7 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  client = createBrowserClient(
-    supabaseUrl,
-    supabasePublishableKey,
-    {
-      auth: {
-        // Bypass navigator.locks which causes deadlocks
-        lock: (async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => {
-          return await fn();
-        }) as never,
-      },
-    }
-  );
+  client = createBrowserClient(supabaseUrl, supabasePublishableKey);
 
   return client;
 }

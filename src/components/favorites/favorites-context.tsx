@@ -5,10 +5,10 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/components/auth/auth-context";
 
 export interface FavoriteEvent {
   id: number;
@@ -26,18 +26,18 @@ interface FavoritesContextValue {
   count: number;
   isFavorite: (eventId: number) => boolean;
   toggleFavorite: (eventId: number) => Promise<boolean>;
+  /** `true` once both auth and favorites have finished their first load. */
   ready: boolean;
-  isAuthenticated: boolean;
 }
 
 const FavoritesContext = createContext<FavoritesContextValue | null>(null);
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
+  const { user, ready: authReady } = useAuth();
+  const userId = user?.id ?? null;
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [favoriteEvents, setFavoriteEvents] = useState<FavoriteEvent[]>([]);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
-  const userIdRef = useRef<string | null>(null);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
 
   const loadFavorites = useCallback(async (uid: string) => {
     const supabase = createClient();
@@ -65,46 +65,28 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Load user + their favorites on mount
+  // Reload favorites whenever the authenticated user changes.
   useEffect(() => {
-    const supabase = createClient();
+    if (!authReady) return;
+
+    let cancelled = false;
+
     (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setReady(true);
-        return;
-      }
-      userIdRef.current = user.id;
-      setUserId(user.id);
-      await loadFavorites(user.id);
-      setReady(true);
-    })();
-
-    // Listen for auth changes (login/logout)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event: string, session: { user: { id: string } } | null) => {
-      if (event === "INITIAL_SESSION") return;
-      if (event === "TOKEN_REFRESHED") return;
-
-      if (session?.user) {
-        if (session.user.id !== userIdRef.current) {
-          userIdRef.current = session.user.id;
-          setUserId(session.user.id);
-          await loadFavorites(session.user.id);
-        }
-      } else if (event === "SIGNED_OUT") {
-        userIdRef.current = null;
-        setUserId(null);
+      if (!userId) {
         setFavoriteIds(new Set());
         setFavoriteEvents([]);
+        setFavoritesLoaded(true);
+        return;
       }
-    });
 
-    return () => subscription.unsubscribe();
-  }, [loadFavorites]);
+      await loadFavorites(userId);
+      if (!cancelled) setFavoritesLoaded(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, userId, loadFavorites]);
 
   const isFavorite = useCallback(
     (eventId: number) => favoriteIds.has(eventId),
@@ -164,8 +146,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         count: favoriteIds.size,
         isFavorite,
         toggleFavorite,
-        ready,
-        isAuthenticated: userId !== null,
+        ready: authReady && favoritesLoaded,
       }}
     >
       {children}

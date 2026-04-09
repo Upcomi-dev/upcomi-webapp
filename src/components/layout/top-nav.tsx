@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
 import { FavoritesDropdown } from "@/components/favorites/favorites-dropdown";
@@ -10,7 +11,9 @@ import { ProfileInfoDialog } from "@/components/layout/profile-info-dialog";
 
 export function TopNav() {
   const { openAuthModal } = useAuthModal();
-  const { count, isAuthenticated } = useFavorites();
+  const { user, ready } = useAuth();
+  const { count } = useFavorites();
+  const isAuthenticated = user !== null;
   const [showFavorites, setShowFavorites] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showProfileInfo, setShowProfileInfo] = useState(false);
@@ -69,7 +72,12 @@ export function TopNav() {
               {showFavorites && <FavoritesDropdown onClose={closeFavorites} />}
             </div>
 
-            {isAuthenticated ? (
+            {!ready ? (
+              <div
+                className="h-10 w-[124px] rounded-full border border-white/50 bg-white/30"
+                aria-hidden="true"
+              />
+            ) : isAuthenticated ? (
               <div className="relative">
                 <button
                   type="button"

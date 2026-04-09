@@ -18,12 +18,14 @@ interface MobileBottomSheetProps {
   panelMode: string;
   selectedEventId: number | null;
   detailEventId: number | null;
+  /** Increments on every map background click — collapses the sheet to peek. */
+  collapseSignal?: number;
   onEventClick: (eventId: number) => void;
   onBackFromDetail: () => void;
 }
 
 const PEEK_HEIGHT = 148;
-const BOTTOM_NAV_HEIGHT = 73;
+const BOTTOM_NAV_HEIGHT = 0;
 
 export function MobileBottomSheet({
   collections,
@@ -31,6 +33,7 @@ export function MobileBottomSheet({
   listEvents,
   hasFilters,
   detailEventId,
+  collapseSignal,
   onEventClick,
   onBackFromDetail,
 }: MobileBottomSheetProps) {
@@ -46,14 +49,15 @@ export function MobileBottomSheet({
 
   const getSnapTranslate = useCallback((level: SnapLevel) => {
     // Sheet height = 100dvh - 60px - BOTTOM_NAV_HEIGHT
-    // translateY moves the sheet down from its natural position (bottom: 73px)
+    // translateY moves the sheet down from its natural position (bottom: BOTTOM_NAV_HEIGHT)
     // At translateY=0, the sheet is fully visible
     // At translateY=sheetHeight - PEEK_HEIGHT, only peek is visible
     const sheetHeight = window.innerHeight - 60 - BOTTOM_NAV_HEIGHT;
     switch (level) {
       case "peek": return sheetHeight - PEEK_HEIGHT;
       case "half": return sheetHeight * 0.5;
-      case "full": return 0;
+      // "full" opens to 90% of the sheet height (keeps a 10% peek of the map above).
+      case "full": return sheetHeight * 0.1;
     }
   }, []);
 
@@ -71,6 +75,14 @@ export function MobileBottomSheet({
       setTranslateY(getSnapTranslate("full"));
     }
   }, [detailEventId, getSnapTranslate]);
+
+  // Collapse to peek when the map background is clicked.
+  // Skip the initial mount by ignoring undefined signals.
+  useEffect(() => {
+    if (collapseSignal === undefined) return;
+    setSnap("peek");
+    setTranslateY(getSnapTranslate("peek"));
+  }, [collapseSignal, getSnapTranslate]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     setDragging(true);
@@ -113,8 +125,8 @@ export function MobileBottomSheet({
 
   const handleHeaderClick = useCallback(() => {
     if (snap === "peek") {
-      setSnap("half");
-      setTranslateY(getSnapTranslate("half"));
+      setSnap("full");
+      setTranslateY(getSnapTranslate("full"));
     } else {
       setSnap("peek");
       setTranslateY(getSnapTranslate("peek"));

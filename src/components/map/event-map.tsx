@@ -58,6 +58,9 @@ const FRANCE_VIEW = {
 /** Pixel radius of the spider circle. */
 const SPIDER_RADIUS_PX = 40;
 
+/** Bottom sheet peek height on mobile — keep markers above the sheet. */
+const MOBILE_BOTTOM_INSET = 148;
+
 interface EventMapProps {
   events: MapEvent[];
   selectedEventId?: number | null;
@@ -125,6 +128,15 @@ export function EventMap({
     events: MapEvent[];
   } | null>(null);
   const hasCenteredInitially = useRef(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   const validEvents = events.filter(
     (event) =>
@@ -234,6 +246,9 @@ export function EventMap({
           center: [validEvents[0].longitude, validEvents[0].latitude],
           zoom: 7.5,
           duration: 900,
+          padding: isMobile
+            ? { top: 0, right: 0, bottom: MOBILE_BOTTOM_INSET, left: 0 }
+            : undefined,
         });
         return;
       }
@@ -256,7 +271,9 @@ export function EventMap({
           [maxLng, maxLat],
         ],
         {
-          padding: { top: 56, right: 56, bottom: 56, left: 56 },
+          padding: isMobile
+            ? { top: 56, right: 24, bottom: MOBILE_BOTTOM_INSET + 24, left: 24 }
+            : { top: 56, right: 56, bottom: 56, left: 56 },
           duration: 900,
           maxZoom: 8.5,
         }
@@ -268,7 +285,7 @@ export function EventMap({
     } else {
       runFit();
     }
-  }, [validEvents]);
+  }, [validEvents, isMobile]);
 
   // Center on events only once on mount
   const hasFittedBounds = useRef(false);
@@ -293,8 +310,11 @@ export function EventMap({
       center: [event.longitude, event.latitude],
       zoom: 7,
       duration: 1000,
+      padding: isMobile
+        ? { top: 0, right: 0, bottom: MOBILE_BOTTOM_INSET, left: 0 }
+        : undefined,
     });
-  }, [flyToEventId, validEvents]);
+  }, [flyToEventId, validEvents, isMobile]);
 
   // Close spider on zoom/move
   useEffect(() => {
@@ -471,7 +491,7 @@ export function EventMap({
         />
       </Source>
 
-      <div className="absolute top-4 right-4 z-10 flex max-w-[240px] flex-col gap-2.5">
+      <div className="absolute top-4 right-4 z-10 hidden max-w-[240px] flex-col gap-2.5 md:flex">
         <MapFilterCard>
           <div className="grid gap-2">
             {EVENT_TYPE_LEGEND.map((item) => (

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useAuth } from "@/components/auth/auth-context";
 import { useFavorites } from "./favorites-context";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { getEventTypeColor } from "@/lib/types/database";
@@ -12,7 +13,9 @@ interface FavoritesDropdownProps {
 }
 
 export function FavoritesDropdown({ onClose }: FavoritesDropdownProps) {
-  const { favoriteEvents, count, isAuthenticated } = useFavorites();
+  const { favoriteEvents, count } = useFavorites();
+  const { user } = useAuth();
+  const isAuthenticated = user !== null;
   const ref = useRef<HTMLDivElement>(null);
 
   // Close on click outside

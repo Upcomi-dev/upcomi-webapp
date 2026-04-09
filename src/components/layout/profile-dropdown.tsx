@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/components/auth/auth-context";
 
 interface ProfileDropdownProps {
   onClose: () => void;
@@ -14,7 +13,7 @@ export function ProfileDropdown({
   onOpenProfileInfo,
 }: ProfileDropdownProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+  const { user, ready, signOut } = useAuth();
   const [confirming, setConfirming] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -36,22 +35,15 @@ export function ProfileDropdown({
     setLoggingOut(true);
     setLogoutError(null);
 
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signOut({ scope: "local" });
+    const { error } = await signOut();
 
-      if (error) {
-        throw error;
-      }
-
-      onClose();
-      router.replace("/");
-      router.refresh();
-      window.location.reload();
-    } catch {
+    if (error) {
       setLogoutError("Impossible de te déconnecter pour le moment.");
       setLoggingOut(false);
+      return;
     }
+
+    onClose();
   };
 
   return (
@@ -59,6 +51,20 @@ export function ProfileDropdown({
       ref={ref}
       className="absolute right-0 top-12 z-50 w-[260px] overflow-hidden rounded-[20px] border border-white/50 bg-white/90 shadow-[var(--shadow-md)] backdrop-blur-xl"
     >
+      {/* Account header with email */}
+      <div className="border-b border-foreground/8 bg-white/60 px-4 py-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground/45">
+          Connecté en tant que
+        </p>
+        <p className="mt-1 truncate text-[13px] font-medium text-foreground">
+          {!ready
+            ? "Chargement…"
+            : user
+            ? user.email ?? "(email non renseigné)"
+            : "Non connecté"}
+        </p>
+      </div>
+
       <div className="p-2">
         {confirming ? (
           <div className="space-y-2 px-1 py-1">

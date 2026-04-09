@@ -206,8 +206,14 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
     setFlyToEventId(eventId);
   }, []);
 
+  const [sheetCollapseSignal, setSheetCollapseSignal] = useState(0);
+
   const handleMapEventSelect = useCallback((eventId: number | null) => {
     dispatch({ type: "MAP_SELECT", eventId });
+    // Clicking on empty map background collapses the mobile bottom sheet.
+    if (eventId == null) {
+      setSheetCollapseSignal((n) => n + 1);
+    }
   }, []);
 
   const handleBackFromDetail = useCallback(() => {
@@ -337,7 +343,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   };
 
   return (
-    <div className="flex min-h-screen flex-col md:h-screen">
+    <div className="flex h-full min-h-0 flex-col md:h-screen">
       <TopNav />
 
       <div className="relative flex flex-1 flex-col overflow-hidden md:min-h-0 md:grid md:grid-rows-[1fr] md:grid-cols-[minmax(380px,45vw)_minmax(0,1fr)] xl:grid-cols-[minmax(420px,45vw)_minmax(0,1fr)]">
@@ -349,22 +355,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
         </aside>
 
         {/* Map */}
-        <main className="relative min-h-[55vh] min-w-0 flex-1 md:h-full md:min-h-0">
-          {/* Mobile hero overlay */}
-          <div className="pointer-events-none absolute inset-x-4 top-4 z-10 md:hidden">
-            <section className="hero-mesh grain-overlay rounded-[28px] border border-white/48 p-4 shadow-soft-xl">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-foreground/42">
-                Upcomi atlas
-              </p>
-              <h1 className="max-w-[16ch] font-serif text-[32px] leading-[0.94] text-foreground text-balance">
-                Des événements vélo mieux choisis, mieux présentés.
-              </h1>
-              <div className="mt-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/50">
-                <span>{listEvents.length} résultats</span>
-              </div>
-            </section>
-          </div>
-
+        <main className="relative h-full min-h-0 min-w-0 flex-1">
           {/* Mobile bottom sheet */}
           <MobileBottomSheet
             collections={collections}
@@ -374,6 +365,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
             panelMode={panel.mode}
             selectedEventId={panel.selectedEventId}
             detailEventId={panel.detailEventId}
+            collapseSignal={sheetCollapseSignal}
             onEventClick={handleEventClick}
             onBackFromDetail={handleBackFromDetail}
           />

@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/components/auth/auth-context";
 
 interface ProfileInfoDialogProps {
   open: boolean;
@@ -41,105 +42,43 @@ export function ProfileInfoDialog({
   onOpenChange,
 }: ProfileInfoDialogProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [form, setForm] = useState<ProfileFormState>(emptyForm);
   const [initialForm, setInitialForm] = useState<ProfileFormState>(emptyForm);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const isDirty =
     JSON.stringify(normalizeForm(form)) !== JSON.stringify(normalizeForm(initialForm));
 
+  // Hydrate the form from the AuthContext user whenever the dialog opens.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !user) return;
 
-    let cancelled = false;
+    setError(null);
+    setSuccess(null);
 
-    const loadUser = async () => {
-      setLoading(true);
-      setError(null);
-      setSuccess(null);
+    const metadata = user.user_metadata ?? {};
+    const firstName =
+      metadata.first_name ??
+      metadata.firstName ??
+      metadata.prenom ??
+      "";
+    const lastName =
+      metadata.last_name ??
+      metadata.lastName ??
+      metadata.surname ??
+      metadata.nom ??
+      "";
 
-      const supabase = createClient();
-      const { data: sessionData } = await supabase.auth.getSession();
-      const sessionUser = sessionData.session?.user ?? null;
-
-      let user = sessionUser;
-      const sessionMetadata = sessionUser?.user_metadata ?? {};
-      const sessionFirstName =
-        sessionMetadata.first_name ??
-        sessionMetadata.firstName ??
-        sessionMetadata.prenom ??
-        "";
-      const sessionLastName =
-        sessionMetadata.last_name ??
-        sessionMetadata.lastName ??
-        sessionMetadata.surname ??
-        sessionMetadata.nom ??
-        "";
-
-      if (sessionUser) {
-        const nextForm = {
-          firstName: sessionFirstName,
-          lastName: sessionLastName,
-          email: sessionUser.email ?? "",
-        };
-        setForm(nextForm);
-        setInitialForm(nextForm);
-        setLoading(false);
-      }
-
-      if (!user) {
-        const { data, error: userError } = await supabase.auth.getUser();
-
-        if (cancelled) return;
-
-        if (userError) {
-          setError("Impossible de charger tes informations.");
-          setLoading(false);
-          return;
-        }
-
-        user = data.user;
-      }
-
-      if (cancelled) return;
-
-      if (!user) {
-        setError("Impossible de charger tes informations.");
-        setLoading(false);
-        return;
-      }
-
-      const metadata = user.user_metadata ?? {};
-      const firstName =
-        metadata.first_name ??
-        metadata.firstName ??
-        metadata.prenom ??
-        "";
-      const lastName =
-        metadata.last_name ??
-        metadata.lastName ??
-        metadata.surname ??
-        metadata.nom ??
-        "";
-
-      const nextForm = {
-        firstName,
-        lastName,
-        email: user.email ?? "",
-      };
-      setForm(nextForm);
-      setInitialForm(nextForm);
-      setLoading(false);
+    const nextForm = {
+      firstName,
+      lastName,
+      email: user.email ?? "",
     };
-
-    void loadUser();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
+    setForm(nextForm);
+    setInitialForm(nextForm);
+  }, [open, user]);
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -244,7 +183,7 @@ export function ProfileInfoDialog({
                   E-mail
                 </span>
                 <div className="flex min-h-[52px] items-center rounded-[18px] border border-white/60 bg-[rgba(255,255,255,0.5)] px-4 py-3 text-[15px] text-foreground/70 shadow-[var(--shadow-sm)]">
-                  {form.email || "E-mail indisponible"}
+                  {form.email || user?.email || "E-mail indisponible"}
                 </div>
               </div>
 
@@ -274,7 +213,7 @@ export function ProfileInfoDialog({
                   disabled={saving || !isDirty}
                   className="rounded-full bg-[linear-gradient(135deg,rgba(235,95,59,1),rgba(213,143,56,0.95))] px-5 py-3 text-[13px] font-semibold uppercase tracking-[0.14em] text-white shadow-[var(--shadow-warm)] transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
                 >
-                  {loading ? "Chargement..." : saving ? "Enregistrement..." : "Enregistrer"}
+                  {saving ? "Enregistrement..." : "Enregistrer"}
                 </button>
               </div>
             </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
 
@@ -9,7 +10,9 @@ interface FavouriteButtonProps {
 }
 
 export function FavouriteButton({ eventId }: FavouriteButtonProps) {
-  const { isFavorite, toggleFavorite, ready, isAuthenticated } = useFavorites();
+  const { isFavorite, toggleFavorite, ready } = useFavorites();
+  const { user } = useAuth();
+  const isAuthenticated = user !== null;
   const { openAuthModal } = useAuthModal();
   const favorited = isFavorite(eventId);
 
