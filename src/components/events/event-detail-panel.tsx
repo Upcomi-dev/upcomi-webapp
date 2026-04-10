@@ -6,6 +6,7 @@ import type { Event, SousEvent, MapEvent } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
 import { FavouriteButton } from "./favourite-button";
 import { ShareButton } from "./share-button";
+import { FavoriteCTA } from "./favorite-cta";
 import { makeEventSlug } from "@/lib/utils/slugify";
 
 interface EventDetailPanelProps {
@@ -17,6 +18,7 @@ interface EventDetailPanelProps {
 export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelProps) {
   const [fullEvent, setFullEvent] = useState<Event | null>(null);
   const [sousEvents, setSousEvents] = useState<SousEvent[]>([]);
+  const [favCount, setFavCount] = useState(0);
 
   // Fetch full details (description, URL, organisateur, sous_events)
   useEffect(() => {
@@ -27,9 +29,16 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
     Promise.all([
       fetch(`${url}/rest/v1/events?id=eq.${mapEvent.id}&select=*&limit=1`, { headers }).then((r) => r.json()),
       fetch(`${url}/rest/v1/sous_events?event_id=eq.${mapEvent.id}&select=*&order=distance.asc`, { headers }).then((r) => r.json()),
-    ]).then(([events, sous]) => {
+      fetch(`${url}/rest/v1/favourite_events?event=eq.${mapEvent.id}&select=id`, {
+        headers: { ...headers, Prefer: "count=exact", "Range": "0-0" },
+        method: "GET",
+      })
+        .then((r) => parseInt(r.headers.get("content-range")?.split("/")[1] || "0", 10))
+        .catch(() => 0),
+    ]).then(([events, sous, count]) => {
       if (events?.[0]) setFullEvent(events[0] as Event);
       if (Array.isArray(sous)) setSousEvents(sous as SousEvent[]);
+      if (typeof count === "number") setFavCount(count);
     });
   }, [mapEvent.id]);
 
@@ -112,11 +121,20 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
         </div>
       </div>
 
-      {/* Title + meta */}
+      {/* Title + meta + Actions */}
       <div>
-        <h1 className="mb-2 font-serif text-[26px] leading-tight text-foreground">
-          {event.nomEvent || "Événement"}
-        </h1>
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <h1 className="font-serif text-[26px] leading-tight text-foreground">
+            {event.nomEvent || "Événement"}
+          </h1>
+          <div className="flex flex-shrink-0 gap-2 pt-0.5">
+            <FavouriteButton eventId={event.id} />
+            <ShareButton
+              title={event.nomEvent || "Événement"}
+              url={`/event/${eventSlug}`}
+            />
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-2 text-[13px] text-foreground/55">
           {formattedDate && (
             <span>
@@ -129,15 +147,6 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
           )}
           {location && <span>{location}</span>}
         </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-2">
-        <FavouriteButton eventId={event.id} />
-        <ShareButton
-          title={event.nomEvent || "Événement"}
-          url={`/event/${eventSlug}`}
-        />
       </div>
 
       {/* Summary card */}
@@ -229,43 +238,56 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-orange/30 bg-orange/20 text-[12px] font-bold text-orange-dark">
               {fullEvent!.organisateur!.substring(0, 2).toUpperCase()}
             </div>
-            <div className="text-[13px] font-semibold text-foreground">
+            <div className="min-w-0 flex-1 text-[13px] font-semibold text-foreground">
               {fullEvent!.organisateur}
             </div>
+            {fullEvent?.URL && (
+              <a
+                href={fullEvent.URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-full border border-foreground/10 px-2.5 py-1 text-[11px] font-medium text-foreground/55 transition-colors hover:border-coral/40 hover:text-coral"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                Site
+              </a>
+            )}
           </div>
         </div>
       )}
 
-      {/* Tags */}
-      <div className="flex flex-wrap gap-2 text-[12px]">
-        {fullEvent?.Dotwatching && (
-          <span className="glass rounded-full px-3 py-1 text-foreground/55">
-            Dotwatching
-          </span>
-        )}
-        {event.budget && (
-          <span className="glass rounded-full px-3 py-1 text-foreground/55">
-            {event.budget}
-          </span>
-        )}
-        {event.distance && (
-          <span className="glass rounded-full px-3 py-1 text-foreground/55">
-            {event.distance}
-          </span>
-        )}
-      </div>
+      {/* Favorite CTA */}
+      <FavoriteCTA eventId={event.id} initialCount={favCount} />
 
       {/* CTA — sticky at bottom */}
       {fullEvent?.URL && (
         <div className="sticky bottom-0 -mx-4 mt-4 border-t border-white/30 bg-white/80 px-4 py-4 backdrop-blur-md md:-mx-5 md:px-5">
-          <a
-            href={fullEvent!.URL!}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full rounded-[var(--radius-sm)] bg-coral py-3 text-center text-[14px] font-semibold text-white shadow-[0_4px_20px_rgba(255,94,65,0.35)] transition-all hover:bg-coral-dark hover:shadow-[0_6px_24px_rgba(255,94,65,0.45)]"
-          >
-            S&apos;inscrire →
-          </a>
+          <div className="flex items-center gap-3">
+            {(() => {
+              const prices = sousEvents.filter(se => se.prix != null).map(se => se.prix!);
+              if (prices.length === 0) return null;
+              const minPrice = Math.min(...prices);
+              return (
+                <div className="flex-shrink-0">
+                  <div className="font-serif text-[18px] font-semibold text-foreground">
+                    {minPrice === 0 ? "Gratuit" : `${minPrice}€`}
+                  </div>
+                </div>
+              );
+            })()}
+            <a
+              href={fullEvent!.URL!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block flex-1 rounded-[var(--radius-sm)] bg-coral py-2.5 text-center text-[13px] font-semibold text-white shadow-[0_4px_20px_rgba(255,94,65,0.35)] transition-all hover:bg-coral-dark hover:shadow-[0_6px_24px_rgba(255,94,65,0.45)]"
+            >
+              S&apos;inscrire →
+            </a>
+          </div>
         </div>
       )}
     </div>

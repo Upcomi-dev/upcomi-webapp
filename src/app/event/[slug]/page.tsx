@@ -7,6 +7,7 @@ import { getEventTypeColor } from "@/lib/types/database";
 import type { Event, SousEvent } from "@/lib/types/database";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { ShareButton } from "@/components/events/share-button";
+import { FavoriteCTA } from "@/components/events/favorite-cta";
 import { EventCard } from "@/components/events/event-card";
 import { TopNav } from "@/components/layout/top-nav";
 
@@ -67,9 +68,16 @@ export default async function EventPage({ params }: PageProps) {
   const sousEvents = (sousEventsResult.data as SousEvent[]) || [];
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = makeEventSlug(event.id, event.nomEvent);
-  const relatedEvents = event.organisateur
-    ? await fetchOrganizerEvents(supabase, event.organisateur, event.id)
-    : [];
+  const [relatedEvents, favCountResult] = await Promise.all([
+    event.organisateur
+      ? fetchOrganizerEvents(supabase, event.organisateur, event.id)
+      : Promise.resolve([]),
+    supabase
+      .from("favourite_events")
+      .select("*", { count: "exact", head: true })
+      .eq("event", event.id),
+  ]);
+  const favCount = favCountResult.count ?? 0;
 
   const formattedDate = event.dateEvent
     ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
@@ -177,11 +185,20 @@ export default async function EventPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* Title + Meta */}
-            <h1 className="mb-2.5 font-serif text-[32px] leading-tight text-foreground">
-              {event.nomEvent || "Événement"}
-            </h1>
-            <div className="mb-4 flex flex-wrap gap-3.5 border-b border-black/8 pb-4">
+            {/* Title + Actions */}
+            <div className="mb-2.5 flex items-start justify-between gap-3">
+              <h1 className="font-serif text-[32px] leading-tight text-foreground">
+                {event.nomEvent || "Événement"}
+              </h1>
+              <div className="flex flex-shrink-0 gap-2 pt-1">
+                <FavouriteButton eventId={event.id} />
+                <ShareButton
+                  title={event.nomEvent || "Événement"}
+                  url={`/event/${eventSlug}`}
+                />
+              </div>
+            </div>
+            <div className="mb-6 flex flex-wrap gap-3.5 border-b border-black/8 pb-4">
               {formattedDate && (
                 <span className="text-sm text-foreground/55">
                   {formattedDate}
@@ -189,15 +206,6 @@ export default async function EventPage({ params }: PageProps) {
                 </span>
               )}
               {location && <span className="text-sm text-foreground/55">{location}</span>}
-            </div>
-
-            {/* Action buttons */}
-            <div className="mb-6 flex gap-2 border-b border-black/8 pb-6">
-              <FavouriteButton eventId={event.id} />
-              <ShareButton
-                title={event.nomEvent || "Événement"}
-                url={`/event/${eventSlug}`}
-              />
             </div>
 
             {/* Sous-events / Parcours */}
@@ -268,9 +276,29 @@ export default async function EventPage({ params }: PageProps) {
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-foreground">{event.organisateur}</div>
                   </div>
+                  {event.URL && (
+                    <a
+                      href={event.URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 rounded-full border border-foreground/10 px-3 py-1.5 text-xs font-medium text-foreground/55 transition-colors hover:border-coral/40 hover:text-coral"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                      Voir le site
+                    </a>
+                  )}
                 </div>
               </div>
             )}
+
+            {/* Favorite CTA */}
+            <div className="mb-6">
+              <FavoriteCTA eventId={event.id} initialCount={favCount} />
+            </div>
 
             {relatedEvents.length > 0 && (
               <div className="mb-6">
@@ -294,25 +322,6 @@ export default async function EventPage({ params }: PageProps) {
                 </div>
               </div>
             )}
-
-            {/* Extra tags */}
-            <div className="flex flex-wrap gap-2 text-sm">
-              {event.Dotwatching && (
-                <span className="glass rounded-full px-3 py-1 text-foreground/55">
-                  📡 Dotwatching
-                </span>
-              )}
-              {event.budget && (
-                <span className="glass rounded-full px-3 py-1 text-foreground/55">
-                  {event.budget}
-                </span>
-              )}
-              {event.distance && (
-                <span className="glass rounded-full px-3 py-1 text-foreground/55">
-                  {event.distance}
-                </span>
-              )}
-            </div>
           </div>
 
           {/* Right column — CTA card */}
@@ -322,29 +331,31 @@ export default async function EventPage({ params }: PageProps) {
                 className="glass rounded-[var(--radius)] p-5"
                 style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
               >
-                {/* Price */}
-                {sousEvents.length > 0 && sousEvents[0].prix != null && (
-                  <>
-                    <div className="font-serif text-[28px] text-foreground">
-                      À partir de {Math.min(...sousEvents.filter(se => se.prix != null).map(se => se.prix!))}€
-                    </div>
-                    <div className="mb-4 text-xs text-foreground/55">
-                      Inscription sur le site de l&apos;organisateur
-                    </div>
-                  </>
-                )}
-
-                {/* Register button */}
+                {/* Register + Price */}
                 {event.URL && (
-                  <a
-                    href={event.URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mb-2.5 block w-full rounded-[var(--radius-sm)] bg-coral py-3.5 text-center text-[15px] font-semibold text-white transition-all hover:bg-coral-dark"
-                    style={{ boxShadow: "0 4px 20px rgba(255,94,65,0.35)" }}
-                  >
-                    S&apos;inscrire →
-                  </a>
+                  <div className="mb-2.5 flex items-center gap-3">
+                    {(() => {
+                      const prices = sousEvents.filter(se => se.prix != null).map(se => se.prix!);
+                      if (prices.length === 0) return null;
+                      const minPrice = Math.min(...prices);
+                      return (
+                        <div className="flex-shrink-0">
+                          <div className="font-serif text-[22px] font-semibold text-foreground">
+                            {minPrice === 0 ? "Gratuit" : `${minPrice}€`}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    <a
+                      href={event.URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block flex-1 rounded-[var(--radius-sm)] bg-coral py-2.5 text-center text-[13px] font-semibold text-white transition-all hover:bg-coral-dark"
+                      style={{ boxShadow: "0 4px 20px rgba(255,94,65,0.35)" }}
+                    >
+                      S&apos;inscrire →
+                    </a>
+                  </div>
                 )}
 
                 {/* Separator */}
