@@ -273,7 +273,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
           <section className="hero-mesh grain-overlay overflow-hidden rounded-[30px] border border-white/45 p-5 shadow-soft-xl">
             <div className="mb-5">
               <h1 className="max-w-[18ch] font-serif text-[38px] leading-[0.93] text-foreground text-balance">
-                Trouve le prochain ride qui te ressemble.
+                Trouve la prochaine aventure qui te ressemble.
               </h1>
             </div>
             <div className="mt-4 rounded-[26px] border border-white/48 bg-white/34 p-4 shadow-[var(--shadow-sm)]">
@@ -299,7 +299,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
         <section className="hero-mesh grain-overlay overflow-hidden rounded-[30px] border border-white/45 p-5 shadow-soft-xl">
           <div className="mb-5">
             <h1 className="max-w-[18ch] font-serif text-[38px] leading-[0.93] text-foreground text-balance">
-              Trouve le prochain ride qui te ressemble.
+              Trouve la prochaine aventure qui te ressemble.
             </h1>
           </div>
           <div className="rounded-[26px] border border-white/48 bg-white/34 p-4 shadow-[var(--shadow-sm)]">
@@ -389,12 +389,8 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
             dimOtherMarkers={panel.mode === "detail"}
             flyToEventId={flyToEventId ?? routeEventId}
             activeEventTypes={activeEventTypes}
-            activeBikeTypes={activeBikeTypes}
-            activeDistances={activeDistances}
             onEventSelect={handleMapEventSelect}
             onToggleEventType={(eventType) => toggleMultiFilter("type_event", eventType)}
-            onToggleBikeType={(bikeType) => toggleMultiFilter("bike_type", bikeType)}
-            onToggleDistance={(distance) => toggleMultiFilter("distance", distance)}
           />
         </main>
       </div>

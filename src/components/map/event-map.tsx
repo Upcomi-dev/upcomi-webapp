@@ -14,14 +14,6 @@ import {
   type MapEvent,
 } from "@/lib/types/database";
 
-const BIKE_TYPE_FILTERS = ["Gravel", "VTT", "Route"] as const;
-const DISTANCE_FILTERS = [
-  { label: "< 200 km", value: "Moins de 200km" },
-  { label: "200-500 km", value: "Entre 200 et 500km" },
-  { label: "500-1000 km", value: "Entre 500 et 1000km" },
-  { label: "> 1000 km", value: "Plus de 1000km" },
-] as const;
-
 const MAP_STYLE = {
   version: 8,
   sources: {
@@ -68,12 +60,8 @@ interface EventMapProps {
   dimOtherMarkers?: boolean;
   flyToEventId?: number | null;
   activeEventTypes?: string[];
-  activeBikeTypes?: string[];
-  activeDistances?: string[];
   onEventSelect?: (eventId: number | null) => void;
   onToggleEventType?: (eventType: string) => void;
-  onToggleBikeType?: (bikeType: string) => void;
-  onToggleDistance?: (distance: string) => void;
 }
 
 /** Round coordinates to ~11m precision to group co-located events. */
@@ -113,12 +101,8 @@ export function EventMap({
   dimOtherMarkers = false,
   flyToEventId,
   activeEventTypes = [],
-  activeBikeTypes = [],
-  activeDistances = [],
   onEventSelect,
   onToggleEventType,
-  onToggleBikeType,
-  onToggleDistance,
 }: EventMapProps) {
   const mapRef = useRef<MapRef>(null);
   const [spiderfied, setSpiderfied] = useState<{
@@ -517,35 +501,6 @@ export function EventMap({
           </div>
         </MapFilterCard>
 
-        <MapFilterCard>
-          <MapFilterTitle>Vélo</MapFilterTitle>
-          <MapPillGroup>
-            {BIKE_TYPE_FILTERS.map((item) => (
-              <MapFilterPill
-                key={item}
-                label={item}
-                active={activeBikeTypes.includes(item)}
-                dimmed={activeBikeTypes.length > 0 && !activeBikeTypes.includes(item)}
-                onClick={() => onToggleBikeType?.(item)}
-              />
-            ))}
-          </MapPillGroup>
-        </MapFilterCard>
-
-        <MapFilterCard>
-          <MapFilterTitle>Distance</MapFilterTitle>
-          <MapPillGroup>
-            {DISTANCE_FILTERS.map((item) => (
-              <MapFilterPill
-                key={item.value}
-                label={item.label}
-                active={activeDistances.includes(item.value)}
-                dimmed={activeDistances.length > 0 && !activeDistances.includes(item.value)}
-                onClick={() => onToggleDistance?.(item.value)}
-              />
-            ))}
-          </MapPillGroup>
-        </MapFilterCard>
       </div>
 
     </Map>
@@ -560,41 +515,3 @@ function MapFilterCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-function MapFilterTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground/42">
-      {children}
-    </p>
-  );
-}
-
-function MapPillGroup({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-wrap gap-1.5">{children}</div>;
-}
-
-function MapFilterPill({
-  label,
-  active,
-  dimmed,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  dimmed: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="pointer-events-auto cursor-pointer rounded-full border px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/72 transition-colors hover:bg-white/32"
-      style={{
-        backgroundColor: active ? "rgba(255,255,255,0.52)" : "rgba(255,255,255,0.18)",
-        borderColor: active ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.34)",
-        opacity: dimmed ? 0.45 : 1,
-      }}
-    >
-      {label}
-    </button>
-  );
-}

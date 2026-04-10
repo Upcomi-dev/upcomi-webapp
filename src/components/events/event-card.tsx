@@ -180,7 +180,7 @@ export function EventCard({
   }
 
   if (variant === "list") {
-    const cardClassName = `group block overflow-hidden rounded-[28px] border p-2 transition-all duration-300 hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-[var(--shadow-md)] ${
+    const cardClassName = `group block overflow-hidden rounded-[28px] border p-2 md:p-2.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-[var(--shadow-md)] ${
       isSelected
         ? "border-coral/50 bg-[linear-gradient(180deg,rgba(255,245,240,0.95),rgba(255,240,232,0.88))] shadow-[var(--shadow-md),0_0_0_1px_rgba(235,95,59,0.12)]"
         : "border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.92),rgba(248,240,230,0.82))] shadow-[var(--shadow-sm)]"
@@ -189,7 +189,7 @@ export function EventCard({
       <div
         className="flex gap-3"
       >
-        <div className="relative h-28 w-28 flex-none overflow-hidden rounded-[22px] sm:h-32 sm:w-32">
+        <div className="relative h-28 w-28 flex-none overflow-hidden rounded-[22px] sm:h-32 sm:w-32 md:h-36 md:w-36">
           {!imageLoaded ? (
             <EventCardFallbackArt name={name} typeColor={typeColor} variant="list" />
           ) : null}
@@ -230,25 +230,17 @@ export function EventCard({
               <FavouriteButton eventId={id} />
             </div>
 
-            <h3 className="max-w-[24ch] font-serif text-[21px] leading-[1.02] text-foreground text-balance">
+            <h3 className="max-w-[24ch] font-serif text-[21px] leading-[1.02] text-foreground text-balance md:text-[23px]">
               {name}
             </h3>
 
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-foreground/58">
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-foreground/58 md:mt-2.5">
               <span>{formattedDate || "À venir"}</span>
               <span className="text-coral/55">•</span>
               <span className="truncate">{location || "Lieu à confirmer"}</span>
             </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/38">
-              Vue carte + détails
-            </div>
-            <div className="rounded-full border border-coral/16 bg-coral/8 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-coral transition-colors group-hover:bg-coral group-hover:text-white">
-              Ouvrir
-            </div>
-          </div>
         </div>
       </div>
     );
