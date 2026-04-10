@@ -43,7 +43,7 @@ export function TopNav() {
   return (
     <>
       <nav className="glass-nav sticky top-0 z-50 border-b border-white/45">
-        <div className="mx-auto flex h-18 max-w-[1400px] items-center gap-4 px-4 md:px-6">
+        <div className="flex h-18 items-center gap-4 px-4 md:px-6">
           <Link href="/" className="group flex min-w-0 items-center gap-3">
             <div className="soft-ring flex h-11 w-11 items-center justify-center rounded-full bg-white/58 text-[11px] font-semibold uppercase tracking-[0.28em] text-coral shadow-[var(--shadow-sm)] transition-transform duration-300 group-hover:scale-105">
               U

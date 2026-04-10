@@ -303,7 +303,7 @@ export function EventMap({
     if (flyToEventId === prevFlyTo.current) return;
     prevFlyTo.current = flyToEventId;
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !map.loaded()) return;
     const event = validEvents.find((e) => e.id === flyToEventId);
     if (!event) return;
     map.flyTo({
