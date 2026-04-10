@@ -40,10 +40,11 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
         openAuthModal({ view: "login" });
         return;
       }
-      // Trigger flying heart animation only when adding
-      if (!favorited) {
+      if (!favorited && flyingHeart) {
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        flyingHeart?.triggerHeart(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        flyingHeart.triggerHeart(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        // Delay toggle so counter increments when the heart arrives
+        await new Promise((r) => setTimeout(r, 950));
       }
       await toggleFavorite(eventId);
     },
