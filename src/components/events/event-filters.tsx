@@ -52,11 +52,15 @@ function removeValue(current: URLSearchParams, key: string, value?: string) {
   return params;
 }
 
-export function InlineFilters() {
+interface InlineFiltersProps {
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+}
+
+export function InlineFilters({ searchValue = "", onSearchChange }: InlineFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState<PanelKey | null>(null);
-  const searchValue = searchParams.get("q") ?? "";
   const dateFrom = searchParams.get("date_from") ?? "";
   const dateTo = searchParams.get("date_to") ?? "";
 
@@ -114,10 +118,6 @@ export function InlineFilters() {
   const activeTags = useMemo(() => {
     const tags: Array<{ key: string; label: string; value?: string }> = [];
 
-    if (searchValue) {
-      tags.push({ key: "q", label: `Nom : ${searchValue}` });
-    }
-
     if (dateFrom) {
       tags.push({ key: "date_from", label: `À partir du ${formatDateLabel(dateFrom)}` });
     }
@@ -151,10 +151,9 @@ export function InlineFilters() {
     }
 
     return tags;
-  }, [dateFrom, dateTo, isActive, searchValue]);
+  }, [dateFrom, dateTo, isActive]);
 
   const counts = {
-    search: searchValue ? 1 : 0,
     date: Number(Boolean(dateFrom)) + Number(Boolean(dateTo)),
     bike: searchParams.get("bike_type")?.split(",").filter(Boolean).length || 0,
     type: searchParams.get("type_event")?.split(",").filter(Boolean).length || 0,
@@ -170,13 +169,13 @@ export function InlineFilters() {
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end">
           <label className="block flex-1">
             <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
-              Nom
+              Recherche
             </span>
             <input
               type="search"
               value={searchValue}
-              onChange={(event) => setValue("q", event.target.value)}
-              placeholder="Chercher un événement"
+              onChange={(event) => onSearchChange?.(event.target.value)}
+              placeholder="Nom, lieu, organisateur..."
               className="w-full rounded-[18px] border border-white/55 bg-white/70 px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-foreground/35 focus:border-coral/35 focus:bg-white"
             />
           </label>

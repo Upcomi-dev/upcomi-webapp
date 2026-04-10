@@ -5,7 +5,6 @@ import { MapPageClient } from "./map-page-client";
 export const revalidate = 300;
 
 const FILTER_KEYS = [
-  "q",
   "bike_type",
   "type_event",
   "distance",
@@ -68,11 +67,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const budget = typeof params.budget === "string" ? params.budget : null;
   if (budget) {
     query = query.eq("budget", budget);
-  }
-
-  const searchTerm = typeof params.q === "string" ? params.q.trim() : null;
-  if (searchTerm) {
-    query = query.ilike("nomEvent", `%${searchTerm}%`);
   }
 
   const dateFrom = typeof params.date_from === "string" ? params.date_from : null;

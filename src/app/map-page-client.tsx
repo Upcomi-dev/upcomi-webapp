@@ -82,6 +82,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   const [hoveredEventId, setHoveredEventId] = useState<number | null>(null);
   const [flyToEventId, setFlyToEventId] = useState<number | null>(null);
   const [listReferenceTime] = useState(() => Date.now());
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [panel, dispatch] = useReducer(panelReducer, {
     mode: hasFilters ? "filtered" : "collections",
@@ -149,8 +150,18 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
     [router, searchParams]
   );
 
+  const matchesSearch = useCallback(
+    (event: MapEvent) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return [event.nomEvent, event.villeDepart, event.paysDepart, event.type_event, event.bike_type]
+        .some((field) => field?.toLowerCase().includes(q));
+    },
+    [searchQuery]
+  );
+
   const sortedEvents = useMemo(() => {
-    const list = [...detailEvents];
+    const list = detailEvents.filter(matchesSearch);
 
     switch (sort) {
       case "date-asc":
@@ -183,16 +194,17 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
     }
 
     return list;
-  }, [detailEvents, sort, panel.selectedEventId]);
+  }, [detailEvents, matchesSearch, sort, panel.selectedEventId]);
 
   const listEvents = useMemo(() => {
     return initialEvents
       .filter((event) => {
         if (!event.dateEvent) return false;
-        return new Date(event.dateEvent).getTime() >= listReferenceTime;
+        if (new Date(event.dateEvent).getTime() < listReferenceTime) return false;
+        return matchesSearch(event);
       })
       .sort((a, b) => new Date(a.dateEvent!).getTime() - new Date(b.dateEvent!).getTime());
-  }, [initialEvents, listReferenceTime]);
+  }, [initialEvents, listReferenceTime, matchesSearch]);
 
   // Scroll to selected card after selection changes.
   useEffect(() => {
@@ -253,8 +265,8 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
       }
     }
 
-    // Collections mode (no filters)
-    if (panel.mode === "collections" && collections.length > 0) {
+    // Collections mode (no filters, no search)
+    if (panel.mode === "collections" && collections.length > 0 && !searchQuery) {
       return (
         <>
           {/* Hero in collections mode */}
@@ -268,7 +280,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
                 Affiner la sélection
               </p>
-              <InlineFilters />
+              <InlineFilters searchValue={searchQuery} onSearchChange={setSearchQuery} />
             </div>
           </section>
 
@@ -294,7 +306,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
               Affiner la sélection
             </p>
-            <InlineFilters />
+            <InlineFilters searchValue={searchQuery} onSearchChange={setSearchQuery} />
           </div>
         </section>
 
