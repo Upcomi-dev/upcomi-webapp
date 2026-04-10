@@ -35,7 +35,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       "id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance_range_filter, region, budget, villeDepart, paysDepart"
     )
     .not("latitude", "is", null)
-    .not("longitude", "is", null);
+    .not("longitude", "is", null)
+    .eq("verifie", true)
+    .gte("dateEvent", new Date().toISOString().split("T")[0]);
 
   const bikeTypes = (typeof params.bike_type === "string" ? params.bike_type : "")
     .split(",")
@@ -170,7 +172,9 @@ async function fetchCollections(
       const { data: manualEventsData } = await supabase
         .from("events")
         .select("id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance_range_filter, region, budget, villeDepart, paysDepart")
-        .in("id", allManualEventIds);
+        .in("id", allManualEventIds)
+        .eq("verifie", true)
+        .gte("dateEvent", new Date().toISOString().split("T")[0]);
 
       for (const e of (manualEventsData || []) as MapEvent[]) {
         manualEventsMap.set(e.id, e);
