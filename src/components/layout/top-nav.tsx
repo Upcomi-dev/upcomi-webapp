@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
+import { useFlyingHeart } from "@/components/favorites/flying-heart";
 import { FavoritesDropdown } from "@/components/favorites/favorites-dropdown";
 import { ProfileDropdown } from "@/components/layout/profile-dropdown";
 import { ProfileInfoDialog } from "@/components/layout/profile-info-dialog";
@@ -13,6 +14,7 @@ export function TopNav() {
   const { openAuthModal } = useAuthModal();
   const { user, ready } = useAuth();
   const { count } = useFavorites();
+  const flyingHeart = useFlyingHeart();
   const isAuthenticated = user !== null;
   const [showFavorites, setShowFavorites] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -63,11 +65,12 @@ export function TopNav() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
-                {count > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white shadow-[0_2px_6px_rgba(235,95,59,0.4)]">
-                    {count}
-                  </span>
-                )}
+                <span
+                  ref={flyingHeart?.counterRef}
+                  className={`absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white shadow-[0_2px_6px_rgba(235,95,59,0.4)] transition-transform ${count > 0 ? "scale-100" : "scale-0"}`}
+                >
+                  {count}
+                </span>
               </button>
               {showFavorites && <FavoritesDropdown onClose={closeFavorites} />}
             </div>

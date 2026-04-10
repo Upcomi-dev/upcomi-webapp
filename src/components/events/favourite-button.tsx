@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
+import { useFlyingHeart } from "@/components/favorites/flying-heart";
 
 interface FavouriteButtonProps {
   eventId: number;
@@ -14,6 +15,7 @@ export function FavouriteButton({ eventId }: FavouriteButtonProps) {
   const { user } = useAuth();
   const isAuthenticated = user !== null;
   const { openAuthModal } = useAuthModal();
+  const flyingHeart = useFlyingHeart();
   const favorited = isFavorite(eventId);
 
   const handleClick = useCallback(
@@ -28,9 +30,15 @@ export function FavouriteButton({ eventId }: FavouriteButtonProps) {
         return;
       }
 
+      // Trigger flying heart animation only when adding
+      if (!favorited) {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        flyingHeart?.triggerHeart(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      }
+
       await toggleFavorite(eventId);
     },
-    [eventId, toggleFavorite, openAuthModal, ready, isAuthenticated]
+    [eventId, toggleFavorite, openAuthModal, ready, isAuthenticated, favorited, flyingHeart]
   );
 
   return (

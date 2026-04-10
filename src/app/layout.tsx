@@ -6,6 +6,7 @@ import { AuthModalProvider } from "@/components/auth/auth-modal-context";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { AuthProvider } from "@/components/auth/auth-context";
 import { FavoritesProvider } from "@/components/favorites/favorites-context";
+import { FlyingHeartProvider } from "@/components/favorites/flying-heart";
 import { createClient } from "@/lib/supabase/server";
 
 const workSans = Work_Sans({
@@ -41,11 +42,13 @@ export default async function RootLayout({
         <AuthProvider initialUser={initialUser}>
           <AuthModalProvider>
             <FavoritesProvider>
+              <FlyingHeartProvider>
               <AmbientOrbs />
               <div className="relative z-10 flex h-[100dvh] flex-col md:h-auto md:min-h-screen">
                 {children}
               </div>
               <AuthModal />
+              </FlyingHeartProvider>
             </FavoritesProvider>
           </AuthModalProvider>
         </AuthProvider>

@@ -4,6 +4,7 @@ import { useCallback, useRef } from "react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
+import { useFlyingHeart } from "@/components/favorites/flying-heart";
 
 interface FavoriteCTAProps {
   eventId: number;
@@ -14,6 +15,7 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
   const { isFavorite, toggleFavorite, ready } = useFavorites();
   const { user } = useAuth();
   const { openAuthModal } = useAuthModal();
+  const flyingHeart = useFlyingHeart();
   const favorited = isFavorite(eventId);
 
   // Capture whether the user had already favorited at first ready render,
@@ -38,9 +40,14 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
         openAuthModal({ view: "login" });
         return;
       }
+      // Trigger flying heart animation only when adding
+      if (!favorited) {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        flyingHeart?.triggerHeart(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      }
       await toggleFavorite(eventId);
     },
-    [eventId, toggleFavorite, openAuthModal, ready, user]
+    [eventId, toggleFavorite, openAuthModal, ready, user, favorited, flyingHeart]
   );
 
   return (
