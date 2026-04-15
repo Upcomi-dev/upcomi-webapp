@@ -51,6 +51,7 @@ export interface MapEvent {
   budget: string | null;
   villeDepart: string | null;
   paysDepart: string | null;
+  mint: boolean;
 }
 
 export interface SousEvent {

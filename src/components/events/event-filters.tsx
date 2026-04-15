@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Info } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -150,6 +150,10 @@ export function InlineFilters({ searchValue = "", onSearchChange }: InlineFilter
       }
     }
 
+    if (searchParams.get("mint") === "true") {
+      tags.push({ key: "mint", label: "Mixité choisie" });
+    }
+
     return tags;
   }, [dateFrom, dateTo, isActive]);
 
@@ -213,6 +217,12 @@ export function InlineFilters({ searchValue = "", onSearchChange }: InlineFilter
             active={openPanel === "region" || counts.region > 0}
             badge={counts.region || undefined}
             onClick={() => setOpenPanel((current) => (current === "region" ? null : "region"))}
+          />
+          <ActionButton
+            label="Mixité choisie"
+            active={searchParams.get("mint") === "true"}
+            onClick={() => setSingle("mint", "true")}
+            tooltip="Événements non-mixtes, entre femmes et minorités de genre"
           />
           <div className="ml-auto flex items-center gap-2">
             {hasFilters && (
@@ -326,19 +336,21 @@ function ActionButton({
   active,
   badge,
   icon: Icon,
+  tooltip,
   onClick,
 }: {
   label: string;
   active: boolean;
   badge?: number;
   icon?: React.ComponentType<{ className?: string }>;
+  tooltip?: string;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all",
+        "group/btn relative inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all",
         active
           ? "border-coral/30 bg-coral text-white shadow-[var(--shadow-sm)]"
           : "border-white/55 bg-white/60 text-foreground/70 hover:border-coral/25 hover:text-coral"
@@ -346,6 +358,14 @@ function ActionButton({
     >
       {Icon ? <Icon className="h-4 w-4" /> : null}
       <span>{label}</span>
+      {tooltip && (
+        <>
+          <Info className={cn("h-3.5 w-3.5", active ? "text-white/60" : "text-foreground/30")} />
+          <span className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 rounded-xl bg-foreground/90 px-3 py-2 text-xs font-normal normal-case tracking-normal leading-snug text-white opacity-0 shadow-lg transition-opacity group-hover/btn:opacity-100">
+            {tooltip}
+          </span>
+        </>
+      )}
       {badge ? (
         <span
           className={cn(

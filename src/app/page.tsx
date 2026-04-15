@@ -12,6 +12,7 @@ const FILTER_KEYS = [
   "budget",
   "date_from",
   "date_to",
+  "mint",
 ] as const;
 
 interface HomePageProps {
@@ -31,7 +32,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   let query = supabase
     .from("events")
     .select(
-      "id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance_range_filter, region, budget, villeDepart, paysDepart"
+      "id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance_range_filter, region, budget, villeDepart, paysDepart, mint"
     )
     .not("latitude", "is", null)
     .not("longitude", "is", null)
@@ -77,6 +78,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const dateTo = typeof params.date_to === "string" ? params.date_to : null;
   if (dateTo) {
     query = query.lte("dateEvent", dateTo);
+  }
+
+  const mintFilter = typeof params.mint === "string" ? params.mint : null;
+  if (mintFilter === "true") {
+    query = query.eq("mint", true);
   }
 
   const { data: events, error } = await query;
@@ -165,7 +171,7 @@ async function fetchCollections(
     if (allManualEventIds.length > 0) {
       const { data: manualEventsData } = await supabase
         .from("events")
-        .select("id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance_range_filter, region, budget, villeDepart, paysDepart")
+        .select("id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance_range_filter, region, budget, villeDepart, paysDepart, mint")
         .in("id", allManualEventIds)
         .eq("verifie", true)
         .gte("dateEvent", new Date().toISOString().split("T")[0]);

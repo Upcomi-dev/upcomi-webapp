@@ -52,23 +52,23 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
   );
 
   return (
-    <div className="glass rounded-[var(--radius)] p-5 text-center">
+    <div className="flex items-center gap-2.5">
       {displayCount > 0 && (
-        <p className="mb-3 text-sm font-semibold text-foreground/70">
-          {displayCount} intéressé·e{displayCount > 1 ? "s" : ""}
+        <p className="flex items-center gap-1.5 text-[12px] text-foreground/45">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+          </svg>
+          {displayCount} personne{displayCount > 1 ? "s" : ""} intéressée{displayCount > 1 ? "s" : ""}
         </p>
       )}
       <button
         onClick={handleClick}
-        className={`flex w-full items-center justify-center gap-2.5 rounded-[var(--radius-sm)] py-3.5 text-[15px] font-semibold transition-all ${
-          favorited
-            ? "bg-violet/20 text-violet border border-violet/30"
-            : "bg-violet text-white shadow-[0_4px_20px_rgba(126,105,200,0.35)] hover:shadow-[0_6px_24px_rgba(126,105,200,0.45)]"
-        }`}
+        className="ml-auto flex items-center gap-1.5 rounded-full border border-foreground/12 px-3 py-1.5 text-[12px] font-medium text-foreground/55 transition-all hover:border-[#d4caff] hover:bg-[#d4caff]/10 hover:text-foreground/80"
+        style={favorited ? { backgroundColor: "#d4caff", borderColor: "#d4caff", color: "#5b4a9e" } : undefined}
       >
         <svg
-          width="18"
-          height="18"
+          width="13"
+          height="13"
           viewBox="0 0 24 24"
           fill={favorited ? "currentColor" : "none"}
           strokeWidth="1.8"

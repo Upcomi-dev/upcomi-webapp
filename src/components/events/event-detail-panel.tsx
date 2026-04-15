@@ -55,7 +55,8 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
       })
     : null;
 
-  const formattedDateFin = fullEvent?.dateFin
+  const isSameDay = fullEvent?.dateFin && event.dateEvent && fullEvent.dateFin === event.dateEvent;
+  const formattedDateFin = fullEvent?.dateFin && !isSameDay
     ? new Date(fullEvent.dateFin).toLocaleDateString("fr-FR", {
         day: "numeric",
         month: "long",
@@ -265,16 +266,16 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
 
       {/* CTA — sticky at bottom */}
       {fullEvent?.URL && (
-        <div className="sticky bottom-0 -mx-4 mt-4 border-t border-white/30 bg-white/80 px-4 py-4 backdrop-blur-md md:-mx-5 md:px-5">
-          <div className="flex items-center gap-3">
+        <div className="sticky bottom-0 -mx-4 mt-4 border-t border-white/30 bg-white/80 px-4 py-3 backdrop-blur-md md:-mx-5 md:px-5">
+          <div className="flex w-full flex-col items-end gap-2 text-right">
             {(() => {
               const prices = sousEvents.filter(se => se.prix != null).map(se => se.prix!);
               if (prices.length === 0) return null;
               const minPrice = Math.min(...prices);
               return (
-                <div className="flex-shrink-0">
-                  <div className="font-serif text-[18px] font-semibold text-foreground">
-                    {minPrice === 0 ? "Gratuit" : `${minPrice}€`}
+                <div className="ml-auto flex-shrink-0 text-right">
+                  <div className="text-[15px] font-semibold text-foreground">
+                    {minPrice === 0 ? "Gratuit" : `À partir de ${minPrice}€`}
                   </div>
                 </div>
               );
@@ -283,7 +284,7 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
               href={fullEvent!.URL!}
               target="_blank"
               rel="noopener noreferrer"
-              className="block flex-1 rounded-[var(--radius-sm)] bg-coral py-2.5 text-center text-[13px] font-semibold text-white shadow-[0_4px_20px_rgba(255,94,65,0.35)] transition-all hover:bg-coral-dark hover:shadow-[0_6px_24px_rgba(255,94,65,0.45)]"
+              className="ml-auto block rounded-[var(--radius-sm)] bg-coral px-6 py-2.5 text-center text-[14px] font-semibold text-white shadow-[0_2px_12px_rgba(255,94,65,0.25)] transition-all hover:bg-coral-dark hover:shadow-[0_4px_16px_rgba(255,94,65,0.35)]"
             >
               S&apos;inscrire →
             </a>

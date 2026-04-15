@@ -87,7 +87,8 @@ export default async function EventPage({ params }: PageProps) {
       })
     : null;
 
-  const formattedDateFin = event.dateFin
+  const isSameDay = event.dateFin && event.dateEvent && event.dateFin === event.dateEvent;
+  const formattedDateFin = event.dateFin && !isSameDay
     ? new Date(event.dateFin).toLocaleDateString("fr-FR", {
         day: "numeric",
         month: "long",
@@ -333,15 +334,15 @@ export default async function EventPage({ params }: PageProps) {
               >
                 {/* Register + Price */}
                 {event.URL && (
-                  <div className="mb-2.5 flex items-center gap-3">
+                  <div className="mb-2.5 flex flex-col items-end gap-2 text-right">
                     {(() => {
                       const prices = sousEvents.filter(se => se.prix != null).map(se => se.prix!);
                       if (prices.length === 0) return null;
                       const minPrice = Math.min(...prices);
                       return (
-                        <div className="flex-shrink-0">
-                          <div className="font-serif text-[22px] font-semibold text-foreground">
-                            {minPrice === 0 ? "Gratuit" : `${minPrice}€`}
+                        <div className="ml-auto flex-shrink-0 text-right">
+                          <div className="text-[16px] font-semibold text-foreground">
+                            {minPrice === 0 ? "Gratuit" : `À partir de ${minPrice}€`}
                           </div>
                         </div>
                       );
@@ -350,8 +351,8 @@ export default async function EventPage({ params }: PageProps) {
                       href={event.URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block flex-1 rounded-[var(--radius-sm)] bg-coral py-2.5 text-center text-[13px] font-semibold text-white transition-all hover:bg-coral-dark"
-                      style={{ boxShadow: "0 4px 20px rgba(255,94,65,0.35)" }}
+                      className="ml-auto block rounded-[var(--radius-sm)] bg-coral px-6 py-2.5 text-center text-[14px] font-semibold text-white transition-all hover:bg-coral-dark"
+                      style={{ boxShadow: "0 2px 12px rgba(255,94,65,0.25)" }}
                     >
                       S&apos;inscrire →
                     </a>

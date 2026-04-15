@@ -272,8 +272,8 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
           {/* Hero in collections mode */}
           <section className="hero-mesh grain-overlay overflow-hidden rounded-[30px] border border-white/45 p-5 shadow-soft-xl">
             <div className="mb-5">
-              <h1 className="max-w-[18ch] font-serif text-[38px] leading-[0.93] text-foreground text-balance">
-                Trouve la prochaine aventure qui te ressemble.
+              <h1 className="font-serif text-[38px] leading-[0.93] text-foreground">
+                Trouve la prochaine aventure<br />qui te ressemble.
               </h1>
             </div>
             <div className="mt-4 rounded-[26px] border border-white/48 bg-white/34 p-4 shadow-[var(--shadow-sm)]">
@@ -298,8 +298,8 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
       <>
         <section className="hero-mesh grain-overlay overflow-hidden rounded-[30px] border border-white/45 p-5 shadow-soft-xl">
           <div className="mb-5">
-            <h1 className="max-w-[18ch] font-serif text-[38px] leading-[0.93] text-foreground text-balance">
-              Trouve la prochaine aventure qui te ressemble.
+            <h1 className="font-serif text-[38px] leading-[0.93] text-foreground">
+              Trouve la prochaine aventure<br />qui te ressemble.
             </h1>
           </div>
           <div className="rounded-[26px] border border-white/48 bg-white/34 p-4 shadow-[var(--shadow-sm)]">
