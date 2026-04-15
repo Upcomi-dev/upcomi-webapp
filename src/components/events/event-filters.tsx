@@ -55,9 +55,18 @@ function removeValue(current: URLSearchParams, key: string, value?: string) {
 interface InlineFiltersProps {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
+  showSearch?: boolean;
+  expandAllPanels?: boolean;
+  variant?: "default" | "drawer";
 }
 
-export function InlineFilters({ searchValue = "", onSearchChange }: InlineFiltersProps) {
+export function InlineFilters({
+  searchValue = "",
+  onSearchChange,
+  showSearch = true,
+  expandAllPanels = false,
+  variant = "default",
+}: InlineFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState<PanelKey | null>(null);
@@ -84,19 +93,6 @@ export function InlineFilters({ searchValue = "", onSearchChange }: InlineFilter
       const params = new URLSearchParams(searchParams.toString());
       if (params.get(key) === value) params.delete(key);
       else params.set(key, value);
-      updateParams(params);
-    },
-    [searchParams, updateParams]
-  );
-
-  const setValue = useCallback(
-    (key: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      const nextValue = value.trim();
-
-      if (nextValue) params.set(key, nextValue);
-      else params.delete(key);
-
       updateParams(params);
     },
     [searchParams, updateParams]
@@ -155,7 +151,7 @@ export function InlineFilters({ searchValue = "", onSearchChange }: InlineFilter
     }
 
     return tags;
-  }, [dateFrom, dateTo, isActive]);
+  }, [dateFrom, dateTo, isActive, searchParams]);
 
   const counts = {
     date: Number(Boolean(dateFrom)) + Number(Boolean(dateTo)),
@@ -166,144 +162,198 @@ export function InlineFilters({ searchValue = "", onSearchChange }: InlineFilter
   };
 
   const hasFilters = activeTags.length > 0;
+  const isDrawerVariant = variant === "drawer";
+  const showDatePanel = expandAllPanels || openPanel === "date";
+  const showTypePanel = expandAllPanels || openPanel === "type";
+  const showDistancePanel = expandAllPanels || openPanel === "distance";
+  const showBikePanel = expandAllPanels || openPanel === "bike";
+  const showRegionPanel = expandAllPanels || openPanel === "region";
 
   return (
     <div className="w-full">
       <div>
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end">
-          <label className="block flex-1">
-            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
-              Recherche
-            </span>
-            <input
-              type="search"
-              value={searchValue}
-              onChange={(event) => onSearchChange?.(event.target.value)}
-              placeholder="Nom, lieu, organisateur..."
-              className="w-full rounded-[18px] border border-white/55 bg-white/70 px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-foreground/35 focus:border-coral/35 focus:bg-white"
+          {showSearch ? (
+            <label className="block flex-1">
+              <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
+                Recherche
+              </span>
+              <input
+                type="search"
+                value={searchValue}
+                onChange={(event) => onSearchChange?.(event.target.value)}
+                placeholder="Nom, lieu, organisateur..."
+                className="w-full rounded-[18px] border border-white/55 bg-white/70 px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-foreground/35 focus:border-coral/35 focus:bg-white"
+              />
+            </label>
+          ) : null}
+
+          {!isDrawerVariant ? (
+            <ActionButton
+              label={getDateButtonLabel(dateFrom, dateTo)}
+              active={showDatePanel || counts.date > 0}
+              badge={counts.date || undefined}
+              icon={CalendarDays}
+              onClick={() => {
+                if (expandAllPanels) return;
+                setOpenPanel((current) => (current === "date" ? null : "date"));
+              }}
             />
-          </label>
-
-          <ActionButton
-            label={getDateButtonLabel(dateFrom, dateTo)}
-            active={openPanel === "date" || counts.date > 0}
-            badge={counts.date || undefined}
-            icon={CalendarDays}
-            onClick={() => setOpenPanel((current) => (current === "date" ? null : "date"))}
-          />
+          ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <ActionButton
-            label="Type"
-            active={openPanel === "type" || counts.type > 0}
-            badge={counts.type || undefined}
-            onClick={() => setOpenPanel((current) => (current === "type" ? null : "type"))}
-          />
-          <ActionButton
-            label="Distance"
-            active={openPanel === "distance" || counts.distance > 0}
-            badge={counts.distance || undefined}
-            onClick={() => setOpenPanel((current) => (current === "distance" ? null : "distance"))}
-          />
-          <ActionButton
-            label="Vélo"
-            active={openPanel === "bike" || counts.bike > 0}
-            badge={counts.bike || undefined}
-            onClick={() => setOpenPanel((current) => (current === "bike" ? null : "bike"))}
-          />
-          <ActionButton
-            label="Zone"
-            active={openPanel === "region" || counts.region > 0}
-            badge={counts.region || undefined}
-            onClick={() => setOpenPanel((current) => (current === "region" ? null : "region"))}
-          />
-          <ActionButton
-            label="Mixité choisie"
-            active={searchParams.get("mint") === "true"}
-            onClick={() => setSingle("mint", "true")}
-            tooltip="Événements non-mixtes, entre femmes et minorités de genre"
-          />
-          <div className="ml-auto flex items-center gap-2">
-            {hasFilters && (
-              <button
-                onClick={clearAll}
-                className="rounded-full border border-coral/20 bg-coral/8 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-coral transition-all hover:bg-coral/14"
-              >
-                Effacer tout
-              </button>
-            )}
+        {!isDrawerVariant ? (
+          <div className="flex flex-wrap items-center gap-2.5">
+            <ActionButton
+              label="Type"
+              active={showTypePanel || counts.type > 0}
+              badge={counts.type || undefined}
+              onClick={() => {
+                if (expandAllPanels) return;
+                setOpenPanel((current) => (current === "type" ? null : "type"));
+              }}
+            />
+            <ActionButton
+              label="Distance"
+              active={showDistancePanel || counts.distance > 0}
+              badge={counts.distance || undefined}
+              onClick={() => {
+                if (expandAllPanels) return;
+                setOpenPanel((current) => (current === "distance" ? null : "distance"));
+              }}
+            />
+            <ActionButton
+              label="Vélo"
+              active={showBikePanel || counts.bike > 0}
+              badge={counts.bike || undefined}
+              onClick={() => {
+                if (expandAllPanels) return;
+                setOpenPanel((current) => (current === "bike" ? null : "bike"));
+              }}
+            />
+            <ActionButton
+              label="Zone"
+              active={showRegionPanel || counts.region > 0}
+              badge={counts.region || undefined}
+              onClick={() => {
+                if (expandAllPanels) return;
+                setOpenPanel((current) => (current === "region" ? null : "region"));
+              }}
+            />
+            <ActionButton
+              label="Mixité choisie"
+              active={searchParams.get("mint") === "true"}
+              onClick={() => setSingle("mint", "true")}
+              tooltip="Événements non-mixtes, entre femmes et minorités de genre"
+            />
+            <div className="ml-auto flex items-center gap-2">
+              {hasFilters && (
+                <button
+                  onClick={clearAll}
+                  className="rounded-full border border-coral/20 bg-coral/8 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-coral transition-all hover:bg-coral/14"
+                >
+                  Effacer tout
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        {openPanel && (
-          <div className="mt-3 rounded-[28px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.94),rgba(248,240,230,0.9))] p-4 shadow-[var(--shadow-md)]">
-            {openPanel === "date" && (
-              <FilterSection label="Période">
-                <DateRangeCalendar
-                  dateFrom={dateFrom}
-                  dateTo={dateTo}
-                  onChange={(nextFrom, nextTo) => {
-                    const params = new URLSearchParams(searchParams.toString());
+        {(expandAllPanels || openPanel) && (
+          <div className={cn(
+            "mt-3",
+            isDrawerVariant
+              ? "space-y-5"
+              : "rounded-[28px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.94),rgba(248,240,230,0.9))] p-4 shadow-[var(--shadow-md)]"
+          )}>
+            {showDatePanel && (
+              <FilterSection label={isDrawerVariant ? "Dates" : "Période"} variant={variant}>
+                {isDrawerVariant ? (
+                  <DrawerDateFields
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                    onChange={(nextFrom, nextTo) => {
+                      const params = new URLSearchParams(searchParams.toString());
 
-                    if (nextFrom) params.set("date_from", nextFrom);
-                    else params.delete("date_from");
+                      if (nextFrom) params.set("date_from", nextFrom);
+                      else params.delete("date_from");
 
-                    if (nextTo) params.set("date_to", nextTo);
-                    else params.delete("date_to");
+                      if (nextTo) params.set("date_to", nextTo);
+                      else params.delete("date_to");
 
-                    updateParams(params);
-                  }}
-                />
+                      updateParams(params);
+                    }}
+                  />
+                ) : (
+                  <DateRangeCalendar
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                    onChange={(nextFrom, nextTo) => {
+                      const params = new URLSearchParams(searchParams.toString());
+
+                      if (nextFrom) params.set("date_from", nextFrom);
+                      else params.delete("date_from");
+
+                      if (nextTo) params.set("date_to", nextTo);
+                      else params.delete("date_to");
+
+                      updateParams(params);
+                    }}
+                  />
+                )}
               </FilterSection>
             )}
 
-            {openPanel === "type" && (
-              <FilterSection label="Type d'événement">
+            {showTypePanel && (
+              <FilterSection label="Type d'événement" variant={variant}>
                 {EVENT_TYPES.map((type) => (
                   <FilterPill
                     key={type}
                     label={type}
                     active={isActive("type_event", type)}
+                    variant={variant}
                     onClick={() => toggle("type_event", type)}
                   />
                 ))}
               </FilterSection>
             )}
 
-            {openPanel === "distance" && (
-              <FilterSection label="Distance">
+            {showDistancePanel && (
+              <FilterSection label="Distance" variant={variant}>
                 {DISTANCE_OPTIONS.map((option) => (
                   <FilterPill
                     key={option.value}
                     label={option.label}
                     active={isActive("distance", option.value)}
+                    variant={variant}
                     onClick={() => toggle("distance", option.value)}
                   />
                 ))}
               </FilterSection>
             )}
 
-            {openPanel === "bike" && (
-              <FilterSection label="Type de vélo">
+            {showBikePanel && (
+              <FilterSection label="Type de vélo" variant={variant}>
                 {BIKE_TYPES.map((type) => (
                   <FilterPill
                     key={type}
                     label={type}
                     active={isActive("bike_type", type)}
+                    variant={variant}
                     onClick={() => toggle("bike_type", type)}
                   />
                 ))}
               </FilterSection>
             )}
 
-            {openPanel === "region" && (
-              <FilterSection label="Zone">
+            {showRegionPanel && (
+              <FilterSection label="Région" variant={variant}>
                 {REGION_OPTIONS.map((option) => (
                   <FilterPill
                     key={option.value}
                     label={option.label}
                     active={isActive("region", option.value)}
+                    variant={variant}
                     onClick={() => setSingle("region", option.value)}
                   />
                 ))}
@@ -313,7 +363,7 @@ export function InlineFilters({ searchValue = "", onSearchChange }: InlineFilter
           </div>
         )}
 
-        {hasFilters && (
+        {hasFilters && !isDrawerVariant && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {activeTags.map((tag) => (
               <button
@@ -383,13 +433,27 @@ function ActionButton({
 function FilterSection({
   label,
   children,
+  variant = "default",
 }: {
   label: string;
   children: React.ReactNode;
+  variant?: "default" | "drawer";
 }) {
   return (
-    <section>
-      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
+    <section
+      className={cn(
+        variant === "drawer"
+          ? "border-b border-white/45 pb-5 last:mb-0 last:border-b-0 last:pb-0"
+          : "mb-5 last:mb-0"
+      )}
+    >
+      <p
+        className={cn(
+          variant === "drawer"
+            ? "mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42"
+            : "mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42"
+        )}
+      >
         {label}
       </p>
       <div className="flex flex-wrap gap-2">{children}</div>
@@ -401,23 +465,74 @@ function FilterPill({
   label,
   active,
   onClick,
+  variant = "default",
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
+  variant?: "default" | "drawer";
 }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all",
-        active
-          ? "border-coral bg-coral text-white"
-          : "border-white/55 bg-white/65 text-foreground/70 hover:border-coral/24 hover:text-coral"
+        "rounded-full border px-3.5 py-2 text-[11px] font-semibold transition-all",
+        variant === "drawer"
+          ? active
+            ? "border-coral bg-coral text-white"
+            : "border-white/55 bg-white/65 text-foreground/70 hover:border-coral/24 hover:text-coral"
+          : active
+            ? "border-coral bg-coral text-white"
+            : "border-white/55 bg-white/65 text-foreground/70 hover:border-coral/24 hover:text-coral",
+        variant === "drawer" ? "uppercase tracking-[0.14em]" : "uppercase tracking-[0.14em]"
       )}
     >
       {label}
     </button>
+  );
+}
+
+function DrawerDateFields({
+  dateFrom,
+  dateTo,
+  onChange,
+}: {
+  dateFrom: string;
+  dateTo: string;
+  onChange: (dateFrom: string, dateTo: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <label className="flex items-center gap-2 rounded-[18px] border border-white/55 bg-white/70 px-3 py-3 text-sm text-foreground/55 shadow-[var(--shadow-xs)]">
+        <CalendarDays className="h-4 w-4" />
+        <span className="relative flex-1">
+          <span className={cn("pointer-events-none", dateFrom ? "text-foreground" : "")}>
+            {dateFrom ? formatDateLabel(dateFrom) : "Début"}
+          </span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(event) => onChange(event.target.value, dateTo)}
+            className="absolute inset-0 opacity-0"
+          />
+        </span>
+      </label>
+
+      <label className="flex items-center gap-2 rounded-[18px] border border-white/55 bg-white/70 px-3 py-3 text-sm text-foreground/55 shadow-[var(--shadow-xs)]">
+        <CalendarDays className="h-4 w-4" />
+        <span className="relative flex-1">
+          <span className={cn("pointer-events-none", dateTo ? "text-foreground" : "")}>
+            {dateTo ? formatDateLabel(dateTo) : "Fin"}
+          </span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(event) => onChange(dateFrom, event.target.value)}
+            className="absolute inset-0 opacity-0"
+          />
+        </span>
+      </label>
+    </div>
   );
 }
 

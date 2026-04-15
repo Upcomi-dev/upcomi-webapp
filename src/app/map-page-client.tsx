@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import { Filter, List, Map as MapIcon, Search } from "lucide-react";
 import type { MapEvent, CollectionWithEvents } from "@/lib/types/database";
 
 const EventMap = dynamic(
@@ -15,7 +16,8 @@ import { EventDetailPanel } from "@/components/events/event-detail-panel";
 import { SortControl } from "@/components/events/sort-control";
 import { TopNav } from "@/components/layout/top-nav";
 import { CollectionsView } from "@/components/collections/collections-view";
-import { MobileBottomSheet } from "@/components/layout/mobile-bottom-sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 /* ── Panel state machine ── */
 type PanelMode = "collections" | "filtered" | "detail";
@@ -83,6 +85,9 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   const [flyToEventId, setFlyToEventId] = useState<number | null>(null);
   const [listReferenceTime] = useState(() => Date.now());
   const [searchQuery, setSearchQuery] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileView, setMobileView] = useState<"list" | "map">("list");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const [panel, dispatch] = useReducer(panelReducer, {
     mode: hasFilters ? "filtered" : "collections",
@@ -93,16 +98,19 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
 
   const sort = searchParams.get("sort");
   const eventParam = searchParams.get("event");
+  const activeFilterCount = useMemo(() => {
+    const keys = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to", "mint"];
+    return keys.reduce((count, key) => {
+      const value = searchParams.get(key);
+      if (!value) return count;
+      return count + value.split(",").filter(Boolean).length;
+    }, 0);
+  }, [searchParams]);
+  const clearMobileFilters = useCallback(() => {
+    router.push("/", { scroll: false });
+  }, [router]);
   const activeEventTypes = useMemo(
     () => searchParams.get("type_event")?.split(",").filter(Boolean) ?? [],
-    [searchParams]
-  );
-  const activeBikeTypes = useMemo(
-    () => searchParams.get("bike_type")?.split(",").filter(Boolean) ?? [],
-    [searchParams]
-  );
-  const activeDistances = useMemo(
-    () => searchParams.get("distance")?.split(",").filter(Boolean) ?? [],
     [searchParams]
   );
   const routeEventId = useMemo(() => {
@@ -197,14 +205,46 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   }, [detailEvents, matchesSearch, sort, panel.selectedEventId]);
 
   const listEvents = useMemo(() => {
-    return initialEvents
+    const list = initialEvents
       .filter((event) => {
         if (!event.dateEvent) return false;
         if (new Date(event.dateEvent).getTime() < listReferenceTime) return false;
         return matchesSearch(event);
-      })
-      .sort((a, b) => new Date(a.dateEvent!).getTime() - new Date(b.dateEvent!).getTime());
-  }, [initialEvents, listReferenceTime, matchesSearch]);
+      });
+
+    switch (sort) {
+      case "date-desc":
+        list.sort((a, b) => new Date(b.dateEvent!).getTime() - new Date(a.dateEvent!).getTime());
+        break;
+      case "name-asc":
+        list.sort((a, b) =>
+          (a.nomEvent || "").localeCompare(b.nomEvent || "", "fr", { sensitivity: "base" })
+        );
+        break;
+      case "date-asc":
+      default:
+        list.sort((a, b) => new Date(a.dateEvent!).getTime() - new Date(b.dateEvent!).getTime());
+        break;
+    }
+
+    if (panel.selectedEventId != null) {
+      const idx = list.findIndex((event) => event.id === panel.selectedEventId);
+      if (idx > 0) {
+        const [selected] = list.splice(idx, 1);
+        list.unshift(selected);
+      }
+    }
+
+    return list;
+  }, [initialEvents, listReferenceTime, matchesSearch, panel.selectedEventId, sort]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const syncViewport = () => setIsMobile(mediaQuery.matches);
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+    return () => mediaQuery.removeEventListener("change", syncViewport);
+  }, []);
 
   // Scroll to selected card after selection changes.
   useEffect(() => {
@@ -218,14 +258,8 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
     setFlyToEventId(eventId);
   }, []);
 
-  const [sheetCollapseSignal, setSheetCollapseSignal] = useState(0);
-
   const handleMapEventSelect = useCallback((eventId: number | null) => {
     dispatch({ type: "MAP_SELECT", eventId });
-    // Clicking on empty map background collapses the mobile bottom sheet.
-    if (eventId == null) {
-      setSheetCollapseSignal((n) => n + 1);
-    }
   }, []);
 
   const handleBackFromDetail = useCallback(() => {
@@ -249,6 +283,12 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
 
     dispatch({ type: "SELECT_EVENT", eventId: routeEventId });
   }, [detailEvents, eventParam, routeEventId]);
+
+  const detailEvent =
+    panel.mode === "detail" && panel.detailEventId != null
+      ? detailEvents.find((event) => event.id === panel.detailEventId) ?? null
+      : null;
+  const showMobileCollections = !detailEvent && !searchQuery && activeFilterCount === 0 && collections.length > 0;
 
   /* ── Panel content renderer ── */
   const renderPanelContent = () => {
@@ -354,34 +394,87 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
     );
   };
 
-  return (
-    <div className="flex h-full min-h-0 flex-col md:h-screen">
-      <TopNav />
+  const renderMobileListContent = () => {
+    if (detailEvent) {
+      return (
+        <section className="rounded-[28px] border border-white/45 bg-[linear-gradient(180deg,rgba(255,251,246,0.96),rgba(248,240,230,0.88))] p-4 shadow-[var(--shadow-md)]">
+          <EventDetailPanel event={detailEvent} onBack={handleBackFromDetail} />
+        </section>
+      );
+    }
 
-      <div className="relative flex flex-1 flex-col overflow-hidden md:min-h-0 md:grid md:grid-rows-[1fr] md:grid-cols-[minmax(380px,45vw)_minmax(0,1fr)] xl:grid-cols-[minmax(420px,45vw)_minmax(0,1fr)]">
-        {/* Desktop panel */}
-        <aside className="glass-drawer hidden overflow-y-auto border-r border-white/45 md:block">
-          <div className="space-y-5 px-4 py-4 md:px-5">
-            {renderPanelContent()}
+    if (showMobileCollections) {
+      return (
+        <section className="space-y-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
+              Collections
+            </p>
+            <h1 className="font-serif text-[28px] leading-none text-foreground">
+              Trouve ta prochaine aventure
+            </h1>
           </div>
-        </aside>
 
-        {/* Map */}
-        <main className="relative h-full min-h-0 min-w-0 flex-1">
-          {/* Mobile bottom sheet */}
-          <MobileBottomSheet
+          <CollectionsView
             collections={collections}
-            events={detailEvents}
-            listEvents={listEvents}
-            hasFilters={hasFilters}
-            panelMode={panel.mode}
-            selectedEventId={panel.selectedEventId}
-            detailEventId={panel.detailEventId}
-            collapseSignal={sheetCollapseSignal}
             onEventClick={handleEventClick}
-            onBackFromDetail={handleBackFromDetail}
+            onEventHover={setHoveredEventId}
           />
+        </section>
+      );
+    }
 
+    return (
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
+              Vue liste
+            </p>
+            <h1 className="font-serif text-[28px] leading-none text-foreground">
+              {listEvents.length} événements
+            </h1>
+          </div>
+          <SortControl />
+        </div>
+
+        {listEvents.length === 0 ? (
+          <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/36 px-6 py-12 text-center">
+            <p className="text-sm font-semibold text-foreground">Aucun événement</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-foreground/45">
+              Modifie la recherche ou les filtres
+            </p>
+          </div>
+        ) : (
+          <div ref={listRef} className="space-y-3">
+            {listEvents.map((event) => (
+              <div key={event.id} data-event-id={event.id}>
+                <EventCard
+                  id={event.id}
+                  nomEvent={event.nomEvent}
+                  dateEvent={event.dateEvent}
+                  image={event.image}
+                  bike_type={event.bike_type}
+                  type_event={event.type_event}
+                  villeDepart={event.villeDepart}
+                  paysDepart={event.paysDepart}
+                  variant="list"
+                  isSelected={event.id === panel.selectedEventId}
+                  onEventClick={handleEventClick}
+                  onEventHover={setHoveredEventId}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  };
+
+  const renderMobileMapContent = () => {
+    return (
+      <section className="relative min-h-[calc(100dvh-4.5rem)] overflow-hidden bg-white/40">
+        <div className="absolute inset-0">
           <EventMap
             events={sortedEvents}
             selectedEventId={panel.selectedEventId}
@@ -392,8 +485,155 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
             onEventSelect={handleMapEventSelect}
             onToggleEventType={(eventType) => toggleMultiFilter("type_event", eventType)}
           />
-        </main>
+        </div>
+
+        {detailEvent ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10">
+            <div className="pointer-events-auto max-h-[52dvh] overflow-y-auto rounded-[24px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(248,240,230,0.94))] p-4 shadow-[var(--shadow-md)]">
+              <EventDetailPanel event={detailEvent} onBack={handleBackFromDetail} />
+            </div>
+          </div>
+        ) : null}
+      </section>
+    );
+  };
+
+  const renderMobileContent = () => {
+    const mobileSearchBar = (
+      <div className="pointer-events-none absolute inset-x-4 top-4 z-10">
+        <div className="pointer-events-auto flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[20px] border border-white/55 bg-white/88 px-4 py-3 shadow-[var(--shadow-sm)] backdrop-blur-sm">
+            <Search className="h-4 w-4 flex-none text-foreground/38" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Nom, lieu, organisateur..."
+              className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-foreground/35"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen(true)}
+            className={cn(
+              "inline-flex h-[50px] flex-none items-center gap-2 rounded-[18px] border px-4 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all backdrop-blur-sm",
+              mobileFiltersOpen || activeFilterCount > 0
+                ? "border-coral/30 bg-coral text-white shadow-[var(--shadow-sm)]"
+                : "border-white/55 bg-white/88 text-foreground/70 shadow-[var(--shadow-sm)]"
+            )}
+          >
+            <Filter className="h-4 w-4" />
+            <span>Filtres</span>
+            {activeFilterCount > 0 ? (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/18 px-1.5 text-[10px] text-white">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
       </div>
+    );
+
+    return (
+      <div className="relative px-4 py-4 md:hidden">
+        {mobileView === "map" ? (
+          <div className="relative -mx-4 -mt-4 min-h-[calc(100dvh-4.5rem)]">
+            {renderMobileMapContent()}
+            {mobileSearchBar}
+          </div>
+        ) : (
+          <div className="relative -mx-4 -mt-4 pt-[5.5rem]">
+            {mobileSearchBar}
+            <div className="space-y-4 px-4">
+              {renderMobileListContent()}
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setMobileView((current) => (current === "list" ? "map" : "list"))}
+          className="fixed bottom-5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-coral px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white shadow-[0_12px_30px_rgba(235,95,59,0.32)]"
+        >
+          {mobileView === "list" ? <MapIcon className="h-4 w-4" /> : <List className="h-4 w-4" />}
+          <span>{mobileView === "list" ? "Carte" : "Liste"}</span>
+        </button>
+
+        <Dialog open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+          <DialogContent
+            showCloseButton
+            className="top-0 right-0 left-auto h-dvh w-[min(88vw,25rem)] max-w-none translate-x-0 translate-y-0 gap-0 rounded-none rounded-l-[28px] border-y-0 border-r-0 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(248,240,230,0.94))] p-0 shadow-[var(--shadow-lg)]"
+          >
+            <DialogHeader className="border-b border-white/45 px-5 pb-4 pt-5">
+              <DialogTitle className="font-serif text-[24px] font-normal text-foreground">
+                Filtres
+              </DialogTitle>
+              <DialogDescription>
+                Affine les événements affichés sur la liste et la carte.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="overflow-y-auto px-5 py-4">
+                <InlineFilters showSearch={false} expandAllPanels variant="drawer" />
+              </div>
+
+              <div className="border-t border-white/45 bg-white/72 px-4 py-4 backdrop-blur-sm">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={clearMobileFilters}
+                    className="rounded-full border border-white/55 bg-white/80 px-5 py-3 text-[13px] font-semibold text-foreground shadow-[var(--shadow-xs)]"
+                  >
+                    Effacer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileFiltersOpen(false)}
+                    className="flex-1 rounded-full bg-coral px-5 py-3 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(235,95,59,0.28)]"
+                  >
+                    Afficher la sélection
+                  </button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col md:h-screen">
+      <TopNav />
+
+      {isMobile ? (
+        <div className="flex-1 overflow-y-auto">{renderMobileContent()}</div>
+      ) : (
+        <div className="relative flex flex-1 flex-col overflow-hidden md:min-h-0 md:grid md:grid-rows-[1fr] md:grid-cols-[minmax(380px,45vw)_minmax(0,1fr)] xl:grid-cols-[minmax(420px,45vw)_minmax(0,1fr)]">
+        {/* Desktop panel */}
+          <aside className="glass-drawer hidden overflow-y-auto border-r border-white/45 md:block">
+          <div className="space-y-5 px-4 py-4 md:px-5">
+            {renderPanelContent()}
+          </div>
+          </aside>
+
+        {/* Map */}
+          <main className="relative h-full min-h-0 min-w-0 flex-1">
+            <EventMap
+              events={sortedEvents}
+              selectedEventId={panel.selectedEventId}
+              hoveredEventId={hoveredEventId}
+              dimOtherMarkers={panel.mode === "detail"}
+              flyToEventId={flyToEventId ?? routeEventId}
+              activeEventTypes={activeEventTypes}
+              onEventSelect={handleMapEventSelect}
+              onToggleEventType={(eventType) => toggleMultiFilter("type_event", eventType)}
+            />
+          </main>
+        </div>
+      )}
     </div>
   );
 }

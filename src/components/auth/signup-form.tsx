@@ -15,8 +15,11 @@ export function SignupForm({
   redirectTo = "/",
   onSwitchToLogin,
 }: SignupFormProps) {
+  const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
+  const [emailConfirmation, setEmailConfirmation] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -24,10 +27,33 @@ export function SignupForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmailConfirmation = emailConfirmation.trim().toLowerCase();
+    const normalizedFirstName = firstName.trim();
+
+    if (normalizedEmail !== normalizedEmailConfirmation) {
+      setError("Les emails ne correspondent pas");
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      setError("Les mots de passe ne correspondent pas");
+      return;
+    }
+
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password,
+      options: {
+        data: {
+          first_name: normalizedFirstName,
+        },
+      },
+    });
 
     if (error) {
       if (error.message.includes("already registered")) {
@@ -55,6 +81,24 @@ export function SignupForm({
 
         <div>
           <label
+            htmlFor="signup-first-name"
+            className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
+          >
+            Prénom
+          </label>
+          <input
+            id="signup-first-name"
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+            className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
+            placeholder="Ton prénom"
+          />
+        </div>
+
+        <div>
+          <label
             htmlFor="signup-email"
             className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
           >
@@ -68,6 +112,24 @@ export function SignupForm({
             required
             className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
             placeholder="ton@email.com"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="signup-email-confirmation"
+            className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
+          >
+            Confirmation de l&apos;email
+          </label>
+          <input
+            id="signup-email-confirmation"
+            type="email"
+            value={emailConfirmation}
+            onChange={(e) => setEmailConfirmation(e.target.value)}
+            required
+            className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
+            placeholder="Confirme ton email"
           />
         </div>
 
@@ -87,6 +149,25 @@ export function SignupForm({
             minLength={6}
             className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
             placeholder="6 caractères minimum"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="signup-password-confirmation"
+            className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
+          >
+            Confirmation du mot de passe
+          </label>
+          <input
+            id="signup-password-confirmation"
+            type="password"
+            value={passwordConfirmation}
+            onChange={(e) => setPasswordConfirmation(e.target.value)}
+            required
+            minLength={6}
+            className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
+            placeholder="Confirme ton mot de passe"
           />
         </div>
 

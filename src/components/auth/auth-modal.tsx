@@ -28,7 +28,7 @@ export function AuthModal() {
             </span>
           </div>
           <h2 className="mt-4 font-serif text-[22px] font-bold leading-tight text-foreground">
-            {view === "login" ? "Content de te revoir" : "Rejoins la communauté"}
+            {view === "login" ? "Connexion" : "Rejoins la communauté"}
           </h2>
           <p className="mt-1.5 text-[13px] text-foreground/52">
             {view === "login"
