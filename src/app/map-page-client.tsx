@@ -1,10 +1,14 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Filter, List, Map as MapIcon, Search } from "lucide-react";
+import { Filter, List, Map as MapIcon, Search, X } from "lucide-react";
 import type { MapEvent, CollectionWithEvents } from "@/lib/types/database";
+import { makeEventSlug } from "@/lib/utils/slugify";
+import { getEventTypeColor } from "@/lib/types/database";
 
 const EventMap = dynamic(
   () => import("@/components/map/event-map").then((mod) => mod.EventMap),
@@ -31,6 +35,7 @@ type PanelState = {
 
 type PanelAction =
   | { type: "SELECT_EVENT"; eventId: number }
+  | { type: "PREVIEW_EVENT"; eventId: number }
   | { type: "MAP_SELECT"; eventId: number | null }
   | { type: "BACK_FROM_DETAIL" }
   | { type: "FILTERS_CHANGED"; hasFilters: boolean };
@@ -44,6 +49,13 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
         detailEventId: action.eventId,
         selectedEventId: action.eventId,
         previousMode: state.mode === "detail" ? state.previousMode : state.mode,
+      };
+    case "PREVIEW_EVENT":
+      return {
+        ...state,
+        mode: state.mode === "detail" ? state.previousMode : state.mode,
+        detailEventId: null,
+        selectedEventId: action.eventId,
       };
     case "MAP_SELECT":
       if (action.eventId == null) return { ...state, selectedEventId: null };
@@ -259,8 +271,18 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   }, []);
 
   const handleMapEventSelect = useCallback((eventId: number | null) => {
+    if (isMobile) {
+      if (eventId == null) {
+        dispatch({ type: "MAP_SELECT", eventId: null });
+        return;
+      }
+
+      dispatch({ type: "PREVIEW_EVENT", eventId });
+      return;
+    }
+
     dispatch({ type: "MAP_SELECT", eventId });
-  }, []);
+  }, [isMobile]);
 
   const handleBackFromDetail = useCallback(() => {
     dispatch({ type: "BACK_FROM_DETAIL" });
@@ -281,12 +303,16 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
     const eventExists = detailEvents.some((event) => event.id === routeEventId);
     if (!eventExists) return;
 
-    dispatch({ type: "SELECT_EVENT", eventId: routeEventId });
-  }, [detailEvents, eventParam, routeEventId]);
+    dispatch({ type: isMobile ? "PREVIEW_EVENT" : "SELECT_EVENT", eventId: routeEventId });
+  }, [detailEvents, eventParam, isMobile, routeEventId]);
 
   const detailEvent =
     panel.mode === "detail" && panel.detailEventId != null
       ? detailEvents.find((event) => event.id === panel.detailEventId) ?? null
+      : null;
+  const mobilePreviewEvent =
+    panel.selectedEventId != null
+      ? detailEvents.find((event) => event.id === panel.selectedEventId) ?? null
       : null;
   const showMobileCollections = !detailEvent && !searchQuery && activeFilterCount === 0 && collections.length > 0;
 
@@ -487,11 +513,12 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
           />
         </div>
 
-        {detailEvent ? (
-          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10">
-            <div className="pointer-events-auto max-h-[52dvh] overflow-y-auto rounded-[24px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(248,240,230,0.94))] p-4 shadow-[var(--shadow-md)]">
-              <EventDetailPanel event={detailEvent} onBack={handleBackFromDetail} />
-            </div>
+        {mobilePreviewEvent ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-[5.75rem] z-10">
+            <MobileEventPreviewCard
+              event={mobilePreviewEvent}
+              onClose={() => dispatch({ type: "MAP_SELECT", eventId: null })}
+            />
           </div>
         ) : null}
       </section>
@@ -634,6 +661,91 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
           </main>
         </div>
       )}
+    </div>
+  );
+}
+
+function MobileEventPreviewCard({ event, onClose }: { event: MapEvent; onClose: () => void }) {
+  const eventSlug = makeEventSlug(event.id, event.nomEvent);
+  const typeColor = getEventTypeColor(event.type_event);
+  const normalizedImage = event.image?.trim() ?? "";
+  const hasImage =
+    normalizedImage.length > 0 &&
+    normalizedImage.toLowerCase() !== "null" &&
+    normalizedImage.toLowerCase() !== "undefined";
+  const formattedDate = event.dateEvent
+    ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "short",
+      })
+    : null;
+  const name = event.nomEvent || "Événement";
+  const location = [event.villeDepart, event.paysDepart].filter(Boolean).join(", ") || "Lieu à confirmer";
+
+  return (
+    <div className="pointer-events-auto relative overflow-hidden rounded-[22px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.92),rgba(248,240,230,0.82))] shadow-[var(--shadow-md)]">
+      <Link
+        href={`/event/${eventSlug}`}
+        className="group block"
+      >
+        <div className="relative h-[158px] w-full overflow-hidden">
+          {!hasImage ? (
+            <div
+              className="flex h-full items-end justify-start p-4"
+              style={{
+                backgroundImage: `radial-gradient(circle at top left, ${typeColor}55, transparent 35%), linear-gradient(140deg, ${typeColor}, ${typeColor}bb)`,
+              }}
+            >
+              <div className="max-w-[11ch] font-serif text-[22px] font-bold leading-[1.04] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.24)]">
+                {name}
+              </div>
+            </div>
+          ) : null}
+          {hasImage ? (
+            <>
+              <Image
+                src={normalizedImage}
+                alt={name}
+                fill
+                className="object-cover transition-all duration-500 group-hover:scale-105"
+                sizes="(max-width: 767px) 100vw, 420px"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,10,0.04),rgba(20,14,10,0.34))]" />
+            </>
+          ) : null}
+
+          {event.type_event && (
+            <div className="absolute bottom-3 right-3 z-10">
+              <span
+                className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm"
+                style={{ backgroundColor: `${typeColor}de` }}
+              >
+                {event.type_event}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col justify-between p-3">
+          <h3 className="line-clamp-2 pr-14 font-serif text-[18px] leading-[1.12] text-foreground">
+            {name}
+          </h3>
+          <div className="mt-2 flex items-center gap-2 text-[11px] text-foreground/55">
+            <span>{formattedDate || "À venir"}</span>
+            <span className="text-coral/55">·</span>
+            <span className="truncate">{location}</span>
+          </div>
+        </div>
+      </Link>
+
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Fermer l'aperçu"
+        className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/70 text-foreground/75 backdrop-blur-sm transition-colors hover:bg-white"
+      >
+        <X className="h-6 w-6" />
+      </button>
     </div>
   );
 }

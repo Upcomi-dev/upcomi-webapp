@@ -8,6 +8,7 @@ import Map, {
   type MapLayerMouseEvent,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { EventCard } from "@/components/events/event-card";
 import {
   EVENT_TYPE_LEGEND,
   getEventTypeColor,
@@ -47,9 +48,6 @@ const FRANCE_VIEW = {
   zoom: 5.4,
 };
 
-/** Pixel radius of the spider circle. */
-const SPIDER_RADIUS_PX = 40;
-
 /** Bottom sheet peek height on mobile — keep markers above the sheet. */
 const MOBILE_BOTTOM_INSET = 148;
 
@@ -69,31 +67,6 @@ function coordKey(lng: number, lat: number) {
   return `${lng.toFixed(4)},${lat.toFixed(4)}`;
 }
 
-/**
- * Spread N points evenly around a center, returning lng/lat offsets.
- * The offset size is relative to the current zoom level so the spider
- * looks the same visual size regardless of zoom.
- */
-function spiderPositions(
-  centerLng: number,
-  centerLat: number,
-  count: number,
-  zoom: number
-) {
-  // Approximate degrees-per-pixel at this zoom & latitude
-  const metersPerPx = (156543.03 * Math.cos((centerLat * Math.PI) / 180)) / Math.pow(2, zoom);
-  const degreesPerPx = metersPerPx / 111320;
-  const radius = SPIDER_RADIUS_PX * degreesPerPx;
-
-  return Array.from({ length: count }, (_, i) => {
-    const angle = (2 * Math.PI * i) / count - Math.PI / 2;
-    return {
-      lng: centerLng + radius * Math.cos(angle),
-      lat: centerLat + radius * Math.sin(angle),
-    };
-  });
-}
-
 export function EventMap({
   events,
   selectedEventId,
@@ -105,12 +78,7 @@ export function EventMap({
   onToggleEventType,
 }: EventMapProps) {
   const mapRef = useRef<MapRef>(null);
-  const [spiderfied, setSpiderfied] = useState<{
-    key: string;
-    centerLng: number;
-    centerLat: number;
-    events: MapEvent[];
-  } | null>(null);
+  const [activeGroup, setActiveGroup] = useState<MapEvent[] | null>(null);
   const hasCenteredInitially = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -172,52 +140,6 @@ export function EventMap({
     };
   }, [validEvents, selectedEventId, hoveredEventId]);
 
-  // GeoJSON for spider legs + dots
-  const spiderGeojson = useMemo<GeoJSON.FeatureCollection>(() => {
-    if (!spiderfied) return { type: "FeatureCollection", features: [] };
-
-    const zoom = mapRef.current?.getZoom() ?? 6;
-    const positions = spiderPositions(
-      spiderfied.centerLng,
-      spiderfied.centerLat,
-      spiderfied.events.length,
-      zoom
-    );
-
-    const features: GeoJSON.Feature[] = [];
-
-    spiderfied.events.forEach((event, i) => {
-      const pos = positions[i];
-      // Leg line from center to spider dot
-      features.push({
-        type: "Feature",
-        geometry: {
-          type: "LineString",
-          coordinates: [
-            [spiderfied.centerLng, spiderfied.centerLat],
-            [pos.lng, pos.lat],
-          ],
-        },
-        properties: { _type: "leg" },
-      });
-      // Spider dot
-      features.push({
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: [pos.lng, pos.lat],
-        },
-        properties: {
-          _type: "dot",
-          id: event.id,
-          typeColor: getEventTypeColor(event.type_event),
-        },
-      });
-    });
-
-    return { type: "FeatureCollection", features };
-  }, [spiderfied]);
-
   const centerOnEvents = useCallback(() => {
     const map = mapRef.current;
     if (!map || validEvents.length === 0) return;
@@ -278,7 +200,7 @@ export function EventMap({
     if (validEvents.length === 0) return;
     hasFittedBounds.current = true;
     centerOnEvents();
-  }, [centerOnEvents]);
+  }, [centerOnEvents, validEvents.length]);
 
   // Fly to event when clicked from panel
   const prevFlyTo = useRef<number | null>(null);
@@ -300,18 +222,18 @@ export function EventMap({
     });
   }, [flyToEventId, validEvents, isMobile]);
 
-  // Close spider on zoom/move
+  // Close grouped cards on zoom/move
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !spiderfied) return;
-    const close = () => setSpiderfied(null);
+    if (!map || !activeGroup) return;
+    const close = () => setActiveGroup(null);
     map.on("zoom", close);
     map.on("move", close);
     return () => {
       map.off("zoom", close);
       map.off("move", close);
     };
-  }, [spiderfied]);
+  }, [activeGroup]);
 
   const handleClick = useCallback(
     (e: MapLayerMouseEvent) => {
@@ -320,23 +242,6 @@ export function EventMap({
         if (!map) return;
 
         const point = e.point;
-
-        // Check spider dots first (layer may not exist yet)
-        let spiderHits: ReturnType<typeof map.queryRenderedFeatures> = [];
-        try {
-          spiderHits = map.queryRenderedFeatures(point, { layers: ["spider-dots"] });
-        } catch {
-          // spider layer not yet rendered
-        }
-        if (spiderHits.length > 0) {
-          const eventId = spiderHits[0].properties?.id;
-          const event = validEvents.find((ev) => ev.id === eventId);
-          if (event) {
-            setSpiderfied(null);
-            onEventSelect?.(event.id);
-          }
-          return;
-        }
 
         // Check main dots
         let dotHits: ReturnType<typeof map.queryRenderedFeatures> = [];
@@ -354,28 +259,23 @@ export function EventMap({
 
           const first = group[0];
           if (group.length === 1) {
-            setSpiderfied(null);
+            setActiveGroup(null);
             onEventSelect?.(first.id);
           } else {
             onEventSelect?.(null);
-            setSpiderfied({
-              key: coordKey(first.longitude, first.latitude),
-              centerLng: first.longitude,
-              centerLat: first.latitude,
-              events: group,
-            });
+            setActiveGroup(group);
           }
           return;
         }
 
         // Clicked empty area
-        setSpiderfied(null);
+        setActiveGroup(null);
         onEventSelect?.(null);
       } catch {
         // ignore
       }
     },
-    [groupedById, validEvents, onEventSelect]
+    [groupedById, onEventSelect]
   );
 
   return (
@@ -449,32 +349,6 @@ export function EventMap({
         />
       </Source>
 
-      {/* Spider legs + dots */}
-      <Source id="spider" type="geojson" data={spiderGeojson}>
-        <Layer
-          id="spider-legs"
-          type="line"
-          filter={["==", ["get", "_type"], "leg"]}
-          paint={{
-            "line-color": "#eb5f3b",
-            "line-width": 1,
-            "line-opacity": 0.35,
-          }}
-        />
-        <Layer
-          id="spider-dots"
-          type="circle"
-          filter={["==", ["get", "_type"], "dot"]}
-          paint={{
-            "circle-color": ["coalesce", ["get", "typeColor"], "#eb5f3b"],
-            "circle-radius": 6,
-            "circle-stroke-width": 1.5,
-            "circle-stroke-color": "#ffffff",
-            "circle-opacity": 1,
-          }}
-        />
-      </Source>
-
       <div className="absolute top-4 right-4 z-10 hidden max-w-[240px] flex-col gap-2.5 md:flex">
         <MapFilterCard>
           <div className="grid gap-2">
@@ -503,6 +377,49 @@ export function EventMap({
 
       </div>
 
+      {activeGroup ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 z-10"
+          style={{ bottom: isMobile ? MOBILE_BOTTOM_INSET + 20 : 24 }}
+        >
+          <div className="pointer-events-auto mx-auto flex w-full max-w-[min(100%,960px)] flex-col gap-3 px-4">
+            <div className="flex items-center justify-between rounded-full border border-white/55 bg-[rgba(255,251,246,0.9)] px-4 py-2 text-[12px] text-foreground/70 shadow-[var(--shadow-sm)] backdrop-blur-md">
+              <span>{activeGroup.length} events au même endroit</span>
+              <button
+                type="button"
+                onClick={() => setActiveGroup(null)}
+                className="rounded-full px-2 py-1 text-foreground/55 transition-colors hover:bg-black/5 hover:text-foreground"
+                aria-label="Fermer la liste des événements"
+              >
+                Fermer
+              </button>
+            </div>
+
+            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {activeGroup.map((event) => (
+                <div
+                  key={event.id}
+                  className={
+                    selectedEventId === event.id
+                      ? "rounded-[24px] ring-2 ring-coral/45 ring-offset-2 ring-offset-transparent"
+                      : undefined
+                  }
+                >
+                  <EventCard
+                    {...event}
+                    variant="carousel"
+                    onEventClick={(eventId) => {
+                      setActiveGroup(null);
+                      onEventSelect?.(eventId);
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
     </Map>
   );
 }
@@ -514,4 +431,3 @@ function MapFilterCard({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

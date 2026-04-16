@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.0] - 2026-04-16
+
+### Features
+- feat: preview card mobile au clic sur un marqueur carte (remplace le panneau détail plein écran)
+- feat: carousel de cards pour les événements groupés au même endroit (remplace le spider/spiderfied)
+
+### Refactor
+- refactor: suppression complète du mécanisme spider (legs + dots) au profit de cards EventCard en carrousel
+
 ## [0.2.0] - 2026-04-15
 
 ### Features
