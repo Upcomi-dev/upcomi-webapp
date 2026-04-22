@@ -6,12 +6,10 @@ import { useAuth } from "@/components/auth/auth-context";
 
 interface ProfileDropdownProps {
   onClose: () => void;
-  onOpenProfileInfo: () => void;
 }
 
 export function ProfileDropdown({
   onClose,
-  onOpenProfileInfo,
 }: ProfileDropdownProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { user, ready, isAdmin, signOut } = useAuth();
@@ -114,20 +112,17 @@ export function ProfileDropdown({
               </Link>
             )}
 
-            <button
-              type="button"
-              onClick={() => {
-                onOpenProfileInfo();
-                onClose();
-              }}
+            <Link
+              href="/profil"
+              onClick={onClose}
               className="flex w-full items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-left text-[13px] text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor">
                 <path d="M20 21a8 8 0 0 0-16 0" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
-              Mes infos
-            </button>
+              Mon profil
+            </Link>
 
             <button
               type="button"

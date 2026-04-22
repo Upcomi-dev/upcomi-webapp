@@ -35,13 +35,15 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+  const currentPath = `${pathname}${request.nextUrl.search}`;
   const isFavoritesRoute = pathname.startsWith("/favorites");
   const isAdminRoute = pathname.startsWith("/admin");
+  const isProfileRoute = pathname.startsWith("/profil");
 
-  if (!user && (isFavoritesRoute || isAdminRoute)) {
+  if (!user && (isFavoritesRoute || isAdminRoute || isProfileRoute)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirect", pathname);
+    url.searchParams.set("redirect", currentPath);
     return NextResponse.redirect(url);
   }
 

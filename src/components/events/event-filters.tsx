@@ -15,7 +15,7 @@ const DISTANCE_OPTIONS = [
 ];
 const REGION_OPTIONS = [
   { label: "France", value: "France" },
-  { label: "Etranger", value: "Etranger" },
+  { label: "Étranger", value: "Etranger" },
 ];
 type PanelKey = "bike" | "type" | "distance" | "region" | "date";
 

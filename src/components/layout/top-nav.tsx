@@ -9,7 +9,6 @@ import { useFlyingHeart } from "@/components/favorites/flying-heart";
 import { AppLogo } from "@/components/layout/app-logo";
 import { FavoritesDropdown } from "@/components/favorites/favorites-dropdown";
 import { ProfileDropdown } from "@/components/layout/profile-dropdown";
-import { ProfileInfoDialog } from "@/components/layout/profile-info-dialog";
 
 export function TopNav() {
   const { openAuthModal } = useAuthModal();
@@ -19,7 +18,6 @@ export function TopNav() {
   const isAuthenticated = user !== null;
   const [showFavorites, setShowFavorites] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showProfileInfo, setShowProfileInfo] = useState(false);
 
   const toggleFavorites = useCallback(() => {
     setShowFavorites((prev) => !prev);
@@ -37,10 +35,6 @@ export function TopNav() {
 
   const closeProfile = useCallback(() => {
     setShowProfile(false);
-  }, []);
-
-  const openProfileInfo = useCallback(() => {
-    setShowProfileInfo(true);
   }, []);
 
   return (
@@ -91,7 +85,6 @@ export function TopNav() {
                 {showProfile && (
                   <ProfileDropdown
                     onClose={closeProfile}
-                    onOpenProfileInfo={openProfileInfo}
                   />
                 )}
               </div>
@@ -118,10 +111,6 @@ export function TopNav() {
         </div>
       </nav>
 
-      <ProfileInfoDialog
-        open={showProfileInfo}
-        onOpenChange={setShowProfileInfo}
-      />
     </>
   );
 }
