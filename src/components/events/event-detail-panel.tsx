@@ -66,6 +66,9 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
   const location = [event.villeDepart, event.paysDepart]
     .filter(Boolean)
     .join(", ");
+  const prices = sousEvents.filter((se) => se.prix != null).map((se) => se.prix!);
+  const minPrice = prices.length > 0 ? Math.min(...prices) : null;
+  const minPriceLabel = minPrice == null ? null : minPrice === 0 ? "Gratuit" : `À partir de ${minPrice}€`;
 
   return (
     <div className="space-y-5">
@@ -266,25 +269,20 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
 
       {/* CTA — sticky at bottom */}
       {fullEvent?.URL && (
-        <div className="sticky bottom-0 -mx-4 mt-4 border-t border-white/30 bg-white/80 px-4 py-3 backdrop-blur-md md:-mx-5 md:px-5">
-          <div className="flex w-full flex-col items-end gap-2 text-right">
-            {(() => {
-              const prices = sousEvents.filter(se => se.prix != null).map(se => se.prix!);
-              if (prices.length === 0) return null;
-              const minPrice = Math.min(...prices);
-              return (
-                <div className="ml-auto flex-shrink-0 text-right">
-                  <div className="text-[15px] font-semibold text-foreground">
-                    {minPrice === 0 ? "Gratuit" : `À partir de ${minPrice}€`}
-                  </div>
+        <div className="sticky bottom-3 z-10 mt-4">
+          <div className="glass flex items-center justify-between gap-4 rounded-[var(--radius)] p-4 shadow-[0_8px_40px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]">
+            <div className="min-w-0">
+              {minPriceLabel && (
+                <div className="text-[15px] font-semibold text-foreground">
+                  {minPriceLabel}
                 </div>
-              );
-            })()}
+              )}
+            </div>
             <a
               href={fullEvent!.URL!}
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-auto block rounded-[var(--radius-sm)] bg-coral px-6 py-2.5 text-center text-[14px] font-semibold text-white shadow-[0_2px_12px_rgba(255,94,65,0.25)] transition-all hover:bg-coral-dark hover:shadow-[0_4px_16px_rgba(255,94,65,0.35)]"
+              className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white shadow-[0_2px_12px_rgba(255,94,65,0.25)] transition-all hover:bg-coral-dark hover:shadow-[0_4px_16px_rgba(255,94,65,0.35)]"
             >
               S&apos;inscrire →
             </a>

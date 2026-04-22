@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Event } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
+import { withReturnTo } from "@/lib/utils/navigation";
 import { makeEventSlug } from "@/lib/utils/slugify";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { AppLogo } from "@/components/layout/app-logo";
@@ -71,6 +72,7 @@ export default async function FavoritesPage() {
           <div className="space-y-3">
             {events.map((event) => {
               const slug = makeEventSlug(event.id, event.nomEvent);
+              const eventHref = withReturnTo(`/event/${slug}`, "/favorites");
               const typeColor = getEventTypeColor(event.type_event);
 
               return (
@@ -79,7 +81,7 @@ export default async function FavoritesPage() {
                   className="flex gap-4 rounded-xl bg-white p-4 transition-colors hover:bg-[#f5efe6]"
                   style={{ boxShadow: "var(--shadow-sm)" }}
                 >
-                  <Link href={`/event/${slug}`} className="flex-shrink-0">
+                  <Link href={eventHref} className="flex-shrink-0">
                     {event.image ? (
                       <div className="relative h-20 w-28 overflow-hidden rounded-2xl">
                         <Image
@@ -100,7 +102,7 @@ export default async function FavoritesPage() {
                   </Link>
 
                   <div className="flex flex-1 items-start justify-between">
-                    <Link href={`/event/${slug}`} className="flex-1">
+                    <Link href={eventHref} className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         {event.type_event && (
                           <span

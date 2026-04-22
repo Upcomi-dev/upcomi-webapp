@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { User } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
@@ -8,6 +8,7 @@ import { useFavorites } from "@/components/favorites/favorites-context";
 import { useFlyingHeart } from "@/components/favorites/flying-heart";
 import { AppLogo } from "@/components/layout/app-logo";
 import { FavoritesDropdown } from "@/components/favorites/favorites-dropdown";
+import { FavoritesSheet } from "@/components/favorites/favorites-sheet";
 import { ProfileDropdown } from "@/components/layout/profile-dropdown";
 
 export function TopNav() {
@@ -16,8 +17,19 @@ export function TopNav() {
   const { count } = useFavorites();
   const flyingHeart = useFlyingHeart();
   const isAuthenticated = user !== null;
+  const [isMobile, setIsMobile] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const syncViewport = () => setIsMobile(mediaQuery.matches);
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => mediaQuery.removeEventListener("change", syncViewport);
+  }, []);
 
   const toggleFavorites = useCallback(() => {
     setShowFavorites((prev) => !prev);
@@ -65,7 +77,14 @@ export function TopNav() {
                   {count}
                 </span>
               </button>
-              {showFavorites && <FavoritesDropdown onClose={closeFavorites} />}
+              {showFavorites && !isMobile && (
+                <div className="hidden md:block">
+                  <FavoritesDropdown onClose={closeFavorites} />
+                </div>
+              )}
+              {isMobile && (
+                <FavoritesSheet open={showFavorites} onOpenChange={setShowFavorites} />
+              )}
             </div>
 
             {!ready ? (

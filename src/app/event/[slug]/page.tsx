@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
 import { parseEventSlug, makeEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 import type { Event, SousEvent } from "@/lib/types/database";
@@ -13,6 +14,7 @@ import { TopNav } from "@/components/layout/top-nav";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -46,10 +48,15 @@ export async function generateMetadata({ params }: PageProps) {
   };
 }
 
-export default async function EventPage({ params }: PageProps) {
+export default async function EventPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const query = await searchParams;
   const id = parseEventSlug(slug);
   if (!id) notFound();
+  const returnTo = sanitizeReturnTo(
+    typeof query.returnTo === "string" ? query.returnTo : null
+  ) ?? "/";
+  const backLabel = getEventBackLabel(returnTo);
 
   const supabase = await createClient();
 
@@ -96,6 +103,9 @@ export default async function EventPage({ params }: PageProps) {
     : null;
 
   const location = [event.villeDepart, event.paysDepart].filter(Boolean).join(", ");
+  const prices = sousEvents.filter((se) => se.prix != null).map((se) => se.prix!);
+  const minPrice = prices.length > 0 ? Math.min(...prices) : null;
+  const minPriceLabel = minPrice == null ? null : minPrice === 0 ? "Gratuit" : `À partir de ${minPrice}€`;
 
   // JSON-LD structured data
   const jsonLd = {
@@ -130,13 +140,17 @@ export default async function EventPage({ params }: PageProps) {
 
       <TopNav />
 
-      <div className="mx-auto w-full max-w-[920px] px-4 py-8 md:px-6">
+      <div
+        className={`mx-auto w-full max-w-[920px] px-4 pt-8 md:px-6 ${
+          event.URL ? "pb-36 lg:pb-8" : "pb-8"
+        }`}
+      >
         {/* Back */}
         <Link
-          href="/"
+          href={returnTo}
           className="glass mb-5 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] text-foreground/55 transition-all hover:bg-white/80 hover:text-coral"
         >
-          ← Retour à la carte
+          ← {backLabel}
         </Link>
 
         <div className="flex flex-col gap-8 lg:flex-row">
@@ -328,30 +342,24 @@ export default async function EventPage({ params }: PageProps) {
           {/* Right column — CTA card */}
           <div className="w-full flex-shrink-0 lg:w-[300px]">
             <div className="lg:sticky lg:top-24">
-              <div
-                className="glass rounded-[var(--radius)] p-5"
-                style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
-              >
-                {/* Register + Price */}
+              <div className="hidden space-y-4 lg:block">
                 {event.URL && (
-                  <div className="mb-2.5 flex flex-col items-end gap-2 text-right">
-                    {(() => {
-                      const prices = sousEvents.filter(se => se.prix != null).map(se => se.prix!);
-                      if (prices.length === 0) return null;
-                      const minPrice = Math.min(...prices);
-                      return (
-                        <div className="ml-auto flex-shrink-0 text-right">
-                          <div className="text-[16px] font-semibold text-foreground">
-                            {minPrice === 0 ? "Gratuit" : `À partir de ${minPrice}€`}
-                          </div>
+                  <div
+                    className="glass flex items-center justify-between gap-4 rounded-[var(--radius)] p-4"
+                    style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
+                  >
+                    <div className="min-w-0">
+                      {minPriceLabel && (
+                        <div className="text-[16px] font-semibold text-foreground">
+                          {minPriceLabel}
                         </div>
-                      );
-                    })()}
+                      )}
+                    </div>
                     <a
                       href={event.URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-auto block rounded-[var(--radius-sm)] bg-coral px-6 py-2.5 text-center text-[14px] font-semibold text-white transition-all hover:bg-coral-dark"
+                      className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white transition-all hover:bg-coral-dark"
                       style={{ boxShadow: "0 2px 12px rgba(255,94,65,0.25)" }}
                     >
                       S&apos;inscrire →
@@ -359,41 +367,74 @@ export default async function EventPage({ params }: PageProps) {
                   </div>
                 )}
 
-                {/* Separator */}
-                <div className="my-4 h-px bg-black/7" />
+                <div
+                  className="glass rounded-[var(--radius)] p-5"
+                  style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
+                >
+                  {/* Details summary */}
+                  <div className="space-y-1.5">
+                    {formattedDate && (
+                      <SummaryRow label="Dates" value={`${formattedDate}${formattedDateFin ? ` — ${formattedDateFin}` : ""}`} />
+                    )}
+                    {event.villeDepart && (
+                      <SummaryRow label="Lieu" value={event.villeDepart} />
+                    )}
+                    {event.paysDepart && (
+                      <SummaryRow label="Pays" value={event.paysDepart} />
+                    )}
+                    {event.type_event && (
+                      <SummaryRow label="Type" value={event.type_event} />
+                    )}
+                    {event.bike_type && (
+                      <SummaryRow label="Vélo" value={event.bike_type} />
+                    )}
+                  </div>
 
-                {/* Details summary */}
-                <div className="space-y-1.5">
-                  {formattedDate && (
-                    <SummaryRow label="Dates" value={`${formattedDate}${formattedDateFin ? ` — ${formattedDateFin}` : ""}`} />
-                  )}
-                  {event.villeDepart && (
-                    <SummaryRow label="Lieu" value={event.villeDepart} />
-                  )}
-                  {event.paysDepart && (
-                    <SummaryRow label="Pays" value={event.paysDepart} />
-                  )}
-                  {event.type_event && (
-                    <SummaryRow label="Type" value={event.type_event} />
-                  )}
-                  {event.bike_type && (
-                    <SummaryRow label="Vélo" value={event.bike_type} />
+                  {event.verifie && (
+                    <>
+                      <div className="my-4 h-px bg-black/7" />
+                      <p className="text-center text-xs leading-relaxed text-foreground/55">
+                        Sélectionné & vérifié par l&apos;équipe upcomi
+                      </p>
+                    </>
                   )}
                 </div>
-
-                {event.verifie && (
-                  <>
-                    <div className="my-4 h-px bg-black/7" />
-                    <p className="text-center text-xs leading-relaxed text-foreground/55">
-                      Sélectionné & vérifié par l&apos;équipe upcomi
-                    </p>
-                  </>
-                )}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {event.URL && (
+        <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+          <div
+            className="mx-auto w-full max-w-[920px] px-4 pt-3 md:px-6"
+            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+          >
+            <div
+              className="glass flex items-center justify-between gap-4 rounded-[var(--radius)] p-4"
+              style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
+            >
+              <div className="min-w-0">
+                {minPriceLabel && (
+                  <div className="text-[16px] font-semibold text-foreground">
+                    {minPriceLabel}
+                  </div>
+                )}
+              </div>
+              <a
+                href={event.URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white transition-all hover:bg-coral-dark"
+                style={{ boxShadow: "0 2px 12px rgba(255,94,65,0.25)" }}
+              >
+                S&apos;inscrire →
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

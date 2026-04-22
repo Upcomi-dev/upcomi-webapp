@@ -33,17 +33,17 @@ export function UserProfileForm({
 }: UserProfileFormProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const [form, setForm] = useState<UserProfileFormValues>(initialValues);
+  const normalizedInitialForm = useMemo(
+    () => normalizeUserProfile(initialValues),
+    [initialValues]
+  );
+  const [form, setForm] = useState<UserProfileFormValues>(normalizedInitialForm);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [isRedirectPending, startRedirectTransition] = useTransition();
 
   const normalizedForm = useMemo(() => normalizeUserProfile(form), [form]);
-  const normalizedInitialForm = useMemo(
-    () => normalizeUserProfile(initialValues),
-    [initialValues]
-  );
   const isDirty = !areSameProfile(normalizedForm, normalizedInitialForm);
 
   const togglePracticeType = (practiceType: string) => {

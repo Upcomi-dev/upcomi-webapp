@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Filter, List, Map as MapIcon, Search, X } from "lucide-react";
 import type { MapEvent, CollectionWithEvents } from "@/lib/types/database";
+import { buildRelativeUrl, withReturnTo } from "@/lib/utils/navigation";
 import { makeEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 
@@ -98,7 +99,6 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
   const [listReferenceTime] = useState(() => Date.now());
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobile, setIsMobile] = useState(false);
-  const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const [panel, dispatch] = useReducer(panelReducer, {
@@ -110,6 +110,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
 
   const sort = searchParams.get("sort");
   const eventParam = searchParams.get("event");
+  const mobileView = searchParams.get("view") === "map" ? "map" : "list";
   const activeFilterCount = useMemo(() => {
     const keys = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to", "mint"];
     return keys.reduce((count, key) => {
@@ -119,8 +120,28 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
     }, 0);
   }, [searchParams]);
   const clearMobileFilters = useCallback(() => {
-    router.push("/", { scroll: false });
-  }, [router]);
+    const params = new URLSearchParams();
+    if (mobileView === "map") {
+      params.set("view", "map");
+    }
+    const query = params.toString();
+    router.push(query ? `/?${query}` : "/", { scroll: false });
+  }, [mobileView, router]);
+  const setMobileView = useCallback(
+    (nextView: "list" | "map") => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      if (nextView === "map") {
+        params.set("view", "map");
+      } else {
+        params.delete("view");
+      }
+
+      const query = params.toString();
+      router.replace(query ? `/?${query}` : "/", { scroll: false });
+    },
+    [router, searchParams]
+  );
   const activeEventTypes = useMemo(
     () => searchParams.get("type_event")?.split(",").filter(Boolean) ?? [],
     [searchParams]
@@ -580,7 +601,7 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
 
         <button
           type="button"
-          onClick={() => setMobileView((current) => (current === "list" ? "map" : "list"))}
+          onClick={() => setMobileView(mobileView === "list" ? "map" : "list")}
           className="fixed bottom-5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-coral px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white shadow-[0_12px_30px_rgba(235,95,59,0.32)]"
         >
           {mobileView === "list" ? <MapIcon className="h-4 w-4" /> : <List className="h-4 w-4" />}
@@ -666,7 +687,12 @@ function MapPageContent({ initialEvents, collections = [], hasFilters = false }:
 }
 
 function MobileEventPreviewCard({ event, onClose }: { event: MapEvent; onClose: () => void }) {
+  const searchParams = useSearchParams();
   const eventSlug = makeEventSlug(event.id, event.nomEvent);
+  const eventHref = withReturnTo(
+    `/event/${eventSlug}`,
+    buildRelativeUrl("/", searchParams.toString())
+  );
   const typeColor = getEventTypeColor(event.type_event);
   const normalizedImage = event.image?.trim() ?? "";
   const hasImage =
@@ -685,7 +711,7 @@ function MobileEventPreviewCard({ event, onClose }: { event: MapEvent; onClose: 
   return (
     <div className="pointer-events-auto relative overflow-hidden rounded-[22px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.92),rgba(248,240,230,0.82))] shadow-[var(--shadow-md)]">
       <Link
-        href={`/event/${eventSlug}`}
+        href={eventHref}
         className="group block"
       >
         <div className="relative h-[158px] w-full overflow-hidden">

@@ -10,7 +10,11 @@
     "cwd": "."
   },
   "launch": {
-    "command": "pnpm dev -- --hostname 127.0.0.1 --port 3000",
+    "command": "pnpm exec next dev --hostname 127.0.0.1 --port 3000",
     "cwd": "."
+  },
+  "preview": {
+    "url": "http://127.0.0.1:3000/",
+    "readyPattern": "Ready in"
   }
 }

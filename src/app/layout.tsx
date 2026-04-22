@@ -34,8 +34,10 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
+  profile,
 }: Readonly<{
   children: React.ReactNode;
+  profile: React.ReactNode;
 }>) {
   const supabase = await createClient();
   const {
@@ -78,6 +80,7 @@ export default async function RootLayout({
               <div className="relative z-10 flex h-[100dvh] flex-col md:h-auto md:min-h-screen">
                 {children}
               </div>
+              {profile}
               {showOnboardingModal && initialOnboardingValues ? (
                 <OnboardingModal initialValues={initialOnboardingValues} />
               ) : null}

@@ -13,6 +13,7 @@ interface OnboardingModalProps {
 export function OnboardingModal({ initialValues }: OnboardingModalProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isProfilePage = pathname?.startsWith("/profil") ?? false;
   const currentPath = useMemo(() => {
     const query = searchParams.toString();
     if (!pathname) {
@@ -21,6 +22,10 @@ export function OnboardingModal({ initialValues }: OnboardingModalProps) {
 
     return query ? `${pathname}?${query}` : pathname;
   }, [pathname, searchParams]);
+
+  if (isProfilePage) {
+    return null;
+  }
 
   return (
     <Dialog open onOpenChange={() => undefined}>
