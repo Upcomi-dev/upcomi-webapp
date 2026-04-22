@@ -5,6 +5,7 @@ import type { Event } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
 import { makeEventSlug } from "@/lib/utils/slugify";
 import { FavouriteButton } from "@/components/events/favourite-button";
+import { AppLogo } from "@/components/layout/app-logo";
 
 export default async function FavoritesPage() {
   const supabase = await createClient();
@@ -42,12 +43,7 @@ export default async function FavoritesPage() {
         >
           ← Retour à la carte
         </Link>
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-xl bg-[#f59e42] text-[10px] font-bold text-white">U</div>
-          <span className="font-serif text-lg font-bold text-[#d47a1a]">
-            upcomi
-          </span>
-        </div>
+        <AppLogo href="/" imageClassName="h-7 w-auto" />
       </header>
 
       <div className="mx-auto max-w-3xl px-4 py-8">

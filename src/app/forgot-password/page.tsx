@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { AppLogo } from "@/components/layout/app-logo";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
@@ -57,9 +58,12 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#f9faeb]/30 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <Link href="/" className="font-serif text-3xl font-bold text-[#f59e42]">
-            upcomi
-          </Link>
+          <AppLogo
+            href="/"
+            priority
+            className="justify-center"
+            imageClassName="h-10 w-auto"
+          />
           <p className="mt-2 text-sm text-gray-600">
             Entre ton email pour réinitialiser ton mot de passe
           </p>
