@@ -35,11 +35,21 @@ export default async function RootLayout({
   const {
     data: { user: initialUser },
   } = await supabase.auth.getUser();
+  const { data: initialAdminRecord } = initialUser
+    ? await supabase
+        .from("admin_users")
+        .select("id")
+        .eq("user_id", initialUser.id)
+        .maybeSingle()
+    : { data: null };
 
   return (
     <html lang="fr" className={`${workSans.variable} ${averiaSerifLibre.variable} h-full antialiased`}>
       <body className="min-h-screen overflow-x-hidden font-sans">
-        <AuthProvider initialUser={initialUser}>
+        <AuthProvider
+          initialUser={initialUser}
+          initialIsAdmin={Boolean(initialAdminRecord)}
+        >
           <AuthModalProvider>
             <FavoritesProvider>
               <FlyingHeartProvider>

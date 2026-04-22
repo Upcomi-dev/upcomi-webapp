@@ -34,16 +34,30 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect /favorites and /admin routes
-  if (
-    !user &&
-    (request.nextUrl.pathname.startsWith("/favorites") ||
-     request.nextUrl.pathname.startsWith("/admin"))
-  ) {
+  const pathname = request.nextUrl.pathname;
+  const isFavoritesRoute = pathname.startsWith("/favorites");
+  const isAdminRoute = pathname.startsWith("/admin");
+
+  if (!user && (isFavoritesRoute || isAdminRoute)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
+  }
+
+  if (user && isAdminRoute) {
+    const { data: adminRecord } = await supabase
+      .from("admin_users")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!adminRecord) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

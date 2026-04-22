@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/auth-context";
 
@@ -13,7 +14,7 @@ export function ProfileDropdown({
   onOpenProfileInfo,
 }: ProfileDropdownProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const { user, ready, signOut } = useAuth();
+  const { user, ready, isAdmin, signOut } = useAuth();
   const [confirming, setConfirming] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -98,6 +99,21 @@ export function ProfileDropdown({
           </div>
         ) : (
           <div className="space-y-1">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={onClose}
+                className="flex w-full items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-left text-[13px] text-foreground/70 transition-colors hover:bg-foreground/5 hover:text-foreground"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor">
+                  <rect x="3" y="4" width="18" height="14" rx="2" />
+                  <path d="M7 20h10" />
+                  <path d="M12 18v2" />
+                </svg>
+                Administration
+              </Link>
+            )}
+
             <button
               type="button"
               onClick={() => {

@@ -1,0 +1,16 @@
+{
+  "shell": "/bin/zsh",
+  "setup": "if [ -f \"$DENISE_MAIN_WORKTREE_PATH/.env.local\" ] && [ ! -f .env.local ]; then cp \"$DENISE_MAIN_WORKTREE_PATH/.env.local\" .env.local; fi",
+  "install": {
+    "command": "pnpm install",
+    "cwd": "."
+  },
+  "build": {
+    "command": "pnpm build",
+    "cwd": "."
+  },
+  "launch": {
+    "command": "pnpm dev -- --hostname 127.0.0.1 --port 3000",
+    "cwd": "."
+  }
+}

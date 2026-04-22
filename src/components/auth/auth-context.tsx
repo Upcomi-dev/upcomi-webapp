@@ -16,6 +16,7 @@ interface AuthContextValue {
   user: User | null;
   /** `true` once the initial auth check has completed. */
   ready: boolean;
+  isAdmin: boolean;
   signOut: () => Promise<{ error: Error | null }>;
 }
 
@@ -29,17 +30,40 @@ interface AuthProviderProps {
    * "Connexion" and "Mon compte" on cold loads.
    */
   initialUser?: User | null;
+  initialIsAdmin?: boolean;
 }
 
-export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
+export function AuthProvider({
+  children,
+  initialUser = null,
+  initialIsAdmin = false,
+}: AuthProviderProps) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(initialUser);
   const [ready, setReady] = useState(initialUser !== null);
+  const [isAdmin, setIsAdmin] = useState(initialIsAdmin);
   const userIdRef = useRef<string | null>(initialUser?.id ?? null);
 
   useEffect(() => {
     const supabase = createClient();
     let cancelled = false;
+
+    async function syncAdminStatus(nextUser: User | null) {
+      if (!nextUser) {
+        setIsAdmin(false);
+        return;
+      }
+
+      const { data: adminRecord } = await supabase
+        .from("admin_users")
+        .select("id")
+        .eq("user_id", nextUser.id)
+        .maybeSingle();
+
+      if (!cancelled) {
+        setIsAdmin(Boolean(adminRecord));
+      }
+    }
 
     // Always validate on mount: the server-provided `initialUser` may be
     // stale (e.g. if the token was revoked between SSR and hydration).
@@ -51,6 +75,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
       userIdRef.current = fetched?.id ?? null;
       setUser(fetched ?? null);
       setReady(true);
+      await syncAdminStatus(fetched ?? null);
     })();
 
     const {
@@ -68,6 +93,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
       userIdRef.current = nextUser?.id ?? null;
       setUser(nextUser);
       setReady(true);
+      void syncAdminStatus(nextUser);
     });
 
     return () => {
@@ -88,7 +114,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ user, ready, signOut }}>
+    <AuthContext.Provider value={{ user, ready, isAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   );
