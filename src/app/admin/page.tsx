@@ -6,6 +6,10 @@ import { requireAdmin } from "@/lib/auth/assert-admin";
 import type { Event } from "@/lib/types/database";
 import { makeEventSlug } from "@/lib/utils/slugify";
 
+interface AdminPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
 interface AdminCollection {
   id: string;
   name: string;
@@ -64,7 +68,44 @@ interface AdminAppUser {
   created_at: string;
 }
 
-export default async function AdminPage() {
+const ADMIN_TABS = [
+  {
+    id: "overview",
+    label: "Vue d'ensemble",
+    eyebrow: "Pilotage",
+    title: "Dashboard admin",
+    description: "Repérez l'essentiel, puis basculez rapidement vers l'espace à gérer.",
+  },
+  {
+    id: "collections",
+    label: "Collections",
+    eyebrow: "Gestion éditoriale",
+    title: "Collections",
+    description: "Créez, activez et réorganisez les collections visibles dans l'app.",
+  },
+  {
+    id: "events",
+    label: "Événements",
+    eyebrow: "Catalogue",
+    title: "Événements",
+    description: "Administrez le catalogue complet des événements et leurs métadonnées.",
+  },
+  {
+    id: "users",
+    label: "Utilisateurs",
+    eyebrow: "Comptes",
+    title: "Utilisateurs",
+    description: "Gérez les comptes, les abonnements et les préférences applicatives.",
+  },
+] as const;
+
+type AdminTabId = (typeof ADMIN_TABS)[number]["id"];
+
+export default async function AdminPage({ searchParams }: AdminPageProps) {
+  const params = await searchParams;
+  const activeTab = parseAdminTab(params.tab);
+  const activeTabMeta = ADMIN_TABS.find((tab) => tab.id === activeTab) ?? ADMIN_TABS[0];
+
   const { supabase, user } = await requireAdmin("/admin");
   const today = new Date().toISOString().split("T")[0];
 
@@ -167,214 +208,392 @@ export default async function AdminPage() {
   }));
 
   const activeCollectionsCount = collectionsWithCounts.filter((collection) => collection.is_active).length;
+  const automaticCollectionsCount = collectionsWithCounts.filter((collection) => collection.is_auto).length;
   const verifiedEventsCount = eventsList.filter((event) => event.verified).length;
   const featuredEventsCount = eventsList.filter((event) => event.featuredOrder !== null).length;
   const pendingReviewCount = eventsList.length - verifiedEventsCount;
+  const premiumUsersCount = allUsers.filter((userRecord) => userRecord.premium).length;
+
+  const tabCounts: Record<AdminTabId, number> = {
+    overview: eventsList.length + collectionsWithCounts.length + allUsers.length,
+    collections: collectionsWithCounts.length,
+    events: eventsList.length,
+    users: allUsers.length,
+  };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <section className="rounded-[30px] border border-white/60 bg-[linear-gradient(135deg,rgba(255,255,255,0.9),rgba(250,241,231,0.84))] p-6 shadow-[var(--shadow-md)]">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/40">
-          Vue d&apos;ensemble
-        </p>
-        <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <h2 className="font-serif text-[32px] text-foreground">Dashboard admin</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/40">
+              {activeTabMeta.eyebrow}
+            </p>
+            <h2 className="mt-2 font-serif text-[32px] text-foreground">{activeTabMeta.title}</h2>
             <p className="mt-2 max-w-2xl text-[14px] leading-6 text-foreground/62">
-              Le back-office est désormais réservé aux admins, avec une vue centralisée
-              sur les événements, les profils publics et l&apos;édition des collections.
+              {activeTabMeta.description}
             </p>
           </div>
           <div className="rounded-[22px] border border-coral/15 bg-coral/6 px-4 py-3 text-[13px] text-foreground/66">
-            Le back-office permet maintenant de gérer les collections, les événements
-            et les comptes utilisateurs depuis la même interface.
+            `/admin` est désormais découpé en espaces clairs pour limiter le bruit
+            visuel et accélérer la gestion.
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            label="Événements"
-            value={eventsList.length}
-            detail={`${verifiedEventsCount} vérifiés · ${pendingReviewCount} à vérifier`}
-          />
-          <MetricCard
-            label="Collections"
-            value={collectionsWithCounts.length}
-            detail={`${activeCollectionsCount} actives sur l'app`}
-          />
-          <MetricCard
-            label="Profils publics"
-            value={publicProfilesCount}
-            detail="Profils visibles par la communauté"
-          />
-          <MetricCard
-            label="Favoris"
-            value={favouritesCount}
-            detail={`${featuredEventsCount} événements mis à la une`}
-          />
-        </div>
+        <nav
+          aria-label="Sections d'administration"
+          className="mt-6 flex flex-wrap gap-3"
+        >
+          {ADMIN_TABS.map((tab) => {
+            const isActive = tab.id === activeTab;
+
+            return (
+              <Link
+                key={tab.id}
+                href={tab.id === "overview" ? "/admin" : `/admin?tab=${tab.id}`}
+                aria-current={isActive ? "page" : undefined}
+                className={`min-w-[180px] flex-1 rounded-[22px] border px-4 py-3 transition-colors sm:min-w-[220px] ${
+                  isActive
+                    ? "border-coral/25 bg-coral/10 text-foreground"
+                    : "border-white/70 bg-white/60 text-foreground/72 hover:border-coral/18 hover:bg-white/80"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold">{tab.label}</span>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      isActive
+                        ? "bg-coral text-white"
+                        : "bg-foreground/6 text-foreground/52"
+                    }`}
+                  >
+                    {tabCounts[tab.id]}
+                  </span>
+                </div>
+                <p className="mt-2 text-[12px] leading-5 opacity-75">{tab.description}</p>
+              </Link>
+            );
+          })}
+        </nav>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
-        <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-                Events
-              </p>
-              <h3 className="mt-1 font-serif text-[24px] text-foreground">
-                Prochains événements
-              </h3>
-            </div>
-            <div className="text-right text-[12px] text-foreground/42">
-              Lecture seule
-            </div>
-          </div>
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              label="Événements"
+              value={eventsList.length}
+              detail={`${verifiedEventsCount} vérifiés · ${pendingReviewCount} à vérifier`}
+            />
+            <MetricCard
+              label="Collections"
+              value={collectionsWithCounts.length}
+              detail={`${activeCollectionsCount} actives · ${automaticCollectionsCount} automatiques`}
+            />
+            <MetricCard
+              label="Profils publics"
+              value={publicProfilesCount}
+              detail="Profils visibles par la communauté"
+            />
+            <MetricCard
+              label="Favoris"
+              value={favouritesCount}
+              detail={`${featuredEventsCount} événements mis à la une`}
+            />
+          </section>
 
-          <div className="mt-5 space-y-3">
-            {upcomingEvents.length > 0 ? (
-              upcomingEvents.map((event) => (
-                <Link
-                  key={event.id}
-                  href={`/event/${makeEventSlug(event.id, event.nomEvent)}`}
-                  className="flex flex-col gap-3 rounded-[22px] border border-foreground/8 bg-white/70 px-4 py-4 transition-colors hover:border-coral/20 hover:bg-white"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="truncate text-[15px] font-semibold text-foreground">
-                        {event.nomEvent || "Sans nom"}
-                      </p>
-                      <p className="mt-1 text-[13px] text-foreground/48">
-                        {formatAdminDate(event.dateEvent)}
-                        {event.villeDepart ? ` · ${event.villeDepart}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <StatusPill active={event.verifie}>
-                        {event.verifie ? "Vérifié" : "À vérifier"}
-                      </StatusPill>
-                      {event.AlaUne !== null && (
-                        <span className="rounded-full bg-coral/12 px-2.5 py-1 text-[11px] font-semibold text-coral">
-                          À la une
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {event.type_event && (
-                    <p className="text-[12px] uppercase tracking-[0.14em] text-foreground/36">
-                      {event.type_event}
+          <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+            <div className="space-y-6">
+              <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
+                      Accès rapide
                     </p>
+                    <h3 className="mt-1 font-serif text-[24px] text-foreground">
+                      Espaces métier
+                    </h3>
+                  </div>
+                  <div className="text-right text-[12px] text-foreground/42">
+                    Navigation par onglets
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                  <QuickAccessCard
+                    href="/admin?tab=collections"
+                    label="Collections"
+                    value={`${activeCollectionsCount}/${collectionsWithCounts.length}`}
+                    detail="actives"
+                    description="Réordonner les sélections éditoriales et gérer leur contenu."
+                  />
+                  <QuickAccessCard
+                    href="/admin?tab=events"
+                    label="Événements"
+                    value={`${pendingReviewCount}`}
+                    detail="à vérifier"
+                    description="Ouvrir le catalogue complet pour créer, éditer ou supprimer."
+                  />
+                  <QuickAccessCard
+                    href="/admin?tab=users"
+                    label="Utilisateurs"
+                    value={`${premiumUsersCount}`}
+                    detail="premium"
+                    description="Retrouver les comptes applicatifs et gérer les abonnements."
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
+                      Events
+                    </p>
+                    <h3 className="mt-1 font-serif text-[24px] text-foreground">
+                      Prochains événements
+                    </h3>
+                  </div>
+                  <Link
+                    href="/admin?tab=events"
+                    className="text-[12px] font-semibold text-coral transition-colors hover:text-coral-dark"
+                  >
+                    Ouvrir le catalogue
+                  </Link>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  {upcomingEvents.length > 0 ? (
+                    upcomingEvents.map((event) => (
+                      <Link
+                        key={event.id}
+                        href={`/event/${makeEventSlug(event.id, event.nomEvent)}`}
+                        className="flex flex-col gap-3 rounded-[22px] border border-foreground/8 bg-white/70 px-4 py-4 transition-colors hover:border-coral/20 hover:bg-white"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="truncate text-[15px] font-semibold text-foreground">
+                              {event.nomEvent || "Sans nom"}
+                            </p>
+                            <p className="mt-1 text-[13px] text-foreground/48">
+                              {formatAdminDate(event.dateEvent)}
+                              {event.villeDepart ? ` · ${event.villeDepart}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <StatusPill active={event.verifie}>
+                              {event.verifie ? "Vérifié" : "À vérifier"}
+                            </StatusPill>
+                            {event.AlaUne !== null && (
+                              <span className="rounded-full bg-coral/12 px-2.5 py-1 text-[11px] font-semibold text-coral">
+                                À la une
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {event.type_event && (
+                          <p className="text-[12px] uppercase tracking-[0.14em] text-foreground/36">
+                            {event.type_event}
+                          </p>
+                        )}
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/50 px-6 py-12 text-center">
+                      <p className="font-medium text-foreground">Aucun événement à venir</p>
+                      <p className="mt-1 text-sm text-foreground/45">
+                        Les prochains événements apparaîtront ici.
+                      </p>
+                    </div>
                   )}
-                </Link>
-              ))
-            ) : (
-              <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/50 px-6 py-12 text-center">
-                <p className="font-medium text-foreground">Aucun événement à venir</p>
-                <p className="mt-1 text-sm text-foreground/45">
-                  Les prochains événements apparaîtront ici.
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
+                      Users
+                    </p>
+                    <h3 className="mt-1 font-serif text-[24px] text-foreground">
+                      Profils récemment mis à jour
+                    </h3>
+                  </div>
+                  <Link
+                    href="/admin?tab=users"
+                    className="text-[12px] font-semibold text-coral transition-colors hover:text-coral-dark"
+                  >
+                    Ouvrir les comptes
+                  </Link>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  {recentUsers.length > 0 ? (
+                    recentUsers.map((recentUser) => (
+                      <div
+                        key={recentUser.uid}
+                        className="rounded-[20px] border border-foreground/8 bg-white/68 px-4 py-3"
+                      >
+                        <p className="text-[14px] font-semibold text-foreground">
+                          {formatAdminUserName(recentUser)}
+                        </p>
+                        <p className="mt-1 text-[12px] text-foreground/45">
+                          Mis à jour le {formatAdminDate(recentUser.updated_at)}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-[22px] border border-dashed border-foreground/12 bg-white/50 px-4 py-6 text-sm text-foreground/45">
+                      Aucun profil public accessible pour le moment.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(248,239,228,0.92))] p-6 shadow-[var(--shadow-sm)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
+                  Sécurité
+                </p>
+                <h3 className="mt-1 font-serif text-[24px] text-foreground">Accès verrouillé</h3>
+                <p className="mt-3 text-[14px] leading-6 text-foreground/62">
+                  `/admin` est contrôlé à deux niveaux: `proxy.ts` redirige les non-admins
+                  hors du back-office, et le layout serveur bloque aussi tout rendu côté
+                  App Router.
                 </p>
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-              Users
-            </p>
-            <h3 className="mt-1 font-serif text-[24px] text-foreground">
-              Profils récemment mis à jour
-            </h3>
-
-            <div className="mt-5 space-y-3">
-              {recentUsers.length > 0 ? (
-                recentUsers.map((user) => (
-                  <div
-                    key={user.uid}
-                    className="rounded-[20px] border border-foreground/8 bg-white/68 px-4 py-3"
-                  >
-                    <p className="text-[14px] font-semibold text-foreground">
-                      {formatAdminUserName(user)}
-                    </p>
-                    <p className="mt-1 text-[12px] text-foreground/45">
-                      Mis à jour le {formatAdminDate(user.updated_at)}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-[22px] border border-dashed border-foreground/12 bg-white/50 px-4 py-6 text-sm text-foreground/45">
-                  Aucun profil public accessible pour le moment.
-                </div>
-              )}
             </div>
-          </div>
-
-          <div className="rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(248,239,228,0.92))] p-6 shadow-[var(--shadow-sm)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-              Sécurité
-            </p>
-            <h3 className="mt-1 font-serif text-[24px] text-foreground">
-              Accès verrouillé
-            </h3>
-            <p className="mt-3 text-[14px] leading-6 text-foreground/62">
-              `/admin` est maintenant contrôlé à deux niveaux:
-              `proxy.ts` redirige les non-admins hors du back-office, et le layout
-              serveur bloque aussi tout rendu côté App Router.
-            </p>
-          </div>
+          </section>
         </div>
-      </section>
+      )}
 
-      <section className="space-y-4">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-              Gestion éditoriale
-            </p>
-            <h3 className="mt-1 font-serif text-[26px] text-foreground">Collections</h3>
-          </div>
-          <p className="max-w-xl text-[14px] leading-6 text-foreground/58">
-            Création, activation, réordonnancement et composition des collections
-            visibles sur la home.
-          </p>
-        </div>
+      {activeTab === "collections" && (
+        <AdminSectionShell
+          eyebrow="Gestion éditoriale"
+          title="Collections"
+          description="Retrouvez ici toute la gestion des collections sans être noyé par les événements et les comptes."
+          stats={[
+            { label: "Total", value: collectionsWithCounts.length.toString() },
+            { label: "Actives", value: activeCollectionsCount.toString() },
+            { label: "Automatiques", value: automaticCollectionsCount.toString() },
+          ]}
+        >
+          <AdminCollectionsClient collections={collectionsWithCounts} events={eventsList} />
+        </AdminSectionShell>
+      )}
 
-        <AdminCollectionsClient collections={collectionsWithCounts} events={eventsList} />
-      </section>
+      {activeTab === "events" && (
+        <AdminSectionShell
+          eyebrow="Catalogue"
+          title="Événements"
+          description="Concentrez-vous sur le catalogue complet, la modération et l'édition des fiches."
+          stats={[
+            { label: "Total", value: eventsList.length.toString() },
+            { label: "Vérifiés", value: verifiedEventsCount.toString() },
+            { label: "À vérifier", value: pendingReviewCount.toString() },
+          ]}
+        >
+          <AdminEventsClient events={allEvents} organisateurs={organisateurs} />
+        </AdminSectionShell>
+      )}
 
-      <section className="space-y-4">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-              Catalogue
-            </p>
-            <h3 className="mt-1 font-serif text-[26px] text-foreground">Événements</h3>
-          </div>
-          <p className="max-w-xl text-[14px] leading-6 text-foreground/58">
-            Administrez le catalogue complet des événements et leurs métadonnées.
-          </p>
-        </div>
-
-        <AdminEventsClient events={allEvents} organisateurs={organisateurs} />
-      </section>
-
-      <section className="space-y-4">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-              Comptes
-            </p>
-            <h3 className="mt-1 font-serif text-[26px] text-foreground">Utilisateurs</h3>
-          </div>
-          <p className="max-w-xl text-[14px] leading-6 text-foreground/58">
-            Gérez les comptes applicatifs, leurs abonnements et leurs préférences.
-          </p>
-        </div>
-
-        <AdminUsersClient users={allUsers} currentAdminId={user.id} />
-      </section>
+      {activeTab === "users" && (
+        <AdminSectionShell
+          eyebrow="Comptes"
+          title="Utilisateurs"
+          description="Travaillez sur les comptes et abonnements dans un espace dédié, sans interférer avec le reste du back-office."
+          stats={[
+            { label: "Comptes", value: allUsers.length.toString() },
+            { label: "Premium", value: premiumUsersCount.toString() },
+            { label: "Profils publics", value: publicProfilesCount.toString() },
+          ]}
+        >
+          <AdminUsersClient users={allUsers} currentAdminId={user.id} />
+        </AdminSectionShell>
+      )}
     </div>
+  );
+}
+
+function AdminSectionShell({
+  eyebrow,
+  title,
+  description,
+  stats,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  stats: Array<{ label: string; value: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="rounded-[28px] border border-white/60 bg-white/70 p-6 shadow-[var(--shadow-sm)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
+              {eyebrow}
+            </p>
+            <h3 className="mt-1 font-serif text-[28px] text-foreground">{title}</h3>
+            <p className="mt-2 max-w-2xl text-[14px] leading-6 text-foreground/58">
+              {description}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {stats.map((stat) => (
+              <div
+                key={stat.label}
+                className="min-w-[112px] rounded-[20px] border border-foreground/8 bg-white/72 px-4 py-3"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/34">
+                  {stat.label}
+                </p>
+                <p className="mt-2 font-serif text-[24px] leading-none text-foreground">
+                  {stat.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {children}
+    </section>
+  );
+}
+
+function QuickAccessCard({
+  href,
+  label,
+  value,
+  detail,
+  description,
+}: {
+  href: string;
+  label: string;
+  value: string;
+  detail: string;
+  description: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-[24px] border border-foreground/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,239,228,0.7))] p-5 transition-colors hover:border-coral/18 hover:bg-white"
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/36">
+        {label}
+      </p>
+      <div className="mt-3 flex items-end justify-between gap-4">
+        <p className="font-serif text-[34px] leading-none text-foreground">{value}</p>
+        <span className="rounded-full bg-coral/10 px-2.5 py-1 text-[11px] font-semibold text-coral">
+          {detail}
+        </span>
+      </div>
+      <p className="mt-3 text-[13px] leading-5 text-foreground/54">{description}</p>
+    </Link>
   );
 }
 
@@ -416,6 +635,16 @@ function StatusPill({
       {children}
     </span>
   );
+}
+
+function parseAdminTab(value: string | string[] | undefined): AdminTabId {
+  const normalized = Array.isArray(value) ? value[0] : value;
+
+  if (normalized === "collections" || normalized === "events" || normalized === "users") {
+    return normalized;
+  }
+
+  return "overview";
 }
 
 function formatAdminDate(value: string | null) {
