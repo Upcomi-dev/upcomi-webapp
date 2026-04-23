@@ -75,6 +75,24 @@ export interface FavouriteEvent {
   event: number;
 }
 
+export type FeedbackKind = "idea" | "bug" | "feedback";
+
+export type FeedbackStatus = "new" | "reviewing" | "closed";
+
+export interface FeedbackEntry {
+  id: string;
+  user_id: string | null;
+  kind: FeedbackKind;
+  status: FeedbackStatus;
+  subject: string;
+  message: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  page_path: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Collection {
   id: string;
   name: string;

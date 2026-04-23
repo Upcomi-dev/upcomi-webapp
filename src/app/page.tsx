@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buildEventTypeOptions } from "@/lib/events/filter-options";
 import type { MapEvent, CollectionWithEvents } from "@/lib/types/database";
 import { MapPageClient } from "./map-page-client";
 
@@ -22,6 +23,7 @@ interface HomePageProps {
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const supabase = await createClient();
+  const today = new Date().toISOString().split("T")[0];
 
   // Detect active filters
   const hasFilters = FILTER_KEYS.some((key) => {
@@ -37,7 +39,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     .not("latitude", "is", null)
     .not("longitude", "is", null)
     .eq("verifie", true)
-    .gte("dateEvent", new Date().toISOString().split("T")[0]);
+    .gte("dateEvent", today);
 
   const bikeTypes = (typeof params.bike_type === "string" ? params.bike_type : "")
     .split(",")
@@ -85,7 +87,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     query = query.eq("mint", true);
   }
 
-  const { data: events, error } = await query;
+  const [
+    { data: events, error },
+    { data: eventTypeRows },
+  ] = await Promise.all([
+    query,
+    supabase
+      .from("events")
+      .select("type_event")
+      .not("type_event", "is", null)
+      .not("latitude", "is", null)
+      .not("longitude", "is", null)
+      .eq("verifie", true)
+      .gte("dateEvent", today),
+  ]);
 
   if (error) {
     return (
@@ -101,6 +116,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   const allEvents = (events as MapEvent[]) || [];
+  const eventTypeOptions = buildEventTypeOptions(
+    (eventTypeRows || []).map((row) => row.type_event)
+  );
 
   // Fetch collections only when no filters are active
   let collections: CollectionWithEvents[] = [];
@@ -108,7 +126,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     collections = await fetchCollections(supabase, allEvents);
   }
 
-  return <MapPageClient initialEvents={allEvents} collections={collections} hasFilters={hasFilters} />;
+  return (
+    <MapPageClient
+      initialEvents={allEvents}
+      collections={collections}
+      hasFilters={hasFilters}
+      eventTypeOptions={eventTypeOptions}
+    />
+  );
 }
 
 async function fetchCollections(

@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   if (!event) return { title: "Événement non trouvé" };
 
-  const title = `${event.nomEvent || "Événement"} — Upcomi`;
+  const title = event.nomEvent || "Événement";
   const description =
     event.description?.substring(0, 160) ||
     `${event.nomEvent} à ${event.villeDepart || "France"}`;
@@ -190,11 +190,6 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 {event.bike_type && (
                   <span className="rounded-full px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm" style={{ backgroundColor: `${typeColor}dd` }}>
                     {event.bike_type}
-                  </span>
-                )}
-                {event.verifie && (
-                  <span className="glass-dark rounded-full px-3 py-1 text-xs font-semibold text-white">
-                    Sélection upcomi
                   </span>
                 )}
               </div>
@@ -385,19 +380,10 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                     {event.type_event && (
                       <SummaryRow label="Type" value={event.type_event} />
                     )}
-                    {event.bike_type && (
-                      <SummaryRow label="Vélo" value={event.bike_type} />
-                    )}
-                  </div>
-
-                  {event.verifie && (
-                    <>
-                      <div className="my-4 h-px bg-black/7" />
-                      <p className="text-center text-xs leading-relaxed text-foreground/55">
-                        Sélectionné & vérifié par l&apos;équipe upcomi
-                      </p>
-                    </>
+                  {event.bike_type && (
+                    <SummaryRow label="Vélo" value={event.bike_type} />
                   )}
+                </div>
                 </div>
               </div>
             </div>
@@ -453,14 +439,19 @@ async function fetchOrganizerEvents(
   organizer: string,
   currentEventId: number
 ) {
+  const today = getTodayDateKey();
   const { data } = await supabase
     .from("events")
     .select("id, nomEvent, dateEvent, image, bike_type, type_event, villeDepart, paysDepart")
     .eq("organisateur", organizer)
     .neq("id", currentEventId)
-    .not("dateEvent", "is", null)
+    .or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`)
     .order("dateEvent", { ascending: true })
     .limit(6);
 
   return data ?? [];
+}
+
+function getTodayDateKey() {
+  return new Date().toISOString().split("T")[0];
 }

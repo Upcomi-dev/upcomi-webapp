@@ -50,6 +50,8 @@ const FRANCE_VIEW = {
 
 /** Bottom sheet peek height on mobile — keep markers above the sheet. */
 const MOBILE_BOTTOM_INSET = 148;
+const MOBILE_MARKER_TOUCH_RADIUS = 22;
+const DESKTOP_MARKER_TOUCH_RADIUS = 10;
 
 interface EventMapProps {
   events: MapEvent[];
@@ -57,6 +59,7 @@ interface EventMapProps {
   hoveredEventId?: number | null;
   dimOtherMarkers?: boolean;
   flyToEventId?: number | null;
+  isVisible?: boolean;
   activeEventTypes?: string[];
   onEventSelect?: (eventId: number | null) => void;
   onToggleEventType?: (eventType: string) => void;
@@ -73,6 +76,7 @@ export function EventMap({
   hoveredEventId,
   dimOtherMarkers = false,
   flyToEventId,
+  isVisible = true,
   activeEventTypes = [],
   onEventSelect,
   onToggleEventType,
@@ -90,12 +94,16 @@ export function EventMap({
     return () => mq.removeEventListener("change", sync);
   }, []);
 
-  const validEvents = events.filter(
-    (event) =>
-      Number.isFinite(event.longitude) &&
-      Number.isFinite(event.latitude) &&
-      Math.abs(event.longitude) <= 180 &&
-      Math.abs(event.latitude) <= 90
+  const validEvents = useMemo(
+    () =>
+      events.filter(
+        (event) =>
+          Number.isFinite(event.longitude) &&
+          Number.isFinite(event.latitude) &&
+          Math.abs(event.longitude) <= 180 &&
+          Math.abs(event.latitude) <= 90
+      ),
+    [events]
   );
 
   // Group events sharing coordinates, indexed by the first event's id
@@ -197,14 +205,31 @@ export function EventMap({
   const hasFittedBounds = useRef(false);
   useEffect(() => {
     if (hasFittedBounds.current) return;
+    if (!isVisible) return;
     if (validEvents.length === 0) return;
     hasFittedBounds.current = true;
     centerOnEvents();
-  }, [centerOnEvents, validEvents.length]);
+  }, [centerOnEvents, isVisible, validEvents.length]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const map = mapRef.current;
+    if (!map) return;
+
+    window.requestAnimationFrame(() => {
+      map.resize();
+
+      if (validEvents.length > 0) {
+        centerOnEvents();
+      }
+    });
+  }, [centerOnEvents, isVisible, validEvents.length]);
 
   // Fly to event when clicked from panel
   const prevFlyTo = useRef<number | null>(null);
   useEffect(() => {
+    if (!isVisible) return;
     if (flyToEventId == null) return;
     if (flyToEventId === prevFlyTo.current) return;
     prevFlyTo.current = flyToEventId;
@@ -220,7 +245,7 @@ export function EventMap({
         ? { top: 0, right: 0, bottom: MOBILE_BOTTOM_INSET, left: 0 }
         : undefined,
     });
-  }, [flyToEventId, validEvents, isMobile]);
+  }, [flyToEventId, isMobile, isVisible, validEvents]);
 
   // Close grouped cards on zoom/move
   useEffect(() => {
@@ -246,7 +271,9 @@ export function EventMap({
         // Check main dots
         let dotHits: ReturnType<typeof map.queryRenderedFeatures> = [];
         try {
-          dotHits = map.queryRenderedFeatures(point, { layers: ["event-dots"] });
+          dotHits = map.queryRenderedFeatures(point, {
+            layers: ["event-dots-hitbox", "event-dots"],
+          });
         } catch {
           // layer not ready
         }
@@ -296,6 +323,23 @@ export function EventMap({
     >
       {/* Main dots */}
       <Source id="events" type="geojson" data={geojson}>
+        <Layer
+          id="event-dots-hitbox"
+          type="circle"
+          paint={{
+            "circle-color": "#000000",
+            "circle-radius": [
+              "case",
+              ["==", ["get", "isSelected"], 1],
+              isMobile ? MOBILE_MARKER_TOUCH_RADIUS + 4 : DESKTOP_MARKER_TOUCH_RADIUS + 2,
+              ["==", ["get", "isHovered"], 1],
+              isMobile ? MOBILE_MARKER_TOUCH_RADIUS + 2 : DESKTOP_MARKER_TOUCH_RADIUS + 1,
+              isMobile ? MOBILE_MARKER_TOUCH_RADIUS : DESKTOP_MARKER_TOUCH_RADIUS,
+            ],
+            "circle-opacity": 0.001,
+            "circle-stroke-width": 0,
+          }}
+        />
         {/* Hovered dot highlight ring */}
         <Layer
           id="event-dots-hover"
@@ -383,18 +427,6 @@ export function EventMap({
           style={{ bottom: isMobile ? MOBILE_BOTTOM_INSET + 20 : 24 }}
         >
           <div className="pointer-events-auto mx-auto flex w-full max-w-[min(100%,960px)] flex-col gap-3 px-4">
-            <div className="flex items-center justify-between rounded-full border border-white/55 bg-[rgba(255,251,246,0.9)] px-4 py-2 text-[12px] text-foreground/70 shadow-[var(--shadow-sm)] backdrop-blur-md">
-              <span>{activeGroup.length} events au même endroit</span>
-              <button
-                type="button"
-                onClick={() => setActiveGroup(null)}
-                className="rounded-full px-2 py-1 text-foreground/55 transition-colors hover:bg-black/5 hover:text-foreground"
-                aria-label="Fermer la liste des événements"
-              >
-                Fermer
-              </button>
-            </div>
-
             <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {activeGroup.map((event) => (
                 <div

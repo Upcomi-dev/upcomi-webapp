@@ -27,9 +27,19 @@ const averiaSerifLibre = Averia_Serif_Libre({
 });
 
 export const metadata: Metadata = {
-  title: "Upcomi — Trouve ton prochain événement vélo",
+  title: {
+    default: "Upcomi",
+    template: "%s | Upcomi",
+  },
+  applicationName: "Upcomi",
   description:
     "Découvre les courses, aventures, brevets et social rides vélo en France et à l'étranger.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Upcomi",
+    statusBarStyle: "default",
+  },
 };
 
 export default async function RootLayout({

@@ -7,6 +7,7 @@ import { withReturnTo } from "@/lib/utils/navigation";
 import { makeEventSlug } from "@/lib/utils/slugify";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { AppLogo } from "@/components/layout/app-logo";
+import { getVisibleFavoriteEvents } from "@/lib/utils/favorites";
 
 export default async function FavoritesPage() {
   const supabase = await createClient();
@@ -32,7 +33,7 @@ export default async function FavoritesPage() {
       .from("events")
       .select("*")
       .in("id", eventIds);
-    events = (data as Event[]) || [];
+    events = getVisibleFavoriteEvents((data as Event[]) || []);
   }
 
   return (
@@ -56,10 +57,10 @@ export default async function FavoritesPage() {
           <div className="py-16 text-center">
             <div className="mb-4 text-4xl text-[#f59e42]/40">♡</div>
             <p className="text-lg font-semibold text-[#2c1e14]">
-              Pas encore de favoris
+              Aucun favori à venir
             </p>
             <p className="mt-1 text-sm text-[#7C7C7C]">
-              Explore la carte et ajoute des événements à tes favoris
+              Seuls les événements futurs sont affichés sur cette page
             </p>
             <Link
               href="/"

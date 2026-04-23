@@ -3,10 +3,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { CalendarDays, Info } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { buildEventTypeOptions, DEFAULT_EVENT_TYPES } from "@/lib/events/filter-options";
 import { cn } from "@/lib/utils";
 
 const BIKE_TYPES = ["Gravel", "VTT", "Route"];
-const EVENT_TYPES = ["Course", "Aventure", "Brevet", "Social Ride", "Evènement"];
 const DISTANCE_OPTIONS = [
   { label: "< 200 km", value: "Moins de 200km" },
   { label: "200-500 km", value: "Entre 200 et 500km" },
@@ -58,6 +58,7 @@ interface InlineFiltersProps {
   showSearch?: boolean;
   expandAllPanels?: boolean;
   variant?: "default" | "drawer";
+  eventTypeOptions?: readonly string[];
 }
 
 export function InlineFilters({
@@ -66,12 +67,21 @@ export function InlineFilters({
   showSearch = true,
   expandAllPanels = false,
   variant = "default",
+  eventTypeOptions = DEFAULT_EVENT_TYPES,
 }: InlineFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [openPanel, setOpenPanel] = useState<PanelKey | null>(null);
   const dateFrom = searchParams.get("date_from") ?? "";
   const dateTo = searchParams.get("date_to") ?? "";
+  const selectedEventTypes = useMemo(
+    () => searchParams.get("type_event")?.split(",").filter(Boolean) ?? [],
+    [searchParams]
+  );
+  const resolvedEventTypes = useMemo(
+    () => buildEventTypeOptions([...eventTypeOptions, ...selectedEventTypes]),
+    [eventTypeOptions, selectedEventTypes]
+  );
 
   const updateParams = useCallback(
     (params: URLSearchParams) => {
@@ -128,7 +138,7 @@ export function InlineFilters({
       }
     }
 
-    for (const type of EVENT_TYPES) {
+    for (const type of resolvedEventTypes) {
       if (isActive("type_event", type)) {
         tags.push({ key: "type_event", value: type, label: type });
       }
@@ -151,7 +161,7 @@ export function InlineFilters({
     }
 
     return tags;
-  }, [dateFrom, dateTo, isActive, searchParams]);
+  }, [dateFrom, dateTo, isActive, resolvedEventTypes, searchParams]);
 
   const counts = {
     date: Number(Boolean(dateFrom)) + Number(Boolean(dateTo)),
@@ -306,7 +316,7 @@ export function InlineFilters({
 
             {showTypePanel && (
               <FilterSection label="Type d'événement" variant={variant}>
-                {EVENT_TYPES.map((type) => (
+                {resolvedEventTypes.map((type) => (
                   <FilterPill
                     key={type}
                     label={type}

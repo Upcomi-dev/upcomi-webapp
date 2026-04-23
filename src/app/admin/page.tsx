@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { AdminEventsClient } from "@/components/admin/admin-events-client";
 import { AdminCollectionsClient } from "@/components/admin/admin-collections-client";
+import { AdminFeedbackClient } from "@/components/admin/admin-feedback-client";
 import { AdminUsersClient } from "@/components/admin/admin-users-client";
 import { requireAdmin } from "@/lib/auth/assert-admin";
-import type { Event } from "@/lib/types/database";
+import type { Event, FeedbackEntry } from "@/lib/types/database";
 import { makeEventSlug } from "@/lib/utils/slugify";
 
 interface AdminPageProps {
@@ -97,6 +98,13 @@ const ADMIN_TABS = [
     title: "Utilisateurs",
     description: "Gérez les comptes, les abonnements et les préférences applicatives.",
   },
+  {
+    id: "feedback",
+    label: "Retours",
+    eyebrow: "Produit",
+    title: "Retours utilisateurs",
+    description: "Consultez les idées, bugs et feedbacks remontés directement depuis l'app.",
+  },
 ] as const;
 
 type AdminTabId = (typeof ADMIN_TABS)[number]["id"];
@@ -143,6 +151,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const favouritesCountPromise = supabase
     .from("favourite_events")
     .select("id", { count: "exact", head: true });
+  const feedbackEntriesPromise = supabase
+    .from("feedback_entries")
+    .select("*")
+    .order("created_at", { ascending: false });
 
   const [
     collectionsResult,
@@ -153,6 +165,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     allUsersResult,
     organisateursResult,
     favouritesCountResult,
+    feedbackEntriesResult,
   ] = await Promise.all([
     collectionsPromise,
     allEventsPromise,
@@ -162,6 +175,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     allUsersPromise,
     organisateursPromise,
     favouritesCountPromise,
+    feedbackEntriesPromise,
   ]);
 
   const collections = collectionsResult.data ?? [];
@@ -182,6 +196,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .map((row) => row.nom_orga as string | null)
     .filter((value): value is string => Boolean(value));
   const favouritesCount = favouritesCountResult.count ?? 0;
+  const feedbackEntries = (feedbackEntriesResult.data ?? []) as FeedbackEntry[];
 
   const collectionsWithCounts: AdminCollection[] = collections.map((c) => ({
     id: c.id as string,
@@ -213,12 +228,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const featuredEventsCount = eventsList.filter((event) => event.featuredOrder !== null).length;
   const pendingReviewCount = eventsList.length - verifiedEventsCount;
   const premiumUsersCount = allUsers.filter((userRecord) => userRecord.premium).length;
+  const newFeedbackCount = feedbackEntries.filter((entry) => entry.status === "new").length;
+  const reviewingFeedbackCount = feedbackEntries.filter((entry) => entry.status === "reviewing").length;
+  const closedFeedbackCount = feedbackEntries.filter((entry) => entry.status === "closed").length;
 
   const tabCounts: Record<AdminTabId, number> = {
-    overview: eventsList.length + collectionsWithCounts.length + allUsers.length,
+    overview: eventsList.length + collectionsWithCounts.length + allUsers.length + feedbackEntries.length,
     collections: collectionsWithCounts.length,
     events: eventsList.length,
     users: allUsers.length,
+    feedback: feedbackEntries.length,
   };
 
   return (
@@ -279,7 +298,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
       {activeTab === "overview" && (
         <div className="space-y-6">
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <MetricCard
               label="Événements"
               value={eventsList.length}
@@ -300,6 +319,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               value={favouritesCount}
               detail={`${featuredEventsCount} événements mis à la une`}
             />
+            <MetricCard
+              label="Retours"
+              value={feedbackEntries.length}
+              detail={`${newFeedbackCount} nouveaux · ${reviewingFeedbackCount} en cours`}
+            />
           </section>
 
           <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
@@ -319,7 +343,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <QuickAccessCard
                     href="/admin?tab=collections"
                     label="Collections"
@@ -340,6 +364,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     value={`${premiumUsersCount}`}
                     detail="premium"
                     description="Retrouver les comptes applicatifs et gérer les abonnements."
+                  />
+                  <QuickAccessCard
+                    href="/admin?tab=feedback"
+                    label="Retours"
+                    value={`${newFeedbackCount}`}
+                    detail="nouveaux"
+                    description="Traiter les idées, bugs et feedbacks remontés depuis le header."
                   />
                 </div>
               </div>
@@ -512,6 +543,22 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <AdminUsersClient users={allUsers} currentAdminId={user.id} />
         </AdminSectionShell>
       )}
+
+      {activeTab === "feedback" && (
+        <AdminSectionShell
+          eyebrow="Produit"
+          title="Retours utilisateurs"
+          description="Traitez les bugs, idées et feedbacks collectés depuis l'interface publique dans un espace dédié."
+          stats={[
+            { label: "Total", value: feedbackEntries.length.toString() },
+            { label: "Nouveaux", value: newFeedbackCount.toString() },
+            { label: "En cours", value: reviewingFeedbackCount.toString() },
+            { label: "Clôturés", value: closedFeedbackCount.toString() },
+          ]}
+        >
+          <AdminFeedbackClient entries={feedbackEntries} />
+        </AdminSectionShell>
+      )}
     </div>
   );
 }
@@ -640,7 +687,12 @@ function StatusPill({
 function parseAdminTab(value: string | string[] | undefined): AdminTabId {
   const normalized = Array.isArray(value) ? value[0] : value;
 
-  if (normalized === "collections" || normalized === "events" || normalized === "users") {
+  if (
+    normalized === "collections" ||
+    normalized === "events" ||
+    normalized === "users" ||
+    normalized === "feedback"
+  ) {
     return normalized;
   }
 

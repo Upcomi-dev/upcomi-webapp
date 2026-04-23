@@ -50,10 +50,10 @@ export function FavoritesPanelBody({
             </svg>
           </div>
           <p className="text-[13px] font-medium text-foreground">
-            Pas encore de favoris
+            Aucun favori à venir
           </p>
           <p className="mt-1 text-[12px] text-foreground/45">
-            Clique sur le coeur d&apos;un événement
+            Seuls les événements futurs sont affichés ici
           </p>
         </div>
       ) : (

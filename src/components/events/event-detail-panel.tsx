@@ -7,39 +7,95 @@ import { getEventTypeColor } from "@/lib/types/database";
 import { FavouriteButton } from "./favourite-button";
 import { ShareButton } from "./share-button";
 import { FavoriteCTA } from "./favorite-cta";
+import { EventCard } from "./event-card";
 import { makeEventSlug } from "@/lib/utils/slugify";
 
 interface EventDetailPanelProps {
   /** Basic event data already available from the list. */
   event: MapEvent;
   onBack: () => void;
+  onEventSelect?: (eventId: number) => void;
 }
 
-export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelProps) {
+type RelatedEventCardData = Pick<
+  Event,
+  "id" | "nomEvent" | "dateEvent" | "image" | "bike_type" | "type_event" | "villeDepart" | "paysDepart"
+>;
+
+export function EventDetailPanel({
+  event: mapEvent,
+  onBack,
+  onEventSelect,
+}: EventDetailPanelProps) {
   const [fullEvent, setFullEvent] = useState<Event | null>(null);
   const [sousEvents, setSousEvents] = useState<SousEvent[]>([]);
   const [favCount, setFavCount] = useState(0);
+  const [relatedEvents, setRelatedEvents] = useState<RelatedEventCardData[]>([]);
 
   // Fetch full details (description, URL, organisateur, sous_events)
   useEffect(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const headers = { apikey: key, Authorization: `Bearer ${key}` };
+    let isCancelled = false;
 
-    Promise.all([
-      fetch(`${url}/rest/v1/events?id=eq.${mapEvent.id}&select=*&limit=1`, { headers }).then((r) => r.json()),
-      fetch(`${url}/rest/v1/sous_events?event_id=eq.${mapEvent.id}&select=*&order=distance.asc`, { headers }).then((r) => r.json()),
-      fetch(`${url}/rest/v1/favourite_events?event=eq.${mapEvent.id}&select=id`, {
-        headers: { ...headers, Prefer: "count=exact", "Range": "0-0" },
-        method: "GET",
-      })
-        .then((r) => parseInt(r.headers.get("content-range")?.split("/")[1] || "0", 10))
-        .catch(() => 0),
-    ]).then(([events, sous, count]) => {
-      if (events?.[0]) setFullEvent(events[0] as Event);
+    async function loadEventDetails() {
+      const today = getTodayDateKey();
+      const [events, sous, count] = await Promise.all([
+        fetch(buildRestUrl(url, "events", {
+          id: `eq.${mapEvent.id}`,
+          select: "*",
+          limit: "1",
+        }), { headers }).then((r) => r.json()),
+        fetch(buildRestUrl(url, "sous_events", {
+          event_id: `eq.${mapEvent.id}`,
+          select: "*",
+          order: "distance.asc",
+        }), { headers }).then((r) => r.json()),
+        fetch(buildRestUrl(url, "favourite_events", {
+          event: `eq.${mapEvent.id}`,
+          select: "id",
+        }), {
+          headers: { ...headers, Prefer: "count=exact", Range: "0-0" },
+          method: "GET",
+        })
+          .then((r) => parseInt(r.headers.get("content-range")?.split("/")[1] || "0", 10))
+          .catch(() => 0),
+      ]);
+
+      if (isCancelled) return;
+
       if (Array.isArray(sous)) setSousEvents(sous as SousEvent[]);
       if (typeof count === "number") setFavCount(count);
-    });
+
+      const nextEvent = Array.isArray(events) ? (events[0] as Event | undefined) : undefined;
+      if (!nextEvent) return;
+
+      setFullEvent(nextEvent);
+
+      if (!nextEvent.organisateur) return;
+
+      const related = await fetch(buildRestUrl(url, "events", {
+        organisateur: `eq.${nextEvent.organisateur}`,
+        id: `neq.${nextEvent.id}`,
+        select: "id,nomEvent,dateEvent,image,bike_type,type_event,villeDepart,paysDepart",
+        or: `(dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today}))`,
+        order: "dateEvent.asc",
+        limit: "6",
+      }), { headers })
+        .then((r) => r.json())
+        .catch(() => []);
+
+      if (!isCancelled && Array.isArray(related)) {
+        setRelatedEvents(related as RelatedEventCardData[]);
+      }
+    }
+
+    void loadEventDetails();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [mapEvent.id]);
 
   // Use mapEvent data immediately, enrich with fullEvent when available
@@ -78,7 +134,7 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
         onClick={onBack}
         className="glass inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] text-foreground/55 transition-all hover:bg-white/80 hover:text-coral"
       >
-        ← Retour à la liste
+        ← Retour
       </button>
 
       {/* Hero image */}
@@ -267,6 +323,31 @@ export function EventDetailPanel({ event: mapEvent, onBack }: EventDetailPanelPr
       {/* Favorite CTA */}
       <FavoriteCTA eventId={event.id} initialCount={favCount} />
 
+      {relatedEvents.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-[14px] font-semibold text-foreground">
+            Autres événements de cette organisation
+          </h2>
+          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {relatedEvents.map((relatedEvent) => (
+              <EventCard
+                key={relatedEvent.id}
+                id={relatedEvent.id}
+                nomEvent={relatedEvent.nomEvent}
+                dateEvent={relatedEvent.dateEvent}
+                image={relatedEvent.image}
+                bike_type={relatedEvent.bike_type}
+                type_event={relatedEvent.type_event}
+                villeDepart={relatedEvent.villeDepart}
+                paysDepart={relatedEvent.paysDepart}
+                variant="carousel"
+                onEventClick={onEventSelect}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* CTA — sticky at bottom */}
       {fullEvent?.URL && (
         <div className="sticky bottom-3 z-10 mt-4">
@@ -300,4 +381,13 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
       <span className="font-semibold text-foreground">{value}</span>
     </div>
   );
+}
+
+function buildRestUrl(baseUrl: string, path: string, params: Record<string, string>) {
+  const searchParams = new URLSearchParams(params);
+  return `${baseUrl}/rest/v1/${path}?${searchParams.toString()}`;
+}
+
+function getTodayDateKey() {
+  return new Date().toISOString().split("T")[0];
 }

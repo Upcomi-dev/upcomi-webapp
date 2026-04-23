@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isFeedbackStatus } from "@/lib/feedback";
 import { assertAdmin } from "@/lib/auth/assert-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -401,6 +402,22 @@ export async function deleteAdminUser(uid: string) {
   if (publicProfileError) throw new Error(publicProfileError.message);
 
   const { error } = await adminSupabase.auth.admin.deleteUser(uid);
+
+  if (error) throw new Error(error.message);
+  revalidateAdminViews();
+}
+
+export async function updateFeedbackEntryStatus(id: string, status: string) {
+  const { supabase } = await assertAdmin();
+
+  if (!isFeedbackStatus(status)) {
+    throw new Error("Le statut du retour est invalide.");
+  }
+
+  const { error } = await supabase
+    .from("feedback_entries")
+    .update({ status })
+    .eq("id", id);
 
   if (error) throw new Error(error.message);
   revalidateAdminViews();

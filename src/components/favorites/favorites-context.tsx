@@ -9,6 +9,7 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/auth-context";
+import { getVisibleFavoriteEvents, isVisibleFavoriteEvent } from "@/lib/utils/favorites";
 
 export interface FavoriteEvent {
   id: number;
@@ -61,7 +62,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       .in("id", ids);
 
     if (events) {
-      setFavoriteEvents(events as FavoriteEvent[]);
+      setFavoriteEvents(getVisibleFavoriteEvents(events as FavoriteEvent[]));
     }
   }, []);
 
@@ -128,8 +129,10 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
           .select("id, nomEvent, dateEvent, image, type_event, villeDepart")
           .eq("id", eventId)
           .single();
-        if (data) {
-          setFavoriteEvents((prev) => [...prev, data as FavoriteEvent]);
+        if (data && isVisibleFavoriteEvent(data as FavoriteEvent)) {
+          setFavoriteEvents((prev) =>
+            getVisibleFavoriteEvents([...prev, data as FavoriteEvent])
+          );
         }
       }
 
@@ -143,7 +146,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
       value={{
         favoriteIds,
         favoriteEvents,
-        count: favoriteIds.size,
+        count: favoriteEvents.length,
         isFavorite,
         toggleFavorite,
         ready: authReady && favoritesLoaded,

@@ -190,8 +190,10 @@ export function MobileBottomSheet({
       >
         {detailEvent ? (
           <EventDetailPanel
+            key={detailEvent.id}
             event={detailEvent}
             onBack={onBackFromDetail}
+            onEventSelect={onEventClick}
           />
         ) : hasFilters ? (
           <div className="space-y-4">
