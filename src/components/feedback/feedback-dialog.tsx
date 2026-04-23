@@ -89,10 +89,10 @@ export function FeedbackDialog() {
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="max-w-[calc(100%-1.5rem)] rounded-[28px] border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,239,228,0.92))] p-0 text-foreground shadow-[var(--shadow-lg)] sm:max-w-xl"
+          className="max-h-[calc(100dvh-1.5rem)] max-w-[calc(100%-1.5rem)] gap-0 overflow-hidden rounded-[28px] border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,239,228,0.92))] p-0 text-foreground shadow-[var(--shadow-lg)] sm:max-w-xl"
           overlayClassName="bg-[rgba(36,23,15,0.24)]"
         >
-          <div className="p-5 sm:p-6">
+          <div className="overflow-y-auto overscroll-contain p-5 sm:p-6">
             <DialogHeader className="gap-3 border-b border-foreground/8 pb-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-coral/10 text-coral">
