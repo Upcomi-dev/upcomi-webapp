@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -97,12 +98,12 @@ export function LoginForm({
                 Oublié ?
               </button>
             ) : (
-              <a
+              <Link
                 href="/forgot-password"
                 className="text-[11px] font-medium text-coral hover:text-coral-dark"
               >
                 Oublié ?
-              </a>
+              </Link>
             )}
           </div>
           <input
@@ -135,12 +136,12 @@ export function LoginForm({
             S&apos;inscrire
           </button>
         ) : (
-          <a
+          <Link
             href="/signup"
             className="font-semibold text-coral hover:text-coral-dark"
           >
             S&apos;inscrire
-          </a>
+          </Link>
         )}
       </div>
     </div>

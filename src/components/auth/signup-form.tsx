@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -15,11 +16,14 @@ export function SignupForm({
   redirectTo = "/",
   onSwitchToLogin,
 }: SignupFormProps) {
+  const termsUrl = "https://www.upcomi.cc/conditions-generales-dutilisation-cgu";
+  const privacyPolicyUrl = "https://www.upcomi.cc/politique-de-confidentialite";
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [emailConfirmation, setEmailConfirmation] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -42,6 +46,11 @@ export function SignupForm({
       return;
     }
 
+    if (!acceptedPrivacyPolicy) {
+      setError("Tu dois accepter les CGU et la politique de confidentialité pour créer un compte");
+      return;
+    }
+
     setLoading(true);
 
     const supabase = createClient();
@@ -51,6 +60,12 @@ export function SignupForm({
       options: {
         data: {
           first_name: normalizedFirstName,
+          terms_accepted: true,
+          terms_accepted_at: new Date().toISOString(),
+          terms_url: termsUrl,
+          privacy_policy_accepted: true,
+          privacy_policy_accepted_at: new Date().toISOString(),
+          privacy_policy_url: privacyPolicyUrl,
         },
       },
     });
@@ -171,6 +186,41 @@ export function SignupForm({
           />
         </div>
 
+        <label
+          htmlFor="signup-privacy-policy"
+          className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-white/55 bg-white/42 px-3.5 py-3 text-[13px] leading-5 text-foreground/72"
+        >
+          <input
+            id="signup-privacy-policy"
+            type="checkbox"
+            checked={acceptedPrivacyPolicy}
+            onChange={(e) => setAcceptedPrivacyPolicy(e.target.checked)}
+            required
+            className="mt-0.5 h-4 w-4 rounded border-white/70 text-coral focus:ring-2 focus:ring-orange/40"
+          />
+          <span>
+            J&apos;ai lu et j&apos;accepte les{" "}
+            <Link
+              href={termsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-coral hover:text-coral-dark"
+            >
+              CGU
+            </Link>{" "}
+            et la{" "}
+            <Link
+              href={privacyPolicyUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-coral hover:text-coral-dark"
+            >
+              politique de confidentialité
+            </Link>
+            .
+          </span>
+        </label>
+
         <button
           type="submit"
           disabled={loading}
@@ -191,12 +241,12 @@ export function SignupForm({
             Se connecter
           </button>
         ) : (
-          <a
+          <Link
             href="/login"
             className="font-semibold text-coral hover:text-coral-dark"
           >
             Se connecter
-          </a>
+          </Link>
         )}
       </div>
     </div>
