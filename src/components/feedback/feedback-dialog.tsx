@@ -52,17 +52,14 @@ export function FeedbackDialog() {
     setError(null);
 
     startTransition(async () => {
-      try {
-        await submitFeedback(formData);
+      const result = await submitFeedback(formData);
+
+      if (result.ok) {
         formRef.current?.reset();
         setSelectedKind("feedback");
         setOpen(false);
-      } catch (submissionError) {
-        const nextError =
-          submissionError instanceof Error
-            ? submissionError.message
-            : "Impossible d'envoyer le retour pour le moment.";
-        setError(nextError);
+      } else {
+        setError(result.message);
       }
     });
   };
