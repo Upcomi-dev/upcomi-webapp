@@ -33,6 +33,12 @@ function isPlaceholderImageSrc(src: string) {
   return PLACEHOLDER_IMAGE_SIGNATURES.some((signature) => src.includes(signature));
 }
 
+function formatDistanceBadge(distance: string | null | undefined) {
+  const value = distance?.trim();
+  if (!value) return null;
+  return /\bkm\b/i.test(value) ? value : `${value} km`;
+}
+
 function EventCardFallbackArt({
   name,
   typeColor,
@@ -72,6 +78,7 @@ export function EventCard({
   type_event,
   villeDepart,
   paysDepart,
+  distance,
   variant = "grid",
   isSelected = false,
   onEventClick,
@@ -99,6 +106,7 @@ export function EventCard({
     : null;
 
   const location = [villeDepart, paysDepart].filter(Boolean).join(", ");
+  const distanceBadge = formatDistanceBadge(distance);
 
   if (variant === "carousel") {
     const content = (
@@ -131,6 +139,16 @@ export function EventCard({
                 style={{ backgroundColor: `${typeColor}de` }}
               >
                 {type_event}
+              </span>
+            </div>
+          )}
+          {distanceBadge && (
+            <div className="absolute bottom-2.5 left-2.5 z-10">
+              <span
+                className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white shadow-[var(--shadow-sm)] backdrop-blur-sm"
+                style={{ backgroundColor: `${typeColor}de` }}
+              >
+                {distanceBadge}
               </span>
             </div>
           )}

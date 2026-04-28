@@ -286,8 +286,13 @@ export function EventMap({
 
           const first = group[0];
           if (group.length === 1) {
-            setActiveGroup(null);
-            onEventSelect?.(first.id);
+            if (isMobile) {
+              onEventSelect?.(null);
+              setActiveGroup(group);
+            } else {
+              setActiveGroup(null);
+              onEventSelect?.(first.id);
+            }
           } else {
             onEventSelect?.(null);
             setActiveGroup(group);
@@ -302,7 +307,7 @@ export function EventMap({
         // ignore
       }
     },
-    [groupedById, onEventSelect]
+    [groupedById, isMobile, onEventSelect]
   );
 
   return (

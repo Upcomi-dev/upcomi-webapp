@@ -19,7 +19,7 @@ interface EventDetailPanelProps {
 
 type RelatedEventCardData = Pick<
   Event,
-  "id" | "nomEvent" | "dateEvent" | "image" | "bike_type" | "type_event" | "villeDepart" | "paysDepart"
+  "id" | "nomEvent" | "dateEvent" | "image" | "bike_type" | "type_event" | "villeDepart" | "paysDepart" | "distance"
 >;
 
 export function EventDetailPanel({
@@ -78,7 +78,7 @@ export function EventDetailPanel({
       const related = await fetch(buildRestUrl(url, "events", {
         organisateur: `eq.${nextEvent.organisateur}`,
         id: `neq.${nextEvent.id}`,
-        select: "id,nomEvent,dateEvent,image,bike_type,type_event,villeDepart,paysDepart",
+        select: "id,nomEvent,dateEvent,image,bike_type,type_event,villeDepart,paysDepart,distance",
         or: `(dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today}))`,
         order: "dateEvent.asc",
         limit: "6",
@@ -340,6 +340,7 @@ export function EventDetailPanel({
                 type_event={relatedEvent.type_event}
                 villeDepart={relatedEvent.villeDepart}
                 paysDepart={relatedEvent.paysDepart}
+                distance={relatedEvent.distance}
                 variant="carousel"
                 onEventClick={onEventSelect}
               />

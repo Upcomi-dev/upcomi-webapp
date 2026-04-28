@@ -327,6 +327,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                       type_event={relatedEvent.type_event}
                       villeDepart={relatedEvent.villeDepart}
                       paysDepart={relatedEvent.paysDepart}
+                      distance={relatedEvent.distance}
                     />
                   ))}
                 </div>
@@ -442,7 +443,7 @@ async function fetchOrganizerEvents(
   const today = getTodayDateKey();
   const { data } = await supabase
     .from("events")
-    .select("id, nomEvent, dateEvent, image, bike_type, type_event, villeDepart, paysDepart")
+    .select("id, nomEvent, dateEvent, image, bike_type, type_event, villeDepart, paysDepart, distance")
     .eq("organisateur", organizer)
     .neq("id", currentEventId)
     .or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`)

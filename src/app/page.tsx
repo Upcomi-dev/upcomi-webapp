@@ -34,7 +34,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   let query = supabase
     .from("events")
     .select(
-      "id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance_range_filter, region, budget, villeDepart, paysDepart, mint"
+      "id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance, distance_range_filter, region, budget, villeDepart, paysDepart, mint"
     )
     .not("latitude", "is", null)
     .not("longitude", "is", null)
@@ -196,7 +196,7 @@ async function fetchCollections(
     if (allManualEventIds.length > 0) {
       const { data: manualEventsData } = await supabase
         .from("events")
-        .select("id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance_range_filter, region, budget, villeDepart, paysDepart, mint")
+        .select("id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance, distance_range_filter, region, budget, villeDepart, paysDepart, mint")
         .in("id", allManualEventIds)
         .eq("verifie", true)
         .gte("dateEvent", new Date().toISOString().split("T")[0]);

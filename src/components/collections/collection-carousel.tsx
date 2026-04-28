@@ -94,6 +94,7 @@ export function CollectionCarousel({ collection, onEventClick, onEventHover }: C
             type_event={event.type_event}
             villeDepart={event.villeDepart}
             paysDepart={event.paysDepart}
+            distance={event.distance}
             variant="carousel"
             onEventClick={onEventClick}
             onEventHover={onEventHover}

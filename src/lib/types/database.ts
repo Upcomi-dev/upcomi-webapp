@@ -47,6 +47,7 @@ export interface MapEvent {
   dateEvent: string | null;
   image: string | null;
   distance_range_filter: string | null;
+  distance: string | null;
   region: string | null;
   budget: string | null;
   villeDepart: string | null;
