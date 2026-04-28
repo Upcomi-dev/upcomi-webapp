@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.5] - 2026-04-28
+
+### UI
+- style: agrandissement des textes secondaires (date/lieu, description, parcours) sur mobile pour améliorer la lisibilité
+
 ## [0.3.0] - 2026-04-16
 
 ### Features

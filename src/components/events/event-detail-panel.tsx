@@ -195,7 +195,7 @@ export function EventDetailPanel({
             />
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-[13px] text-foreground/55">
+        <div className="flex flex-wrap items-center gap-2 text-[17px] text-foreground/55 md:text-[13px]">
           {formattedDate && (
             <span>
               {formattedDate}
@@ -249,7 +249,7 @@ export function EventDetailPanel({
                   <div className="text-[13px] font-semibold text-foreground">
                     {se.nom || "Parcours"}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-foreground/55">
+                  <div className="mt-0.5 flex items-center gap-2 text-[15px] text-foreground/55 md:text-[11px]">
                     {se.distance && <span>{se.distance} km</span>}
                     {se.elevation && (
                       <>
@@ -282,7 +282,7 @@ export function EventDetailPanel({
           <h2 className="mb-2 text-[14px] font-semibold text-foreground">
             Description
           </h2>
-          <p className="whitespace-pre-line text-[13px] leading-[1.75] text-foreground/55">
+          <p className="whitespace-pre-line text-[17px] leading-[1.7] text-foreground/55 md:text-[13px] md:leading-[1.75]">
             {fullEvent!.description}
           </p>
         </div>
