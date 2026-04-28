@@ -32,7 +32,7 @@ type PanelState = {
 type PanelAction =
   | { type: "SELECT_EVENT"; eventId: number }
   | { type: "MAP_SELECT"; eventId: number | null }
-  | { type: "BACK_FROM_DETAIL" }
+  | { type: "BACK_FROM_DETAIL"; clearSelection?: boolean }
   | { type: "FILTERS_CHANGED"; hasFilters: boolean };
 
 function panelReducer(state: PanelState, action: PanelAction): PanelState {
@@ -66,6 +66,7 @@ function panelReducer(state: PanelState, action: PanelAction): PanelState {
         ...state,
         mode: state.previousMode,
         detailEventId: null,
+        selectedEventId: action.clearSelection ? null : state.selectedEventId,
       };
     case "FILTERS_CHANGED":
       if (state.mode === "detail") return state;
@@ -317,7 +318,7 @@ function MapPageContent({
 
   const handleBackFromDetail = useCallback(() => {
     setHoveredEventId(null);
-    dispatch({ type: "BACK_FROM_DETAIL" });
+    dispatch({ type: "BACK_FROM_DETAIL", clearSelection: isMobile });
     setFlyToEventId(null);
     if (searchParams.get("event")) {
       const params = new URLSearchParams(searchParams.toString());
@@ -325,7 +326,7 @@ function MapPageContent({
       const query = params.toString();
       router.replace(query ? `/?${query}` : "/", { scroll: false });
     }
-  }, [router, searchParams]);
+  }, [isMobile, router, searchParams]);
 
   useEffect(() => {
     if (!eventParam) return;
