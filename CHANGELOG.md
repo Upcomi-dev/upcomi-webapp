@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.6] - 2026-04-28
+
+### UI
+- style: ajustement de la taille des textes secondaires sur mobile (mi-chemin entre l'original et v0.3.5) pour un meilleur équilibre lisibilité/densité
+
 ## [0.3.5] - 2026-04-28
 
 ### UI

@@ -139,7 +139,7 @@ export function EventCard({
           <h3 className="line-clamp-2 font-serif text-[16px] leading-[1.15] text-foreground">
             {name}
           </h3>
-          <div className="flex items-center gap-2 text-[14px] text-foreground/55 md:text-[11px]">
+          <div className="flex items-center gap-2 text-[13px] text-foreground/55 md:text-[11px]">
             <span>{formattedDate || "À venir"}</span>
             <span className="text-coral/55">·</span>
             <span className="truncate">{location || "Lieu à confirmer"}</span>
@@ -234,7 +234,7 @@ export function EventCard({
               {name}
             </h3>
 
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[16px] text-foreground/58 md:mt-2.5 md:text-[12px]">
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[14px] text-foreground/58 md:mt-2.5 md:text-[12px]">
               <span>{formattedDate || "À venir"}</span>
               <span className="text-coral/55">•</span>
               <span className="truncate">{location || "Lieu à confirmer"}</span>
@@ -325,7 +325,7 @@ export function EventCard({
           <span className="text-coral/70">Explorer</span>
         </div>
         <div className="mb-2 text-sm font-semibold text-foreground truncate">{name}</div>
-        <div className="flex items-center gap-1.5 text-[16px] text-foreground/55 md:text-[12px]">
+        <div className="flex items-center gap-1.5 text-[14px] text-foreground/55 md:text-[12px]">
           <span className="truncate">{location || "Lieu à confirmer"}</span>
         </div>
       </div>
