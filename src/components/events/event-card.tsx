@@ -18,6 +18,7 @@ interface EventCardProps {
   paysDepart: string | null;
   distance?: string | null;
   variant?: "grid" | "list" | "carousel";
+  carouselLayout?: "default" | "map-preview";
   isSelected?: boolean;
   onEventClick?: (id: number) => void;
   onEventHover?: (id: number | null) => void;
@@ -80,6 +81,7 @@ export function EventCard({
   paysDepart,
   distance,
   variant = "grid",
+  carouselLayout = "default",
   isSelected = false,
   onEventClick,
   onEventHover,
@@ -166,8 +168,12 @@ export function EventCard({
       </>
     );
 
+    const carouselSizeClassName =
+      carouselLayout === "map-preview"
+        ? "h-[280px] w-[calc(100vw-4.75rem)] max-w-[520px] md:w-[260px]"
+        : "h-[280px] w-[260px]";
     const className =
-      "group flex h-[280px] w-[260px] flex-none snap-start flex-col overflow-hidden rounded-[22px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.92),rgba(248,240,230,0.82))] shadow-[var(--shadow-sm)] transition-all duration-300 hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-[var(--shadow-md)]";
+      `group flex ${carouselSizeClassName} flex-none snap-start flex-col overflow-hidden rounded-[22px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.92),rgba(248,240,230,0.82))] shadow-[var(--shadow-sm)] transition-all duration-300 hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-[var(--shadow-md)]`;
 
     if (onEventClick) {
       return (

@@ -429,22 +429,32 @@ export function EventMap({
       {activeGroup ? (
         <div
           className="pointer-events-none absolute inset-x-0 z-10"
-          style={{ bottom: isMobile ? MOBILE_BOTTOM_INSET + 20 : 24 }}
+          style={{ bottom: isMobile ? 88 : 24 }}
         >
-          <div className="pointer-events-auto mx-auto flex w-full max-w-[min(100%,960px)] flex-col gap-3 px-4">
-            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {activeGroup.map((event) => (
+          <div
+            className={`pointer-events-auto mx-auto flex w-full max-w-[min(100%,960px)] flex-col gap-3 ${
+              activeGroup.length === 1 ? "px-4" : ""
+            }`}
+          >
+            <div
+              className={`flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+                activeGroup.length === 1 ? "justify-center" : ""
+              }`}
+            >
+              {activeGroup.map((event, index) => (
                 <div
                   key={event.id}
-                  className={
+                  className={[
+                    activeGroup.length > 1 && index === 0 ? "ml-4" : "",
                     selectedEventId === event.id
                       ? "rounded-[24px] ring-2 ring-coral/45 ring-offset-2 ring-offset-transparent"
-                      : undefined
-                  }
+                      : "",
+                  ].filter(Boolean).join(" ")}
                 >
                   <EventCard
                     {...event}
                     variant="carousel"
+                    carouselLayout={isMobile ? "map-preview" : "default"}
                     onEventClick={(eventId) => {
                       setActiveGroup(null);
                       onEventSelect?.(eventId);
