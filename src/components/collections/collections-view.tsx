@@ -19,7 +19,7 @@ export function CollectionsView({ collections, onEventClick, onEventHover }: Col
       <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/36 px-6 py-12 text-center">
         <p className="text-sm font-semibold text-foreground">Aucune collection</p>
         <p className="mt-1 text-xs uppercase tracking-[0.16em] text-foreground/45">
-          Les collections apparaissent ici quand elles contiennent au moins 3 événements
+          Les collections apparaissent ici quand elles contiennent au moins 1 événement
         </p>
       </div>
     );

@@ -42,8 +42,6 @@ export function CollectionCarousel({ collection, onEventClick, onEventHover }: C
     el.scrollBy({ left: direction === "left" ? -amount : amount, behavior: "smooth" });
   }, []);
 
-  if (collection.events.length < 3) return null;
-
   return (
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3">
