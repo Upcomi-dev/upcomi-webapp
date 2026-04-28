@@ -17,7 +17,8 @@ const REGION_OPTIONS = [
   { label: "France", value: "France" },
   { label: "Étranger", value: "Etranger" },
 ];
-type PanelKey = "bike" | "type" | "distance" | "region" | "date";
+const MINT_FILTER_DESCRIPTION = "Événements non-mixtes, entre femmes et minorités de genre";
+type PanelKey = "bike" | "type" | "distance" | "region" | "date" | "mint";
 
 function buildParams(current: URLSearchParams, key: string, value: string, multi: boolean) {
   const params = new URLSearchParams(current.toString());
@@ -169,6 +170,7 @@ export function InlineFilters({
     type: searchParams.get("type_event")?.split(",").filter(Boolean).length || 0,
     distance: searchParams.get("distance")?.split(",").filter(Boolean).length || 0,
     region: searchParams.get("region") ? 1 : 0,
+    mint: searchParams.get("mint") === "true" ? 1 : 0,
   };
 
   const hasFilters = activeTags.length > 0;
@@ -178,6 +180,7 @@ export function InlineFilters({
   const showDistancePanel = expandAllPanels || openPanel === "distance";
   const showBikePanel = expandAllPanels || openPanel === "bike";
   const showRegionPanel = expandAllPanels || openPanel === "region";
+  const showMintPanel = expandAllPanels || openPanel === "mint";
 
   return (
     <div className="w-full">
@@ -252,9 +255,9 @@ export function InlineFilters({
             />
             <ActionButton
               label="Mixité choisie"
-              active={searchParams.get("mint") === "true"}
+              active={counts.mint > 0}
               onClick={() => setSingle("mint", "true")}
-              tooltip="Événements non-mixtes, entre femmes et minorités de genre"
+              tooltip={MINT_FILTER_DESCRIPTION}
             />
             <div className="ml-auto flex items-center gap-2">
               {hasFilters && (
@@ -328,6 +331,23 @@ export function InlineFilters({
               </FilterSection>
             )}
 
+            {showMintPanel && (
+              <FilterSection label="Mixité choisie" variant={variant}>
+                <FilterPill
+                  label="Mixité choisie"
+                  active={counts.mint > 0}
+                  variant={variant}
+                  onClick={() => setSingle("mint", "true")}
+                />
+                {isDrawerVariant ? (
+                  <p className="flex basis-full items-start gap-1.5 text-xs leading-snug text-foreground/48">
+                    <Info className="mt-0.5 h-3.5 w-3.5 flex-none text-coral" />
+                    {MINT_FILTER_DESCRIPTION}
+                  </p>
+                ) : null}
+              </FilterSection>
+            )}
+
             {showDistancePanel && (
               <FilterSection label="Distance" variant={variant}>
                 {DISTANCE_OPTIONS.map((option) => (
@@ -369,7 +389,6 @@ export function InlineFilters({
                 ))}
               </FilterSection>
             )}
-
           </div>
         )}
 
