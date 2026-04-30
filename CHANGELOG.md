@@ -4,6 +4,7 @@
 
 ### Tooling
 - chore: ajout du plugin Codex local `upcomi-deploy` exposant la commande `/deploy`
+- chore: activation par défaut du plugin Codex local dans le marketplace du repo
 
 ## [0.3.9] - 2026-04-30
 
