@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.9] - 2026-04-30
+
+### UI
+- fix: ajout d'une croix unique pour effacer la recherche textuelle sans variation de hauteur sur mobile
+
+### Tooling
+- chore: ajout de la commande `npm run deploy` pour bumper la version, committer et pousser `main`
+
 ## [0.3.6] - 2026-04-28
 
 ### UI

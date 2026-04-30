@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Filter, List, Map as MapIcon, Search } from "lucide-react";
+import { Filter, List, Map as MapIcon, Search, X } from "lucide-react";
 import type { MapEvent, CollectionWithEvents } from "@/lib/types/database";
 
 const EventMap = dynamic(
@@ -567,15 +567,26 @@ function MapPageContent({
   const renderMobileSearchBar = () => (
     <div className="pointer-events-none absolute inset-x-4 top-4 z-10">
       <div className="pointer-events-auto flex items-center gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[20px] border border-white/55 bg-white/88 px-5 py-3 shadow-[var(--shadow-sm)] backdrop-blur-sm">
+        <div className="flex h-[50px] min-w-0 flex-1 items-center gap-3 rounded-[20px] border border-white/55 bg-white/88 px-5 shadow-[var(--shadow-sm)] backdrop-blur-sm">
           <Search className="h-4 w-4 flex-none text-foreground/38" />
           <input
-            type="search"
+            type="text"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
+            aria-label="Recherche"
             placeholder="Nom, lieu, organisateur..."
-            className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-foreground/35"
+            className="h-full min-w-0 flex-1 bg-transparent text-sm leading-none text-foreground outline-none placeholder:text-foreground/35"
           />
+          {searchQuery ? (
+            <button
+              type="button"
+              aria-label="Effacer la recherche"
+              onClick={() => setSearchQuery("")}
+              className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-full text-foreground/45 transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral/45"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
         </div>
 
         <button

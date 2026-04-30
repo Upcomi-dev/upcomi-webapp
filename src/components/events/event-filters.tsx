@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { CalendarDays, Info } from "lucide-react";
+import { useCallback, useId, useMemo, useState } from "react";
+import { CalendarDays, Info, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { buildEventTypeOptions, DEFAULT_EVENT_TYPES } from "@/lib/events/filter-options";
 import { cn } from "@/lib/utils";
@@ -72,6 +72,7 @@ export function InlineFilters({
 }: InlineFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchInputId = useId();
   const [openPanel, setOpenPanel] = useState<PanelKey | null>(null);
   const dateFrom = searchParams.get("date_from") ?? "";
   const dateTo = searchParams.get("date_to") ?? "";
@@ -187,18 +188,34 @@ export function InlineFilters({
       <div>
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end">
           {showSearch ? (
-            <label className="block flex-1">
-              <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
+            <div className="block flex-1">
+              <label
+                htmlFor={searchInputId}
+                className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42"
+              >
                 Recherche
-              </span>
-              <input
-                type="search"
-                value={searchValue}
-                onChange={(event) => onSearchChange?.(event.target.value)}
-                placeholder="Nom, lieu, organisateur..."
-                className="w-full rounded-[18px] border border-white/55 bg-white/70 px-5 py-3 text-sm text-foreground outline-none transition-all placeholder:text-foreground/35 focus:border-coral/35 focus:bg-white"
-              />
-            </label>
+              </label>
+              <div className="relative">
+                <input
+                  id={searchInputId}
+                  type="text"
+                  value={searchValue}
+                  onChange={(event) => onSearchChange?.(event.target.value)}
+                  placeholder="Nom, lieu, organisateur..."
+                  className="w-full rounded-[18px] border border-white/55 bg-white/70 px-5 py-3 pr-12 text-sm text-foreground outline-none transition-all placeholder:text-foreground/35 focus:border-coral/35 focus:bg-white"
+                />
+                {searchValue ? (
+                  <button
+                    type="button"
+                    aria-label="Effacer la recherche"
+                    onClick={() => onSearchChange?.("")}
+                    className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-foreground/45 transition-colors hover:bg-foreground/8 hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral/45"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
           ) : null}
 
           {!isDrawerVariant ? (
