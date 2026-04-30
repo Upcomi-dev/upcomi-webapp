@@ -219,10 +219,6 @@ export function EventMap({
 
     window.requestAnimationFrame(() => {
       map.resize();
-
-      if (validEvents.length > 0) {
-        centerOnEvents();
-      }
     });
   }, [centerOnEvents, isVisible, validEvents.length]);
 

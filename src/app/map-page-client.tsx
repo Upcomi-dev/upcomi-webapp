@@ -194,8 +194,8 @@ function MapPageContent({
 
   const matchesSearch = useCallback(
     (event: MapEvent) => {
-      if (!searchQuery) return true;
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return true;
       return [event.nomEvent, event.villeDepart, event.paysDepart, event.type_event, event.bike_type]
         .some((field) => field?.toLowerCase().includes(q));
     },
@@ -343,7 +343,7 @@ function MapPageContent({
     panel.mode === "detail" && panel.detailEventId != null
       ? detailEvents.find((event) => event.id === panel.detailEventId) ?? null
       : null;
-  const showMobileCollections = !detailEvent && !searchQuery && activeFilterCount === 0 && collections.length > 0;
+  const showMobileCollections = !detailEvent && !searchQuery.trim() && activeFilterCount === 0 && collections.length > 0;
   const showMobileViewToggle = detailEvent == null;
 
   /* ── Panel content renderer ── */
@@ -364,7 +364,7 @@ function MapPageContent({
     }
 
     // Collections mode (no filters, no search)
-    if (panel.mode === "collections" && collections.length > 0 && !searchQuery) {
+    if (panel.mode === "collections" && collections.length > 0 && !searchQuery.trim()) {
       return (
         <>
           {/* Hero in collections mode */}
@@ -567,7 +567,7 @@ function MapPageContent({
   const renderMobileSearchBar = () => (
     <div className="pointer-events-none absolute inset-x-4 top-4 z-10">
       <div className="pointer-events-auto flex items-center gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[20px] border border-white/55 bg-white/88 px-4 py-3 shadow-[var(--shadow-sm)] backdrop-blur-sm">
+        <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[20px] border border-white/55 bg-white/88 px-5 py-3 shadow-[var(--shadow-sm)] backdrop-blur-sm">
           <Search className="h-4 w-4 flex-none text-foreground/38" />
           <input
             type="search"

@@ -196,7 +196,7 @@ export function InlineFilters({
                 value={searchValue}
                 onChange={(event) => onSearchChange?.(event.target.value)}
                 placeholder="Nom, lieu, organisateur..."
-                className="w-full rounded-[18px] border border-white/55 bg-white/70 px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-foreground/35 focus:border-coral/35 focus:bg-white"
+                className="w-full rounded-[18px] border border-white/55 bg-white/70 px-5 py-3 text-sm text-foreground outline-none transition-all placeholder:text-foreground/35 focus:border-coral/35 focus:bg-white"
               />
             </label>
           ) : null}
