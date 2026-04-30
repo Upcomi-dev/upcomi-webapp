@@ -1,0 +1,20 @@
+{
+  "name": "upcomi-local",
+  "interface": {
+    "displayName": "Upcomi Local Plugins"
+  },
+  "plugins": [
+    {
+      "name": "upcomi-deploy",
+      "source": {
+        "source": "local",
+        "path": "./plugins/upcomi-deploy"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

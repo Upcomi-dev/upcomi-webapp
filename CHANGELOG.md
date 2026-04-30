@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.10] - 2026-04-30
+
+### Tooling
+- chore: ajout du plugin Codex local `upcomi-deploy` exposant la commande `/deploy`
+
 ## [0.3.9] - 2026-04-30
 
 ### UI

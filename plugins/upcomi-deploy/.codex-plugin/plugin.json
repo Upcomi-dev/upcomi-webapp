@@ -1,0 +1,31 @@
+{
+  "name": "upcomi-deploy",
+  "version": "0.1.0",
+  "description": "Upcomi release commands for Codex.",
+  "author": {
+    "name": "Upcomi"
+  },
+  "homepage": "https://github.com/Upcomi-dev/upcomi-webapp",
+  "repository": "https://github.com/Upcomi-dev/upcomi-webapp",
+  "license": "UNLICENSED",
+  "keywords": [
+    "upcomi",
+    "deploy",
+    "release"
+  ],
+  "interface": {
+    "displayName": "Upcomi Deploy",
+    "shortDescription": "Bump and push Upcomi releases from Codex.",
+    "longDescription": "Adds Codex commands for the Upcomi web app release workflow.",
+    "developerName": "Upcomi",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Deploy this Upcomi release"
+    ],
+    "brandColor": "#EB5F3B"
+  }
+}
