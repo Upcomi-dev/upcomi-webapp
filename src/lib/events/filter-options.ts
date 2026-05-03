@@ -2,6 +2,7 @@ export const DEFAULT_EVENT_TYPES = [
   "Course",
   "Aventure",
   "Brevet",
+  "Ultra",
   "Social Ride",
   "Evènement",
 ] as const;

@@ -118,6 +118,7 @@ export const EVENT_TYPE_COLORS: EventTypeColor = {
   Course: "#9ab0ec",
   Aventure: "#ff7d59",
   Brevet: "#f5a60b",
+  Ultra: "#5b6922",
   "Social Ride": "#ab89db",
   "Social ride": "#ab89db",
   Evènement: "#f59e42",
@@ -127,11 +128,17 @@ export const EVENT_TYPE_LEGEND = [
   { label: "Course", color: EVENT_TYPE_COLORS.Course },
   { label: "Aventure", color: EVENT_TYPE_COLORS.Aventure },
   { label: "Brevet", color: EVENT_TYPE_COLORS.Brevet },
+  { label: "Ultra", color: EVENT_TYPE_COLORS.Ultra },
   { label: "Social Ride", color: EVENT_TYPE_COLORS["Social Ride"] },
   { label: "Evènement", color: EVENT_TYPE_COLORS.Evènement },
 ] as const;
 
 export function getEventTypeColor(type: string | null): string {
   if (!type) return "#f59e42";
-  return EVENT_TYPE_COLORS[type] || "#f59e42";
+  const normalizedType = type.trim().toLocaleLowerCase("fr-FR");
+  const matchedKey = Object.keys(EVENT_TYPE_COLORS).find(
+    (key) => key.toLocaleLowerCase("fr-FR") === normalizedType
+  );
+
+  return matchedKey ? EVENT_TYPE_COLORS[matchedKey] : "#f59e42";
 }
