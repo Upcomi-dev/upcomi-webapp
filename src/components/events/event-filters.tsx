@@ -4,6 +4,7 @@ import { useCallback, useId, useMemo, useState } from "react";
 import { CalendarDays, Info, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { buildEventTypeOptions, DEFAULT_EVENT_TYPES } from "@/lib/events/filter-options";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 const BIKE_TYPES = ["Gravel", "VTT", "Route"];
@@ -53,6 +54,15 @@ function removeValue(current: URLSearchParams, key: string, value?: string) {
   return params;
 }
 
+function countActiveFilters(params: URLSearchParams) {
+  const keys = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to", "mint"];
+  return keys.reduce((count, key) => {
+    const value = params.get(key);
+    if (!value) return count;
+    return count + value.split(",").filter(Boolean).length;
+  }, 0);
+}
+
 interface InlineFiltersProps {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -93,27 +103,6 @@ export function InlineFilters({
     [router]
   );
 
-  const toggle = useCallback(
-    (key: string, value: string, multi = true) => {
-      updateParams(buildParams(searchParams, key, value, multi));
-    },
-    [searchParams, updateParams]
-  );
-
-  const setSingle = useCallback(
-    (key: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (params.get(key) === value) params.delete(key);
-      else params.set(key, value);
-      updateParams(params);
-    },
-    [searchParams, updateParams]
-  );
-
-  const clearAll = useCallback(() => {
-    router.push("/", { scroll: false });
-  }, [router]);
-
   const isActive = useCallback(
     (key: string, value: string) => {
       const current = searchParams.get(key);
@@ -122,6 +111,48 @@ export function InlineFilters({
     },
     [searchParams]
   );
+
+  const toggle = useCallback(
+    (key: string, value: string, multi = true) => {
+      const wasActive = isActive(key, value);
+      const nextParams = buildParams(searchParams, key, value, multi);
+      updateParams(nextParams);
+      trackAnalyticsEvent("Filter Changed", {
+        filter_key: key,
+        filter_value: value,
+        action: wasActive ? "removed" : "added",
+        active_filter_count: countActiveFilters(nextParams),
+        surface: variant,
+      });
+    },
+    [isActive, searchParams, updateParams, variant]
+  );
+
+  const setSingle = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      const wasActive = params.get(key) === value;
+      if (wasActive) params.delete(key);
+      else params.set(key, value);
+      updateParams(params);
+      trackAnalyticsEvent("Filter Changed", {
+        filter_key: key,
+        filter_value: value,
+        action: wasActive ? "removed" : "added",
+        active_filter_count: countActiveFilters(params),
+        surface: variant,
+      });
+    },
+    [searchParams, updateParams, variant]
+  );
+
+  const clearAll = useCallback(() => {
+    router.push("/", { scroll: false });
+    trackAnalyticsEvent("Filters Cleared", {
+      active_filter_count: countActiveFilters(searchParams),
+      surface: variant,
+    });
+  }, [router, searchParams, variant]);
 
   const activeTags = useMemo(() => {
     const tags: Array<{ key: string; label: string; value?: string }> = [];
@@ -312,6 +343,12 @@ export function InlineFilters({
                       else params.delete("date_to");
 
                       updateParams(params);
+                      trackAnalyticsEvent("Filter Changed", {
+                        filter_key: "date",
+                        action: nextFrom || nextTo ? "added" : "removed",
+                        active_filter_count: countActiveFilters(params),
+                        surface: variant,
+                      });
                     }}
                   />
                 ) : (
@@ -328,6 +365,12 @@ export function InlineFilters({
                       else params.delete("date_to");
 
                       updateParams(params);
+                      trackAnalyticsEvent("Filter Changed", {
+                        filter_key: "date",
+                        action: nextFrom || nextTo ? "added" : "removed",
+                        active_filter_count: countActiveFilters(params),
+                        surface: variant,
+                      });
                     }}
                   />
                 )}
@@ -414,7 +457,17 @@ export function InlineFilters({
             {activeTags.map((tag) => (
               <button
                 key={`${tag.key}-${tag.value || tag.label}`}
-                onClick={() => updateParams(removeValue(searchParams, tag.key, tag.value))}
+                onClick={() => {
+                  const params = removeValue(searchParams, tag.key, tag.value);
+                  updateParams(params);
+                  trackAnalyticsEvent("Filter Changed", {
+                    filter_key: tag.key,
+                    filter_value: tag.value,
+                    action: "removed",
+                    active_filter_count: countActiveFilters(params),
+                    surface: variant,
+                  });
+                }}
                 className="rounded-full border border-white/55 bg-white/62 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/70 transition-all hover:border-coral/25 hover:text-coral"
               >
                 {tag.label} ×

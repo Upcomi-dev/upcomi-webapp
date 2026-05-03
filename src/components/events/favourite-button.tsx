@@ -5,6 +5,7 @@ import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
 import { useFlyingHeart } from "@/components/favorites/flying-heart";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface FavouriteButtonProps {
   eventId: number;
@@ -26,6 +27,12 @@ export function FavouriteButton({ eventId }: FavouriteButtonProps) {
       if (!ready) return;
 
       if (!isAuthenticated) {
+        trackAnalyticsEvent("Favorite Toggled", {
+          event_id: eventId,
+          action: "auth_required",
+          authenticated: false,
+          source: "icon_button",
+        });
         openAuthModal({ view: "login" });
         return;
       }
@@ -38,6 +45,12 @@ export function FavouriteButton({ eventId }: FavouriteButtonProps) {
       }
 
       await toggleFavorite(eventId);
+      trackAnalyticsEvent("Favorite Toggled", {
+        event_id: eventId,
+        action: favorited ? "removed" : "added",
+        authenticated: true,
+        source: "icon_button",
+      });
     },
     [eventId, toggleFavorite, openAuthModal, ready, isAuthenticated, favorited, flyingHeart]
   );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/auth-context";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface ProfileDropdownProps {
   onClose: () => void;
@@ -33,6 +34,7 @@ export function ProfileDropdown({
   const handleLogout = async () => {
     setLoggingOut(true);
     setLogoutError(null);
+    trackAnalyticsEvent("Logout Clicked", { confirmed: true });
 
     const { error } = await signOut();
 

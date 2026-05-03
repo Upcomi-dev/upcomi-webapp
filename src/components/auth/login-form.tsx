@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -37,6 +38,7 @@ export function LoginForm({
     });
 
     if (error) {
+      trackAnalyticsEvent("Login Submitted", { success: false });
       if (error.message.includes("Invalid login")) {
         setError("Email ou mot de passe incorrect");
       } else if (error.status === 429) {
@@ -48,6 +50,7 @@ export function LoginForm({
       return;
     }
 
+    trackAnalyticsEvent("Login Submitted", { success: true });
     onSuccess?.();
     router.push(redirectTo);
     router.refresh();

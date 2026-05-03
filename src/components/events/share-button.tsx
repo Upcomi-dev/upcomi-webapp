@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface ShareButtonProps {
   title: string;
   url: string;
+  eventId?: number;
 }
 
-export function ShareButton({ title, url }: ShareButtonProps) {
+export function ShareButton({ title, url, eventId }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleShare = useCallback(async () => {
@@ -16,7 +18,17 @@ export function ShareButton({ title, url }: ShareButtonProps) {
     if (navigator.share) {
       try {
         await navigator.share({ title, url: fullUrl });
+        trackAnalyticsEvent("Share Used", {
+          event_id: eventId,
+          method: "native",
+          success: true,
+        });
       } catch {
+        trackAnalyticsEvent("Share Used", {
+          event_id: eventId,
+          method: "native",
+          success: false,
+        });
         // User cancelled share
       }
       return;
@@ -26,11 +38,21 @@ export function ShareButton({ title, url }: ShareButtonProps) {
     try {
       await navigator.clipboard.writeText(fullUrl);
       setCopied(true);
+      trackAnalyticsEvent("Share Used", {
+        event_id: eventId,
+        method: "clipboard",
+        success: true,
+      });
       setTimeout(() => setCopied(false), 2000);
     } catch {
+      trackAnalyticsEvent("Share Used", {
+        event_id: eventId,
+        method: "clipboard",
+        success: false,
+      });
       // Clipboard API not available
     }
-  }, [title, url]);
+  }, [eventId, title, url]);
 
   return (
     <button

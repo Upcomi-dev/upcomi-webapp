@@ -5,6 +5,7 @@ import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
 import { useFlyingHeart } from "@/components/favorites/flying-heart";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface FavoriteCTAProps {
   eventId: number;
@@ -21,12 +22,14 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
   // Capture whether the user had already favorited at first ready render,
   // so we know if initialCount already includes them.
   const wasInitiallyFavorited = useRef<boolean | null>(null);
+  /* eslint-disable react-hooks/refs */
   if (ready && wasInitiallyFavorited.current === null) {
     wasInitiallyFavorited.current = favorited;
   }
 
   // Adjust count optimistically based on client-side toggle
   const alreadyCounted = wasInitiallyFavorited.current === true;
+  /* eslint-enable react-hooks/refs */
   let displayCount = initialCount;
   if (favorited && !alreadyCounted) displayCount = initialCount + 1;
   if (!favorited && alreadyCounted) displayCount = initialCount - 1;
@@ -37,6 +40,12 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
       e.stopPropagation();
       if (!ready) return;
       if (!user) {
+        trackAnalyticsEvent("Favorite Toggled", {
+          event_id: eventId,
+          action: "auth_required",
+          authenticated: false,
+          source: "detail_cta",
+        });
         openAuthModal({ view: "login" });
         return;
       }
@@ -47,6 +56,12 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
         await new Promise((r) => setTimeout(r, 950));
       }
       await toggleFavorite(eventId);
+      trackAnalyticsEvent("Favorite Toggled", {
+        event_id: eventId,
+        action: favorited ? "removed" : "added",
+        authenticated: true,
+        source: "detail_cta",
+      });
     },
     [eventId, toggleFavorite, openAuthModal, ready, user, favorited, flyingHeart]
   );

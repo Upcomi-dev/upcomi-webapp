@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { makeEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { FavouriteButton } from "./favourite-button";
 
 interface EventCardProps {
@@ -109,6 +110,14 @@ export function EventCard({
 
   const location = [villeDepart, paysDepart].filter(Boolean).join(", ");
   const distanceBadge = formatDistanceBadge(distance);
+  const trackLinkOpen = () => {
+    trackAnalyticsEvent("Event Opened", {
+      event_id: id,
+      source: variant,
+      event_type: type_event,
+      bike_type,
+    });
+  };
 
   if (variant === "carousel") {
     const content = (
@@ -195,6 +204,7 @@ export function EventCard({
       <Link
         href={`/event/${slug}`}
         className={className}
+        onClick={trackLinkOpen}
         onMouseEnter={() => onEventHover?.(id)}
         onMouseLeave={() => onEventHover?.(null)}
       >
@@ -286,7 +296,7 @@ export function EventCard({
     }
 
     return (
-      <Link href={`/event/${slug}`} className={cardClassName}>
+      <Link href={`/event/${slug}`} className={cardClassName} onClick={trackLinkOpen}>
         {content}
       </Link>
     );
@@ -296,6 +306,7 @@ export function EventCard({
     <Link
       href={`/event/${slug}`}
       className="glass grain-overlay group block overflow-hidden border border-white/55 transition-all duration-300 hover:-translate-y-1.5 hover:border-orange/45"
+      onClick={trackLinkOpen}
     >
       <div className="relative h-40 overflow-hidden rounded-t-[calc(var(--radius)-1px)]">
         {!imageLoaded ? (

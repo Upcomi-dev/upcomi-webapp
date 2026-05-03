@@ -17,6 +17,7 @@ import { SortControl } from "@/components/events/sort-control";
 import { TopNav } from "@/components/layout/top-nav";
 import { CollectionsView } from "@/components/collections/collections-view";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 /* ── Panel state machine ── */
@@ -140,6 +141,7 @@ function MapPageContent({
 
       const query = params.toString();
       window.history.replaceState(null, "", query ? `/?${query}` : "/");
+      trackAnalyticsEvent("Mobile View Changed", { view: nextView });
     },
     [searchParams]
   );
@@ -174,6 +176,7 @@ function MapPageContent({
     (key: string, value: string) => {
       const params = new URLSearchParams(searchParams.toString());
       const current = params.get(key)?.split(",").filter(Boolean) ?? [];
+      const action = current.includes(value) ? "removed" : "added";
 
       if (current.includes(value)) {
         const next = current.filter((item) => item !== value);
@@ -188,6 +191,12 @@ function MapPageContent({
 
       const query = params.toString();
       router.push(query ? `/?${query}` : "/", { scroll: false });
+      trackAnalyticsEvent("Filter Changed", {
+        filter_key: key,
+        filter_value: value,
+        action,
+        surface: "map_legend",
+      });
     },
     [router, searchParams]
   );
@@ -273,6 +282,21 @@ function MapPageContent({
   }, [initialEvents, listReferenceTime, matchesSearch, panel.selectedEventId, sort]);
 
   useEffect(() => {
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return;
+
+    const timeout = window.setTimeout(() => {
+      trackAnalyticsEvent("Search Used", {
+        query_length: trimmedQuery.length,
+        result_count: listEvents.length,
+        surface: isMobile ? "mobile" : "desktop",
+      });
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+  }, [isMobile, listEvents.length, searchQuery]);
+
+  useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
     const syncViewport = () => setIsMobile(mediaQuery.matches);
     syncViewport();
@@ -287,11 +311,25 @@ function MapPageContent({
     card?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [panel.selectedEventId]);
 
-  const handleEventClick = useCallback((eventId: number) => {
+  const trackEventOpened = useCallback(
+    (eventId: number, source: string) => {
+      const event = detailEvents.find((item) => item.id === eventId);
+      trackAnalyticsEvent("Event Opened", {
+        event_id: eventId,
+        source,
+        event_type: event?.type_event,
+        bike_type: event?.bike_type,
+      });
+    },
+    [detailEvents]
+  );
+
+  const handleEventClick = useCallback((eventId: number, source = "list") => {
     setHoveredEventId(null);
     dispatch({ type: "SELECT_EVENT", eventId });
     setFlyToEventId(eventId);
-  }, []);
+    trackEventOpened(eventId, source);
+  }, [trackEventOpened]);
 
   const handleMapEventSelect = useCallback((eventId: number | null) => {
     setHoveredEventId(null);
@@ -310,11 +348,15 @@ function MapPageContent({
       }
 
       dispatch({ type: "SELECT_EVENT", eventId });
+      trackEventOpened(eventId, "map");
       return;
     }
 
     dispatch({ type: "MAP_SELECT", eventId });
-  }, [isMobile, router, searchParams]);
+    if (eventId != null) {
+      trackEventOpened(eventId, "map");
+    }
+  }, [isMobile, router, searchParams, trackEventOpened]);
 
   const handleBackFromDetail = useCallback(() => {
     setHoveredEventId(null);
@@ -388,7 +430,7 @@ function MapPageContent({
 
           <CollectionsView
             collections={collections}
-            onEventClick={handleEventClick}
+            onEventClick={(eventId) => handleEventClick(eventId, "collection")}
             onEventHover={setHoveredEventId}
           />
         </>
@@ -448,7 +490,7 @@ function MapPageContent({
                     paysDepart={event.paysDepart}
                     variant="list"
                     isSelected={event.id === panel.selectedEventId}
-                    onEventClick={handleEventClick}
+                    onEventClick={(eventId) => handleEventClick(eventId, "list")}
                     onEventHover={setHoveredEventId}
                   />
                 </div>
@@ -475,7 +517,7 @@ function MapPageContent({
 
           <CollectionsView
             collections={collections}
-            onEventClick={handleEventClick}
+            onEventClick={(eventId) => handleEventClick(eventId, "collection")}
             onEventHover={setHoveredEventId}
           />
         </section>
@@ -518,7 +560,7 @@ function MapPageContent({
                   paysDepart={event.paysDepart}
                   variant="list"
                   isSelected={event.id === panel.selectedEventId}
-                  onEventClick={handleEventClick}
+                  onEventClick={(eventId) => handleEventClick(eventId, "list")}
                   onEventHover={setHoveredEventId}
                 />
               </div>

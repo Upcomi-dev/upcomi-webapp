@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useState } from "react";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 type AuthModalView = "login" | "signup";
 
@@ -25,6 +26,10 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
       setView(opts?.view ?? "login");
       setRedirectAfterAuth(opts?.redirect ?? "/");
       setIsOpen(true);
+      trackAnalyticsEvent("Auth Modal Opened", {
+        view: opts?.view ?? "login",
+        has_redirect: Boolean(opts?.redirect),
+      });
     },
     []
   );

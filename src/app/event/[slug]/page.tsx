@@ -9,6 +9,7 @@ import type { Event, SousEvent } from "@/lib/types/database";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { ShareButton } from "@/components/events/share-button";
 import { FavoriteCTA } from "@/components/events/favorite-cta";
+import { ExternalRegistrationLink } from "@/components/events/external-registration-link";
 import { EventCard } from "@/components/events/event-card";
 import { TopNav } from "@/components/layout/top-nav";
 
@@ -205,6 +206,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 <ShareButton
                   title={event.nomEvent || "Événement"}
                   url={`/event/${eventSlug}`}
+                  eventId={event.id}
                 />
               </div>
             </div>
@@ -351,15 +353,16 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                         </div>
                       )}
                     </div>
-                    <a
+                    <ExternalRegistrationLink
                       href={event.URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      eventId={event.id}
+                      eventType={event.type_event}
+                      organizer={event.organisateur}
                       className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white transition-all hover:bg-coral-dark"
                       style={{ boxShadow: "0 2px 12px rgba(255,94,65,0.25)" }}
                     >
                       S&apos;inscrire →
-                    </a>
+                    </ExternalRegistrationLink>
                   </div>
                 )}
 
@@ -409,15 +412,16 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                   </div>
                 )}
               </div>
-              <a
+              <ExternalRegistrationLink
                 href={event.URL}
-                target="_blank"
-                rel="noopener noreferrer"
+                eventId={event.id}
+                eventType={event.type_event}
+                organizer={event.organisateur}
                 className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white transition-all hover:bg-coral-dark"
                 style={{ boxShadow: "0 2px 12px rgba(255,94,65,0.25)" }}
               >
                 S&apos;inscrire →
-              </a>
+              </ExternalRegistrationLink>
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 const SORT_OPTIONS = [
@@ -27,6 +28,10 @@ export function SortControl() {
 
       const query = params.toString();
       router.push(query ? `/?${query}` : "/", { scroll: false });
+      trackAnalyticsEvent("Sort Changed", {
+        sort_value: value,
+        action: searchParams.get("sort") === value ? "removed" : "added",
+      });
       setOpen(false);
     },
     [router, searchParams]

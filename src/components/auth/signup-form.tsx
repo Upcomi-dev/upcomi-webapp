@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface SignupFormProps {
   onSuccess?: () => void;
@@ -38,16 +39,28 @@ export function SignupForm({
 
     if (normalizedEmail !== normalizedEmailConfirmation) {
       setError("Les emails ne correspondent pas");
+      trackAnalyticsEvent("Signup Submitted", {
+        success: false,
+        reason: "email_mismatch",
+      });
       return;
     }
 
     if (password !== passwordConfirmation) {
       setError("Les mots de passe ne correspondent pas");
+      trackAnalyticsEvent("Signup Submitted", {
+        success: false,
+        reason: "password_mismatch",
+      });
       return;
     }
 
     if (!acceptedPrivacyPolicy) {
       setError("Tu dois accepter les CGU et la politique de confidentialité pour créer un compte");
+      trackAnalyticsEvent("Signup Submitted", {
+        success: false,
+        reason: "privacy_not_accepted",
+      });
       return;
     }
 
@@ -71,6 +84,10 @@ export function SignupForm({
     });
 
     if (error) {
+      trackAnalyticsEvent("Signup Submitted", {
+        success: false,
+        reason: error.message.includes("already registered") ? "already_registered" : "supabase_error",
+      });
       if (error.message.includes("already registered")) {
         setError("Un compte existe déjà avec cet email");
       } else {
@@ -80,6 +97,7 @@ export function SignupForm({
       return;
     }
 
+    trackAnalyticsEvent("Signup Submitted", { success: true });
     router.push(redirectTo);
     router.refresh();
     onSuccess?.();

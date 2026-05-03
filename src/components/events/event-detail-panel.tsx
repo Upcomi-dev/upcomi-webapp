@@ -9,12 +9,13 @@ import { ShareButton } from "./share-button";
 import { FavoriteCTA } from "./favorite-cta";
 import { EventCard } from "./event-card";
 import { makeEventSlug } from "@/lib/utils/slugify";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface EventDetailPanelProps {
   /** Basic event data already available from the list. */
   event: MapEvent;
   onBack: () => void;
-  onEventSelect?: (eventId: number) => void;
+  onEventSelect?: (eventId: number, source?: string) => void;
 }
 
 type RelatedEventCardData = Pick<
@@ -192,6 +193,7 @@ export function EventDetailPanel({
             <ShareButton
               title={event.nomEvent || "Événement"}
               url={`/event/${eventSlug}`}
+              eventId={event.id}
             />
           </div>
         </div>
@@ -342,7 +344,7 @@ export function EventDetailPanel({
                 paysDepart={relatedEvent.paysDepart}
                 distance={relatedEvent.distance}
                 variant="carousel"
-                onEventClick={onEventSelect}
+                onEventClick={(eventId) => onEventSelect?.(eventId, "related")}
               />
             ))}
           </div>
@@ -364,6 +366,13 @@ export function EventDetailPanel({
               href={fullEvent!.URL!}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => {
+                trackAnalyticsEvent("External Registration Clicked", {
+                  event_id: event.id,
+                  event_type: event.type_event,
+                  organizer: fullEvent.organisateur,
+                });
+              }}
               className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white shadow-[0_2px_12px_rgba(255,94,65,0.25)] transition-all hover:bg-coral-dark hover:shadow-[0_4px_16px_rgba(255,94,65,0.35)]"
             >
               S&apos;inscrire →

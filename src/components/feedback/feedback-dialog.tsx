@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { FEEDBACK_KIND_OPTIONS } from "@/lib/feedback";
 import type { FeedbackKind } from "@/lib/types/database";
 
@@ -42,6 +43,11 @@ export function FeedbackDialog() {
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
+    if (nextOpen) {
+      trackAnalyticsEvent("Feedback Opened", {
+        authenticated: isAuthenticated,
+      });
+    }
 
     if (!nextOpen) {
       setError(null);
@@ -55,10 +61,20 @@ export function FeedbackDialog() {
       const result = await submitFeedback(formData);
 
       if (result.ok) {
+        trackAnalyticsEvent("Feedback Submitted", {
+          kind: selectedKind,
+          authenticated: isAuthenticated,
+          success: true,
+        });
         formRef.current?.reset();
         setSelectedKind("feedback");
         setOpen(false);
       } else {
+        trackAnalyticsEvent("Feedback Submitted", {
+          kind: selectedKind,
+          authenticated: isAuthenticated,
+          success: false,
+        });
         setError(result.message);
       }
     });
@@ -68,7 +84,7 @@ export function FeedbackDialog() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => handleOpenChange(true)}
         className="soft-ring flex h-9 w-9 items-center justify-center rounded-full border border-white/38 bg-white/42 text-foreground/54 transition-all hover:border-coral/22 hover:bg-white/58 hover:text-foreground/72 md:hidden"
         aria-label="Remonter une idée, un bug ou un feedback"
       >
@@ -77,7 +93,7 @@ export function FeedbackDialog() {
 
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => handleOpenChange(true)}
         className="hidden h-9 w-9 items-center justify-center rounded-full border border-white/38 bg-white/42 text-foreground/58 transition-all hover:border-coral/22 hover:bg-white/58 hover:text-foreground md:inline-flex"
         aria-label="Remonter une idée, un bug ou un feedback"
       >
