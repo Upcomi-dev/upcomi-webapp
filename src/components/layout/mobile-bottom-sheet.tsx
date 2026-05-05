@@ -45,7 +45,10 @@ export function MobileBottomSheet({
   const startTranslate = useRef(0);
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const getSnapTranslate = useCallback((level: SnapLevel) => {
     // Sheet height = 100dvh - 60px - BOTTOM_NAV_HEIGHT
@@ -63,25 +66,38 @@ export function MobileBottomSheet({
 
   // Set initial position after mount
   useEffect(() => {
-    if (mounted) {
+    if (!mounted) return;
+
+    const frame = requestAnimationFrame(() => {
       setTranslateY(getSnapTranslate("peek"));
-    }
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [mounted, getSnapTranslate]);
 
   // Open to half when detail is selected
   useEffect(() => {
-    if (detailEventId != null) {
+    if (detailEventId == null) return;
+
+    const frame = requestAnimationFrame(() => {
       setSnap("full");
       setTranslateY(getSnapTranslate("full"));
-    }
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [detailEventId, getSnapTranslate]);
 
   // Collapse to peek when the map background is clicked.
   // Skip the initial mount by ignoring undefined signals.
   useEffect(() => {
     if (collapseSignal === undefined) return;
-    setSnap("peek");
-    setTranslateY(getSnapTranslate("peek"));
+
+    const frame = requestAnimationFrame(() => {
+      setSnap("peek");
+      setTranslateY(getSnapTranslate("peek"));
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [collapseSignal, getSnapTranslate]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {

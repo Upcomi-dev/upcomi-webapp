@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.14] - 2026-05-05
+
+### Analytics
+- feat: ajout de Vercel Web Analytics et duplication des événements custom existants vers Vercel
+
+### Auth
+- fix: amélioration du parcours de réinitialisation de mot de passe et des modales d'authentification
+
 ## [0.3.10] - 2026-04-30
 
 ### Tooling
