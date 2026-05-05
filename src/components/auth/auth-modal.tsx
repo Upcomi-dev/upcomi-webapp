@@ -40,6 +40,7 @@ export function AuthModalDialog({
   showCloseButton = true,
 }: AuthModalDialogProps) {
   const isForgotPassword = view === "forgot-password";
+  const closeOnAuthSuccess = showCloseButton ? onClose : undefined;
 
   return (
     <Dialog
@@ -79,7 +80,7 @@ export function AuthModalDialog({
           {view === "login" ? (
             <LoginForm
               redirectTo={redirectTo}
-              onSuccess={onClose}
+              onSuccess={closeOnAuthSuccess}
               onSwitchToSignup={() => onViewChange("signup")}
               onSwitchToForgotPassword={() => onViewChange("forgot-password")}
             />
@@ -88,7 +89,7 @@ export function AuthModalDialog({
           ) : (
             <SignupForm
               redirectTo={redirectTo}
-              onSuccess={onClose}
+              onSuccess={closeOnAuthSuccess}
               onSwitchToLogin={() => onViewChange("login")}
             />
           )}

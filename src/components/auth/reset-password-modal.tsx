@@ -95,8 +95,7 @@ function ResetPasswordModalContent() {
       return;
     }
 
-    await supabase.auth.signOut();
-    router.replace("/login");
+    router.replace("/");
     router.refresh();
   }
 
