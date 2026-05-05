@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildEventTypeOptions } from "@/lib/events/filter-options";
 import type { MapEvent, CollectionWithEvents } from "@/lib/types/database";
@@ -22,6 +23,22 @@ interface HomePageProps {
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
+
+  if (typeof params.code === "string") {
+    const recoveryParams = new URLSearchParams();
+    recoveryParams.set("code", params.code);
+
+    if (typeof params.error === "string") {
+      recoveryParams.set("error", params.error);
+    }
+
+    if (typeof params.error_description === "string") {
+      recoveryParams.set("error_description", params.error_description);
+    }
+
+    redirect(`/reset-password?${recoveryParams.toString()}`);
+  }
+
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 

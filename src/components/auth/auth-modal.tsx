@@ -2,6 +2,7 @@
 
 import { AppLogo } from "@/components/layout/app-logo";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ForgotPasswordForm } from "./forgot-password-form";
 import { LoginForm } from "./login-form";
 import { SignupForm } from "./signup-form";
 import { useAuthModal } from "./auth-modal-context";
@@ -9,6 +10,7 @@ import { useAuthModal } from "./auth-modal-context";
 export function AuthModal() {
   const { isOpen, view, redirectAfterAuth, closeAuthModal, setView } =
     useAuthModal();
+  const isForgotPassword = view === "forgot-password";
 
   return (
     <Dialog
@@ -22,12 +24,18 @@ export function AuthModal() {
         <div className="hero-mesh relative px-6 pt-7 pb-5">
           <AppLogo href="/" imageClassName="h-8 w-auto" />
           <h2 className="mt-4 font-serif text-[22px] font-bold leading-tight text-foreground">
-            {view === "login" ? "Connexion" : "Rejoins la communauté"}
+            {view === "login"
+              ? "Connexion"
+              : isForgotPassword
+                ? "Mot de passe oublié"
+                : "Rejoins la communauté"}
           </h2>
           <p className="mt-1.5 text-[13px] text-foreground/52">
             {view === "login"
               ? "Connecte-toi pour retrouver tes événements favoris"
-              : "Crée ton compte pour sauvegarder tes événements"}
+              : isForgotPassword
+                ? "Reçois un lien pour choisir un nouveau mot de passe"
+                : "Crée ton compte pour sauvegarder tes événements"}
           </p>
         </div>
 
@@ -41,7 +49,10 @@ export function AuthModal() {
               redirectTo={redirectAfterAuth}
               onSuccess={closeAuthModal}
               onSwitchToSignup={() => setView("signup")}
+              onSwitchToForgotPassword={() => setView("forgot-password")}
             />
+          ) : isForgotPassword ? (
+            <ForgotPasswordForm onSwitchToLogin={() => setView("login")} />
           ) : (
             <SignupForm
               redirectTo={redirectAfterAuth}

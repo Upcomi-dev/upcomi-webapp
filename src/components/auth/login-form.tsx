@@ -85,13 +85,23 @@ export function LoginForm({
         </div>
 
         <div>
-          <div className="mb-1.5 flex items-center justify-between">
+          <div className="mb-1.5">
             <label
               htmlFor="login-password"
               className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
             >
               Mot de passe
             </label>
+          </div>
+          <input
+            id="login-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
+          />
+          <div className="mt-1.5 text-right">
             {onSwitchToForgotPassword ? (
               <button
                 type="button"
@@ -109,14 +119,6 @@ export function LoginForm({
               </Link>
             )}
           </div>
-          <input
-            id="login-password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
-          />
         </div>
 
         <button

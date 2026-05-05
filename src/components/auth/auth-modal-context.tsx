@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useState } from "react";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 
-type AuthModalView = "login" | "signup";
+type AuthModalView = "login" | "signup" | "forgot-password";
 
 interface AuthModalContextValue {
   isOpen: boolean;
