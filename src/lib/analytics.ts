@@ -1,20 +1,22 @@
 "use client";
 
-import { track } from "@plausible-analytics/tracker";
-
 export type AnalyticsEventName =
   | "Event Opened"
+  | "Event Viewed"
   | "Search Used"
   | "Filter Changed"
   | "Filters Cleared"
   | "Sort Changed"
   | "Mobile View Changed"
   | "Favorite Toggled"
+  | "Favorite Added"
   | "Share Used"
   | "External Registration Clicked"
   | "Auth Modal Opened"
   | "Login Submitted"
+  | "Login Completed"
   | "Signup Submitted"
+  | "Signup Completed"
   | "Logout Clicked"
   | "Feedback Opened"
   | "Feedback Submitted";
@@ -39,8 +41,26 @@ export function trackAnalyticsEvent(
   eventName: AnalyticsEventName,
   props?: AnalyticsProps
 ) {
+  if (typeof window === "undefined") return;
+
+  const plausibleProps = normalizeProps(props);
+
   try {
-    track(eventName, { props: normalizeProps(props) });
+    void import("@plausible-analytics/tracker").then(({ track }) => {
+      track(eventName, { props: plausibleProps });
+    }).catch(() => {
+      // Analytics should never affect user-facing behavior.
+    });
+  } catch {
+    // Analytics should never affect user-facing behavior.
+  }
+
+  try {
+    void import("@vercel/analytics").then(({ track }) => {
+      track(eventName, props);
+    }).catch(() => {
+      // Analytics should never affect user-facing behavior.
+    });
   } catch {
     // Analytics should never affect user-facing behavior.
   }

@@ -44,13 +44,19 @@ export function FavouriteButton({ eventId }: FavouriteButtonProps) {
         await new Promise((r) => setTimeout(r, 950));
       }
 
-      await toggleFavorite(eventId);
+      const isNowFavorite = await toggleFavorite(eventId);
       trackAnalyticsEvent("Favorite Toggled", {
         event_id: eventId,
         action: favorited ? "removed" : "added",
         authenticated: true,
         source: "icon_button",
       });
+      if (isNowFavorite) {
+        trackAnalyticsEvent("Favorite Added", {
+          event_id: eventId,
+          source: "icon_button",
+        });
+      }
     },
     [eventId, toggleFavorite, openAuthModal, ready, isAuthenticated, favorited, flyingHeart]
   );

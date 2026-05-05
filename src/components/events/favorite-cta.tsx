@@ -55,13 +55,19 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
         // Delay toggle so counter increments when the heart arrives
         await new Promise((r) => setTimeout(r, 950));
       }
-      await toggleFavorite(eventId);
+      const isNowFavorite = await toggleFavorite(eventId);
       trackAnalyticsEvent("Favorite Toggled", {
         event_id: eventId,
         action: favorited ? "removed" : "added",
         authenticated: true,
         source: "detail_cta",
       });
+      if (isNowFavorite) {
+        trackAnalyticsEvent("Favorite Added", {
+          event_id: eventId,
+          source: "detail_cta",
+        });
+      }
     },
     [eventId, toggleFavorite, openAuthModal, ready, user, favorited, flyingHeart]
   );

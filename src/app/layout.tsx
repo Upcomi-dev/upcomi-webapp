@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Work_Sans, Averia_Serif_Libre } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AmbientOrbs } from "@/components/layout/ambient-orbs";
 import { AuthModalProvider } from "@/components/auth/auth-modal-context";
@@ -99,6 +100,7 @@ export default async function RootLayout({
             </FavoritesProvider>
           </AuthModalProvider>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );

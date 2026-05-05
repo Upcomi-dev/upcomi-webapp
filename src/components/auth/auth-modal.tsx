@@ -10,16 +10,48 @@ import { useAuthModal } from "./auth-modal-context";
 export function AuthModal() {
   const { isOpen, view, redirectAfterAuth, closeAuthModal, setView } =
     useAuthModal();
+
+  return (
+    <AuthModalDialog
+      open={isOpen}
+      view={view}
+      redirectTo={redirectAfterAuth}
+      onClose={closeAuthModal}
+      onViewChange={setView}
+    />
+  );
+}
+
+interface AuthModalDialogProps {
+  open: boolean;
+  view: "login" | "signup" | "forgot-password";
+  redirectTo?: string;
+  onClose?: () => void;
+  onViewChange: (view: "login" | "signup" | "forgot-password") => void;
+  showCloseButton?: boolean;
+}
+
+export function AuthModalDialog({
+  open,
+  view,
+  redirectTo = "/",
+  onClose,
+  onViewChange,
+  showCloseButton = true,
+}: AuthModalDialogProps) {
   const isForgotPassword = view === "forgot-password";
 
   return (
     <Dialog
-      open={isOpen}
+      open={open}
       onOpenChange={(open) => {
-        if (!open) closeAuthModal();
+        if (!open) onClose?.();
       }}
     >
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-[400px]">
+      <DialogContent
+        className="gap-0 overflow-hidden p-0 sm:max-w-[400px]"
+        showCloseButton={showCloseButton}
+      >
         {/* Header with gradient mesh */}
         <div className="hero-mesh relative px-6 pt-7 pb-5">
           <AppLogo href="/" imageClassName="h-8 w-auto" />
@@ -46,18 +78,18 @@ export function AuthModal() {
         <div className="px-6 pt-5 pb-6">
           {view === "login" ? (
             <LoginForm
-              redirectTo={redirectAfterAuth}
-              onSuccess={closeAuthModal}
-              onSwitchToSignup={() => setView("signup")}
-              onSwitchToForgotPassword={() => setView("forgot-password")}
+              redirectTo={redirectTo}
+              onSuccess={onClose}
+              onSwitchToSignup={() => onViewChange("signup")}
+              onSwitchToForgotPassword={() => onViewChange("forgot-password")}
             />
           ) : isForgotPassword ? (
-            <ForgotPasswordForm onSwitchToLogin={() => setView("login")} />
+            <ForgotPasswordForm onSwitchToLogin={() => onViewChange("login")} />
           ) : (
             <SignupForm
-              redirectTo={redirectAfterAuth}
-              onSuccess={closeAuthModal}
-              onSwitchToLogin={() => setView("login")}
+              redirectTo={redirectTo}
+              onSuccess={onClose}
+              onSwitchToLogin={() => onViewChange("login")}
             />
           )}
         </div>

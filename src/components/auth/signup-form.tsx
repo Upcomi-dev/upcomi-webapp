@@ -5,6 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { trackAnalyticsEvent } from "@/lib/analytics";
+import {
+  getPasswordRequirementsMessage,
+  isPasswordValid,
+  PASSWORD_MIN_LENGTH,
+  translatePasswordError,
+} from "@/lib/auth/password";
+import { PasswordRequirements } from "./password-requirements";
 
 interface SignupFormProps {
   onSuccess?: () => void;
@@ -55,6 +62,15 @@ export function SignupForm({
       return;
     }
 
+    if (!isPasswordValid(password)) {
+      setError(getPasswordRequirementsMessage());
+      trackAnalyticsEvent("Signup Submitted", {
+        success: false,
+        reason: "weak_password",
+      });
+      return;
+    }
+
     if (!acceptedPrivacyPolicy) {
       setError("Tu dois accepter les CGU et la politique de confidentialité pour créer un compte");
       trackAnalyticsEvent("Signup Submitted", {
@@ -91,13 +107,14 @@ export function SignupForm({
       if (error.message.includes("already registered")) {
         setError("Un compte existe déjà avec cet email");
       } else {
-        setError(error.message);
+        setError(translatePasswordError(error.message));
       }
       setLoading(false);
       return;
     }
 
     trackAnalyticsEvent("Signup Submitted", { success: true });
+    trackAnalyticsEvent("Signup Completed");
     router.push(redirectTo);
     router.refresh();
     onSuccess?.();
@@ -179,10 +196,11 @@ export function SignupForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
-            placeholder="6 caractères minimum"
+            placeholder="8 caractères minimum"
           />
+          <PasswordRequirements password={password} />
         </div>
 
         <div>
@@ -198,7 +216,7 @@ export function SignupForm({
             value={passwordConfirmation}
             onChange={(e) => setPasswordConfirmation(e.target.value)}
             required
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
             placeholder="Confirme ton mot de passe"
           />

@@ -11,6 +11,7 @@ import { ShareButton } from "@/components/events/share-button";
 import { FavoriteCTA } from "@/components/events/favorite-cta";
 import { ExternalRegistrationLink } from "@/components/events/external-registration-link";
 import { EventCard } from "@/components/events/event-card";
+import { EventViewTracker } from "@/components/events/event-view-tracker";
 import { TopNav } from "@/components/layout/top-nav";
 
 interface PageProps {
@@ -134,6 +135,12 @@ export default async function EventPage({ params, searchParams }: PageProps) {
 
   return (
     <>
+      <EventViewTracker
+        eventId={event.id}
+        eventType={event.type_event}
+        bikeType={event.bike_type}
+        organizer={event.organisateur}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

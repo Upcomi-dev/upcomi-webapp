@@ -51,6 +51,7 @@ export function LoginForm({
     }
 
     trackAnalyticsEvent("Login Submitted", { success: true });
+    trackAnalyticsEvent("Login Completed");
     onSuccess?.();
     router.push(redirectTo);
     router.refresh();
