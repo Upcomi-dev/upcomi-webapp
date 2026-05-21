@@ -6,6 +6,7 @@ import Image from "next/image";
 import { makeEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 import { trackAnalyticsEvent } from "@/lib/analytics";
+import { formatDateValue, getDateKey, isEventPast } from "@/lib/utils/event-dates";
 import { FavouriteButton } from "./favourite-button";
 
 interface EventCardProps {
@@ -17,7 +18,9 @@ interface EventCardProps {
   type_event: string | null;
   villeDepart: string | null;
   paysDepart: string | null;
+  dateFin?: string | null;
   distance?: string | null;
+  mint?: boolean | null;
   variant?: "grid" | "list" | "carousel";
   carouselLayout?: "default" | "map-preview";
   isSelected?: boolean;
@@ -80,6 +83,7 @@ export function EventCard({
   type_event,
   villeDepart,
   paysDepart,
+  dateFin,
   distance,
   variant = "grid",
   carouselLayout = "default",
@@ -101,12 +105,19 @@ export function EventCard({
   const hasImage = hasUsableImageValue && failedImageSrc !== normalizedImage;
   const imageLoaded = loadedImageSrc === normalizedImage;
 
-  const formattedDate = dateEvent
-    ? new Date(dateEvent).toLocaleDateString("fr-FR", {
-        day: "numeric",
-        month: "short",
-      })
-    : null;
+  const formattedStartDate = formatDateValue(dateEvent, "fr-FR", {
+    day: "numeric",
+    month: "short",
+  });
+  const formattedEndDate = formatDateValue(dateFin, "fr-FR", {
+    day: "numeric",
+    month: "short",
+  });
+  const formattedDate =
+    formattedStartDate && formattedEndDate && getDateKey(dateEvent) !== getDateKey(dateFin)
+      ? `${formattedStartDate} - ${formattedEndDate}`
+      : formattedStartDate;
+  const past = isEventPast({ dateEvent, dateFin });
 
   const location = [villeDepart, paysDepart].filter(Boolean).join(", ");
   const distanceBadge = formatDistanceBadge(distance);
@@ -143,6 +154,13 @@ export function EventCard({
           <div className="absolute right-2.5 top-2.5 z-10">
             <FavouriteButton eventId={id} />
           </div>
+          {past && (
+            <div className="absolute left-2.5 top-2.5 z-10 flex max-w-[calc(100%-4rem)] flex-col items-start gap-1.5">
+              <span className="rounded-full border border-white/35 bg-foreground/62 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm">
+                Terminé
+              </span>
+            </div>
+          )}
           {type_event && (
             <div className="absolute bottom-2.5 right-2.5 z-10">
               <span
@@ -182,7 +200,7 @@ export function EventCard({
         ? "h-[280px] w-[calc(100vw-4.75rem)] max-w-[520px] md:w-[260px]"
         : "h-[280px] w-[260px]";
     const className =
-      `group flex ${carouselSizeClassName} flex-none snap-start flex-col overflow-hidden rounded-[22px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.92),rgba(248,240,230,0.82))] shadow-[var(--shadow-sm)] transition-all duration-300 hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-[var(--shadow-md)]`;
+      `group flex ${carouselSizeClassName} flex-none snap-start flex-col overflow-hidden rounded-[22px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.92),rgba(248,240,230,0.82))] shadow-[var(--shadow-sm)] transition-all duration-300 hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-[var(--shadow-md)] ${past ? "opacity-[0.78] hover:opacity-100" : ""}`;
 
     if (onEventClick) {
       return (
@@ -252,6 +270,11 @@ export function EventCard({
                     {type_event}
                   </span>
                 )}
+                {past ? (
+                  <span className="rounded-full border border-foreground/8 bg-foreground/62 px-2.5 py-1 text-white">
+                    Terminé
+                  </span>
+                ) : null}
                 {bike_type && (
                   <span
                     className="rounded-full px-2.5 py-1 text-white"
@@ -305,7 +328,7 @@ export function EventCard({
   return (
     <Link
       href={`/event/${slug}`}
-      className="glass grain-overlay group block overflow-hidden border border-white/55 transition-all duration-300 hover:-translate-y-1.5 hover:border-orange/45"
+      className={`glass grain-overlay group block overflow-hidden border border-white/55 transition-all duration-300 hover:-translate-y-1.5 hover:border-orange/45 ${past ? "opacity-[0.78] hover:opacity-100" : ""}`}
       onClick={trackLinkOpen}
     >
       <div className="relative h-40 overflow-hidden rounded-t-[calc(var(--radius)-1px)]">
@@ -334,6 +357,11 @@ export function EventCard({
                 {type_event}
               </span>
             )}
+            {past ? (
+              <span className="rounded-full border border-white/20 bg-foreground/62 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white shadow-[var(--shadow-sm)] backdrop-blur-sm">
+                Terminé
+              </span>
+            ) : null}
           </div>
           {bike_type && (
             <span

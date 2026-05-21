@@ -1,35 +1,26 @@
-type DatedEvent = {
-  dateEvent: string | null;
-};
+import {
+  compareEventsByStartDate,
+  getLocalDateKey,
+  isEventOngoingOrUpcoming,
+  type EventDateRange,
+} from "@/lib/utils/event-dates";
 
-function getTodayKey(now = new Date()): string {
-  return now.toISOString().split("T")[0];
+export function getSortedFavoriteEvents<T extends EventDateRange>(events: T[]): T[] {
+  return [...events].sort(compareEventsByStartDate);
 }
 
-function getEventDateKey(dateEvent: string | null): string | null {
-  return dateEvent ? dateEvent.slice(0, 10) : null;
-}
-
-export function getVisibleFavoriteEvents<T extends DatedEvent>(
+export function getVisibleFavoriteEvents<T extends EventDateRange>(
   events: T[],
-  todayKey = getTodayKey()
+  todayKey = getLocalDateKey()
 ): T[] {
-  return events
-    .filter((event) => {
-      const eventDateKey = getEventDateKey(event.dateEvent);
-      return eventDateKey !== null && eventDateKey >= todayKey;
-    })
-    .sort((a, b) => {
-      const left = getEventDateKey(a.dateEvent) ?? "";
-      const right = getEventDateKey(b.dateEvent) ?? "";
-      return left.localeCompare(right);
-    });
+  return getSortedFavoriteEvents(
+    events.filter((event) => isEventOngoingOrUpcoming(event, todayKey))
+  );
 }
 
 export function isVisibleFavoriteEvent(
-  event: DatedEvent,
-  todayKey = getTodayKey()
+  event: EventDateRange,
+  todayKey = getLocalDateKey()
 ): boolean {
-  const eventDateKey = getEventDateKey(event.dateEvent);
-  return eventDateKey !== null && eventDateKey >= todayKey;
+  return isEventOngoingOrUpcoming(event, todayKey);
 }

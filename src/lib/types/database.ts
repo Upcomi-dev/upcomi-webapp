@@ -45,6 +45,7 @@ export interface MapEvent {
   bike_type: string | null;
   type_event: string | null;
   dateEvent: string | null;
+  dateFin: string | null;
   image: string | null;
   distance_range_filter: string | null;
   distance: string | null;
@@ -75,6 +76,7 @@ export interface FavouriteEvent {
   created_at: string;
   user_id: string;
   event: number;
+  participates: boolean;
 }
 
 export type FeedbackKind = "idea" | "bug" | "feedback";

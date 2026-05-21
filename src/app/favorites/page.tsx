@@ -7,10 +7,17 @@ import { withReturnTo } from "@/lib/utils/navigation";
 import { makeEventSlug } from "@/lib/utils/slugify";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { AppLogo } from "@/components/layout/app-logo";
-import { getVisibleFavoriteEvents } from "@/lib/utils/favorites";
+import { formatDateValue, isEventPast } from "@/lib/utils/event-dates";
+import { getSortedFavoriteEvents, getVisibleFavoriteEvents } from "@/lib/utils/favorites";
 
-export default async function FavoritesPage() {
+interface FavoritesPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function FavoritesPage({ searchParams }: FavoritesPageProps) {
   const supabase = await createClient();
+  const params = await searchParams;
+  const showPastEvents = params.show_past === "true";
 
   const {
     data: { user },
@@ -33,7 +40,10 @@ export default async function FavoritesPage() {
       .from("events")
       .select("*")
       .in("id", eventIds);
-    events = getVisibleFavoriteEvents((data as Event[]) || []);
+    const favoriteRows = (data as Event[]) || [];
+    events = showPastEvents
+      ? getSortedFavoriteEvents(favoriteRows)
+      : getVisibleFavoriteEvents(favoriteRows);
   }
 
   return (
@@ -49,9 +59,36 @@ export default async function FavoritesPage() {
       </header>
 
       <div className="mx-auto max-w-3xl px-4 py-8">
-        <h1 className="font-serif text-2xl font-bold text-[#2c1e14] mb-6">
-          Mes favoris
-        </h1>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-serif text-2xl font-bold text-[#2c1e14]">
+            Mes favoris
+          </h1>
+          <Link
+            href={showPastEvents ? "/favorites" : "/favorites?show_past=true"}
+            role="switch"
+            aria-checked={showPastEvents}
+            aria-label="Afficher les événements terminés"
+            className={`inline-flex min-h-10 items-center justify-between gap-3 rounded-full border px-3 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+              showPastEvents
+                ? "border-[#f59e42]/35 bg-white text-[#2c1e14]"
+                : "border-white bg-white text-[#2c1e14]/60 hover:text-[#2c1e14]"
+            }`}
+          >
+            <span>Terminés</span>
+            <span
+              aria-hidden="true"
+              className={`relative inline-flex h-5 w-9 flex-none items-center rounded-full p-0.5 transition-colors ${
+                showPastEvents ? "bg-[#f59e42]" : "bg-[#2c1e14]/16"
+              }`}
+            >
+              <span
+                className={`block h-4 w-4 rounded-full bg-white shadow-[0_1px_4px_rgba(36,23,15,0.24)] transition-transform ${
+                  showPastEvents ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
+            </span>
+          </Link>
+        </div>
 
         {events.length === 0 ? (
           <div className="py-16 text-center">
@@ -75,6 +112,7 @@ export default async function FavoritesPage() {
               const slug = makeEventSlug(event.id, event.nomEvent);
               const eventHref = withReturnTo(`/event/${slug}`, "/favorites");
               const typeColor = getEventTypeColor(event.type_event);
+              const past = isEventPast(event);
 
               return (
                 <div
@@ -113,20 +151,22 @@ export default async function FavoritesPage() {
                             {event.type_event}
                           </span>
                         )}
+                        {past ? (
+                          <span className="rounded-full bg-[#2c1e14]/10 px-2 py-0.5 text-xs font-semibold text-[#2c1e14]/55">
+                            Terminé
+                          </span>
+                        ) : null}
                       </div>
                       <h3 className="font-serif font-bold text-[#2c1e14]">
                         {event.nomEvent || "Événement"}
                       </h3>
                       {event.dateEvent && (
                         <p className="text-sm text-[#7C7C7C]">
-                          {new Date(event.dateEvent).toLocaleDateString(
-                            "fr-FR",
-                            {
-                              day: "numeric",
-                              month: "long",
-                              year: "numeric",
-                            }
-                          )}
+                          {formatDateValue(event.dateEvent, "fr-FR", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
                         </p>
                       )}
                       {event.villeDepart && (

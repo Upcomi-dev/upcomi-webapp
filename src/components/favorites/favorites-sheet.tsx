@@ -1,7 +1,9 @@
 "use client";
 
-import { useFavorites } from "./favorites-context";
+import { useCallback, useState } from "react";
+import { FavoriteEventModal } from "./favorite-event-modal";
 import { FavoritesPanelBody } from "./favorites-panel-body";
+import type { FavoriteEvent } from "./favorites-context";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface FavoritesSheetProps {
@@ -13,49 +15,49 @@ export function FavoritesSheet({
   open,
   onOpenChange,
 }: FavoritesSheetProps) {
-  const { count } = useFavorites();
+  const [selectedEvent, setSelectedEvent] = useState<FavoriteEvent | null>(null);
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) {
+        setSelectedEvent(null);
+      }
+      onOpenChange(nextOpen);
+    },
+    [onOpenChange]
+  );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        overlayClassName="md:hidden"
-        className="top-auto right-0 bottom-0 left-0 z-[60] grid w-full max-w-none translate-x-0 translate-y-0 gap-0 rounded-t-[28px] rounded-b-none border-x-0 border-b-0 border-t border-white/60 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(246,236,223,0.96))] p-0 shadow-[0_-18px_50px_rgba(36,23,15,0.18)] md:hidden"
-      >
-        <DialogTitle className="sr-only">Mes favoris</DialogTitle>
-
-        <div className="flex justify-center px-4 pb-2 pt-3">
-          <div className="h-1.5 w-10 rounded-full bg-foreground/18" />
-        </div>
-
-        <div
-          className="flex max-h-[min(78dvh,42rem)] min-h-[18rem] flex-col"
-          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent
+          className="top-auto right-0 bottom-0 left-0 z-[60] flex w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-t-[32px] rounded-b-none border-x-0 border-b-0 border-t border-white/60 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(246,236,223,0.96))] p-0 shadow-[0_-18px_50px_rgba(36,23,15,0.16)] md:top-1/2 md:left-1/2 md:right-auto md:bottom-auto md:h-[min(720px,calc(100dvh-3rem))] md:w-[min(560px,calc(100vw-2rem))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[32px] md:border md:shadow-[0_24px_80px_rgba(36,23,15,0.16)]"
         >
-          <div className="flex items-center justify-between px-5 pb-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
-                Mon compte
-              </p>
-              <h2 className="mt-1 font-serif text-[28px] leading-none text-foreground">
-                Mes favoris
-              </h2>
-            </div>
-            {count > 0 && (
-              <span className="rounded-full bg-coral/10 px-3 py-1 text-[12px] font-semibold text-coral">
-                {count}
-              </span>
-            )}
+          <DialogTitle className="sr-only">Mes favoris et participations</DialogTitle>
+
+          <div className="flex justify-center px-4 pb-2 pt-3 md:hidden">
+            <div className="h-1.5 w-10 rounded-full bg-foreground/18" />
           </div>
 
-          <div className="h-px bg-gradient-to-r from-transparent via-foreground/8 to-transparent" />
+          <div
+            className="flex max-h-[min(82dvh,46rem)] min-h-[24rem] flex-col md:min-h-0 md:flex-1"
+            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+          >
+            <FavoritesPanelBody
+              onNavigate={() => onOpenChange(false)}
+              onEventOpen={setSelectedEvent}
+              className="pb-4 md:pt-4"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
-          <FavoritesPanelBody
-            onNavigate={() => onOpenChange(false)}
-            className="flex-1 overflow-y-auto overscroll-contain pb-4"
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+      {selectedEvent ? (
+        <FavoriteEventModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+        />
+      ) : null}
+    </>
   );
 }

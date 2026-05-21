@@ -8,8 +8,10 @@ import { FavouriteButton } from "./favourite-button";
 import { ShareButton } from "./share-button";
 import { FavoriteCTA } from "./favorite-cta";
 import { EventCard } from "./event-card";
+import { MixiteBadge } from "./mixite-badge";
 import { makeEventSlug } from "@/lib/utils/slugify";
 import { trackAnalyticsEvent } from "@/lib/analytics";
+import { getLocalDateKey } from "@/lib/utils/event-dates";
 
 interface EventDetailPanelProps {
   /** Basic event data already available from the list. */
@@ -20,7 +22,7 @@ interface EventDetailPanelProps {
 
 type RelatedEventCardData = Pick<
   Event,
-  "id" | "nomEvent" | "dateEvent" | "image" | "bike_type" | "type_event" | "villeDepart" | "paysDepart" | "distance"
+  "id" | "nomEvent" | "dateEvent" | "dateFin" | "image" | "bike_type" | "type_event" | "villeDepart" | "paysDepart" | "distance" | "mint"
 >;
 
 export function EventDetailPanel({
@@ -109,7 +111,7 @@ export function EventDetailPanel({
       const related = await fetch(buildRestUrl(url, "events", {
         organisateur: `eq.${nextEvent.organisateur}`,
         id: `neq.${nextEvent.id}`,
-        select: "id,nomEvent,dateEvent,image,bike_type,type_event,villeDepart,paysDepart,distance",
+        select: "id,nomEvent,dateEvent,dateFin,image,bike_type,type_event,villeDepart,paysDepart,distance,mint",
         or: `(dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today}))`,
         order: "dateEvent.asc",
         limit: "6",
@@ -192,6 +194,11 @@ export function EventDetailPanel({
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+        {event.mint && (
+          <div className="absolute left-4 top-4 z-10 max-w-[calc(100%-2rem)]">
+            <MixiteBadge />
+          </div>
+        )}
         <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-wrap gap-2">
           {event.type_event && (
             <span
@@ -394,12 +401,14 @@ export function EventDetailPanel({
                 id={relatedEvent.id}
                 nomEvent={relatedEvent.nomEvent}
                 dateEvent={relatedEvent.dateEvent}
+                dateFin={relatedEvent.dateFin}
                 image={relatedEvent.image}
                 bike_type={relatedEvent.bike_type}
                 type_event={relatedEvent.type_event}
                 villeDepart={relatedEvent.villeDepart}
                 paysDepart={relatedEvent.paysDepart}
                 distance={relatedEvent.distance}
+                mint={relatedEvent.mint}
                 variant="carousel"
                 onEventClick={(eventId) => onEventSelect?.(eventId, "related")}
               />
@@ -456,5 +465,5 @@ function buildRestUrl(baseUrl: string, path: string, params: Record<string, stri
 }
 
 function getTodayDateKey() {
-  return new Date().toISOString().split("T")[0];
+  return getLocalDateKey();
 }

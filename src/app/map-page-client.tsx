@@ -13,12 +13,19 @@ const EventMap = dynamic(
 import { InlineFilters } from "@/components/events/event-filters";
 import { EventCard } from "@/components/events/event-card";
 import { EventDetailPanel } from "@/components/events/event-detail-panel";
+import { PastEventsToggle } from "@/components/events/past-events-toggle";
 import { SortControl } from "@/components/events/sort-control";
 import { TopNav } from "@/components/layout/top-nav";
 import { CollectionsView } from "@/components/collections/collections-view";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import {
+  compareEventsByStartDate,
+  getLocalDateKey,
+  hasEventStartDate,
+  isEventOngoingOrUpcoming,
+} from "@/lib/utils/event-dates";
 
 function normalizeSearchText(value: string) {
   return value
@@ -105,7 +112,7 @@ function MapPageContent({
   const listRef = useRef<HTMLDivElement>(null);
   const [hoveredEventId, setHoveredEventId] = useState<number | null>(null);
   const [flyToEventId, setFlyToEventId] = useState<number | null>(null);
-  const [listReferenceTime] = useState(() => Date.now());
+  const [todayKey] = useState(() => getLocalDateKey());
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -119,9 +126,10 @@ function MapPageContent({
 
   const sort = searchParams.get("sort");
   const eventParam = searchParams.get("event");
+  const includePastEvents = searchParams.get("show_past") === "true";
   const mobileView = searchParams.get("view") === "map" ? "map" : "list";
   const activeFilterCount = useMemo(() => {
-    const keys = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to", "mint"];
+    const keys = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to", "mint", "show_past"];
     return keys.reduce((count, key) => {
       const value = searchParams.get(key);
       if (!value) return count;
@@ -152,6 +160,22 @@ function MapPageContent({
     },
     [searchParams]
   );
+  const togglePastEvents = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (includePastEvents) {
+      params.delete("show_past");
+    } else {
+      params.set("show_past", "true");
+    }
+
+    const query = params.toString();
+    router.push(query ? `/?${query}` : "/", { scroll: false });
+    trackAnalyticsEvent("Past Events Toggled", {
+      enabled: !includePastEvents,
+      surface: isMobile ? "mobile" : "desktop",
+    });
+  }, [includePastEvents, isMobile, router, searchParams]);
   const activeEventTypes = useMemo(
     () => searchParams.get("type_event")?.split(",").filter(Boolean) ?? [],
     [searchParams]
@@ -218,23 +242,25 @@ function MapPageContent({
     [searchQuery]
   );
 
+  const visibleDetailEvents = useMemo(
+    () =>
+      detailEvents.filter(
+        (event) =>
+          hasEventStartDate(event) &&
+          (includePastEvents || isEventOngoingOrUpcoming(event, todayKey))
+      ),
+    [detailEvents, includePastEvents, todayKey]
+  );
+
   const sortedEvents = useMemo(() => {
-    const list = detailEvents.filter(matchesSearch);
+    const list = visibleDetailEvents.filter(matchesSearch);
 
     switch (sort) {
       case "date-asc":
-        list.sort((a, b) => {
-          const aTime = a.dateEvent ? new Date(a.dateEvent).getTime() : Number.MAX_SAFE_INTEGER;
-          const bTime = b.dateEvent ? new Date(b.dateEvent).getTime() : Number.MAX_SAFE_INTEGER;
-          return aTime - bTime;
-        });
+        list.sort(compareEventsByStartDate);
         break;
       case "date-desc":
-        list.sort((a, b) => {
-          const aTime = a.dateEvent ? new Date(a.dateEvent).getTime() : 0;
-          const bTime = b.dateEvent ? new Date(b.dateEvent).getTime() : 0;
-          return bTime - aTime;
-        });
+        list.sort((a, b) => compareEventsByStartDate(b, a));
         break;
       case "name-asc":
         list.sort((a, b) =>
@@ -252,19 +278,19 @@ function MapPageContent({
     }
 
     return list;
-  }, [detailEvents, matchesSearch, sort, panel.selectedEventId]);
+  }, [matchesSearch, panel.selectedEventId, sort, visibleDetailEvents]);
 
   const listEvents = useMemo(() => {
     const list = initialEvents
       .filter((event) => {
-        if (!event.dateEvent) return false;
-        if (new Date(event.dateEvent).getTime() < listReferenceTime) return false;
+        if (!hasEventStartDate(event)) return false;
+        if (!includePastEvents && !isEventOngoingOrUpcoming(event, todayKey)) return false;
         return matchesSearch(event);
       });
 
     switch (sort) {
       case "date-desc":
-        list.sort((a, b) => new Date(b.dateEvent!).getTime() - new Date(a.dateEvent!).getTime());
+        list.sort((a, b) => compareEventsByStartDate(b, a));
         break;
       case "name-asc":
         list.sort((a, b) =>
@@ -273,7 +299,7 @@ function MapPageContent({
         break;
       case "date-asc":
       default:
-        list.sort((a, b) => new Date(a.dateEvent!).getTime() - new Date(b.dateEvent!).getTime());
+        list.sort(compareEventsByStartDate);
         break;
     }
 
@@ -286,7 +312,7 @@ function MapPageContent({
     }
 
     return list;
-  }, [initialEvents, listReferenceTime, matchesSearch, panel.selectedEventId, sort]);
+  }, [includePastEvents, initialEvents, matchesSearch, panel.selectedEventId, sort, todayKey]);
 
   useEffect(() => {
     const trimmedQuery = searchQuery.trim();
@@ -490,11 +516,13 @@ function MapPageContent({
                     id={event.id}
                     nomEvent={event.nomEvent}
                     dateEvent={event.dateEvent}
+                    dateFin={event.dateFin}
                     image={event.image}
                     bike_type={event.bike_type}
                     type_event={event.type_event}
                     villeDepart={event.villeDepart}
                     paysDepart={event.paysDepart}
+                    mint={event.mint}
                     variant="list"
                     isSelected={event.id === panel.selectedEventId}
                     onEventClick={(eventId) => handleEventClick(eventId, "list")}
@@ -545,6 +573,13 @@ function MapPageContent({
           <SortControl />
         </div>
 
+        <PastEventsToggle
+          active={includePastEvents}
+          onToggle={togglePastEvents}
+          label="Afficher les évènements passés"
+          className="w-full bg-white/78 px-4 py-3 text-left normal-case tracking-normal"
+        />
+
         {listEvents.length === 0 ? (
           <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/36 px-6 py-12 text-center">
             <p className="text-sm font-semibold text-foreground">Aucun événement</p>
@@ -560,11 +595,13 @@ function MapPageContent({
                   id={event.id}
                   nomEvent={event.nomEvent}
                   dateEvent={event.dateEvent}
+                  dateFin={event.dateFin}
                   image={event.image}
                   bike_type={event.bike_type}
                   type_event={event.type_event}
                   villeDepart={event.villeDepart}
                   paysDepart={event.paysDepart}
+                  mint={event.mint}
                   variant="list"
                   isSelected={event.id === panel.selectedEventId}
                   onEventClick={(eventId) => handleEventClick(eventId, "list")}

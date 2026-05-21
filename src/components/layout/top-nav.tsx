@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { User } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
@@ -18,6 +18,7 @@ export function TopNav() {
   const { count } = useFavorites();
   const flyingHeart = useFlyingHeart();
   const isAuthenticated = user !== null;
+  const favoritesButtonRef = useRef<HTMLButtonElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -66,6 +67,7 @@ export function TopNav() {
 
             <div className="relative">
               <button
+                ref={favoritesButtonRef}
                 type="button"
                 onClick={toggleFavorites}
                 className="soft-ring relative flex h-10 w-10 items-center justify-center rounded-full bg-white/58 text-foreground/55 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:text-coral"
@@ -81,14 +83,17 @@ export function TopNav() {
                   {count}
                 </span>
               </button>
-              {showFavorites && !isMobile && (
+              {showFavorites && !isMobile ? (
                 <div className="hidden md:block">
-                  <FavoritesDropdown onClose={closeFavorites} />
+                  <FavoritesDropdown
+                    anchorRef={favoritesButtonRef}
+                    onClose={closeFavorites}
+                  />
                 </div>
-              )}
-              {isMobile && (
+              ) : null}
+              {isMobile ? (
                 <FavoritesSheet open={showFavorites} onOpenChange={setShowFavorites} />
-              )}
+              ) : null}
             </div>
 
             {!ready ? (

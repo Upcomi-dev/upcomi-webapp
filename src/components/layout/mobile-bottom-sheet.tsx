@@ -232,11 +232,13 @@ export function MobileBottomSheet({
                     id={event.id}
                     nomEvent={event.nomEvent}
                     dateEvent={event.dateEvent}
+                    dateFin={event.dateFin}
                     image={event.image}
                     bike_type={event.bike_type}
                     type_event={event.type_event}
                     villeDepart={event.villeDepart}
                     paysDepart={event.paysDepart}
+                    mint={event.mint}
                     variant="list"
                     onEventClick={onEventClick}
                   />
@@ -262,11 +264,13 @@ export function MobileBottomSheet({
                     id={event.id}
                     nomEvent={event.nomEvent}
                     dateEvent={event.dateEvent}
+                    dateFin={event.dateFin}
                     image={event.image}
                     bike_type={event.bike_type}
                     type_event={event.type_event}
                     villeDepart={event.villeDepart}
                     paysDepart={event.paysDepart}
+                    mint={event.mint}
                     variant="list"
                     onEventClick={onEventClick}
                   />

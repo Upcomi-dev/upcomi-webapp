@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { buildEventTypeOptions } from "@/lib/events/filter-options";
 import type { CollectionWithEvents, MapEvent } from "@/lib/types/database";
+import { getLocalDateKey } from "@/lib/utils/event-dates";
 import { MapPageClient } from "./map-page-client";
 
 const FILTER_KEYS = [
@@ -12,9 +13,12 @@ const FILTER_KEYS = [
   "date_from",
   "date_to",
   "mint",
+  "show_past",
 ] as const;
 
 const POPULAR_COLLECTION_LIMIT = 10;
+const MAP_EVENT_SELECT =
+  "id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, dateFin, image, distance, distance_range_filter, region, budget, villeDepart, paysDepart, organisateur, mint";
 
 export type HomeSearchParams = Record<string, string | string[] | undefined>;
 
@@ -24,7 +28,8 @@ interface HomeMapContentProps {
 
 export async function HomeMapContent({ params }: HomeMapContentProps) {
   const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateKey();
+  const includePastEvents = params.show_past === "true";
 
   const hasFilters = FILTER_KEYS.some((key) => {
     const val = params[key];
@@ -33,13 +38,15 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
 
   let query = supabase
     .from("events")
-    .select(
-      "id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance, distance_range_filter, region, budget, villeDepart, paysDepart, organisateur, mint"
-    )
+    .select(MAP_EVENT_SELECT)
     .not("latitude", "is", null)
     .not("longitude", "is", null)
-    .eq("verifie", true)
-    .gte("dateEvent", today);
+    .not("dateEvent", "is", null)
+    .eq("verifie", true);
+
+  if (!includePastEvents) {
+    query = query.or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`);
+  }
 
   const bikeTypes = (typeof params.bike_type === "string" ? params.bike_type : "")
     .split(",")
@@ -74,7 +81,7 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
 
   const dateFrom = typeof params.date_from === "string" ? params.date_from : null;
   if (dateFrom) {
-    query = query.gte("dateEvent", dateFrom);
+    query = query.or(`dateFin.gte.${dateFrom},and(dateFin.is.null,dateEvent.gte.${dateFrom})`);
   }
 
   const dateTo = typeof params.date_to === "string" ? params.date_to : null;
@@ -87,19 +94,25 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
     query = query.eq("mint", true);
   }
 
+  let eventTypeQuery = supabase
+    .from("events")
+    .select("type_event")
+    .not("type_event", "is", null)
+    .not("latitude", "is", null)
+    .not("longitude", "is", null)
+    .not("dateEvent", "is", null)
+    .eq("verifie", true);
+
+  if (!includePastEvents) {
+    eventTypeQuery = eventTypeQuery.or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`);
+  }
+
   const [
     { data: events, error },
     { data: eventTypeRows },
   ] = await Promise.all([
     query,
-    supabase
-      .from("events")
-      .select("type_event")
-      .not("type_event", "is", null)
-      .not("latitude", "is", null)
-      .not("longitude", "is", null)
-      .eq("verifie", true)
-      .gte("dateEvent", today),
+    eventTypeQuery,
   ]);
 
   if (error) {
@@ -175,6 +188,7 @@ async function fetchCollections(
   }
 
   if (manualCollections.length > 0) {
+    const today = getLocalDateKey();
     const manualIds = manualCollections.map((c) => c.id);
     const { data: junctionData } = await supabase
       .from("collection_events")
@@ -188,10 +202,11 @@ async function fetchCollections(
     if (allManualEventIds.length > 0) {
       const { data: manualEventsData } = await supabase
         .from("events")
-        .select("id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, image, distance, distance_range_filter, region, budget, villeDepart, paysDepart, organisateur, mint")
+        .select(MAP_EVENT_SELECT)
         .in("id", allManualEventIds)
         .eq("verifie", true)
-        .gte("dateEvent", new Date().toISOString().split("T")[0]);
+        .not("dateEvent", "is", null)
+        .or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`);
 
       for (const e of (manualEventsData || []) as MapEvent[]) {
         manualEventsMap.set(e.id, e);

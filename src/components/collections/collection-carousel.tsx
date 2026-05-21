@@ -89,12 +89,14 @@ export function CollectionCarousel({ collection, onEventClick, onEventHover }: C
             id={event.id}
             nomEvent={event.nomEvent}
             dateEvent={event.dateEvent}
+            dateFin={event.dateFin}
             image={event.image}
             bike_type={event.bike_type}
             type_event={event.type_event}
             villeDepart={event.villeDepart}
             paysDepart={event.paysDepart}
             distance={event.distance}
+            mint={event.mint}
             variant="carousel"
             onEventClick={onEventClick}
             onEventHover={onEventHover}

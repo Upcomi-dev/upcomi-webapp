@@ -15,6 +15,11 @@ import {
   getEventTypeColor,
   type MapEvent,
 } from "@/lib/types/database";
+import {
+  compareEventsByStartDate,
+  getLocalDateKey,
+  isEventPast,
+} from "@/lib/utils/event-dates";
 
 const MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
@@ -58,6 +63,11 @@ function compareEventsByDate(a: MapEvent, b: MapEvent) {
   return dateDiff || a.id - b.id;
 }
 
+function compareEventsForMap(a: MapEvent, b: MapEvent, todayKey: string) {
+  const pastDiff = Number(isEventPast(a, todayKey)) - Number(isEventPast(b, todayKey));
+  return pastDiff || compareEventsByDate(a, b) || compareEventsByStartDate(a, b);
+}
+
 function localizeMapLabels(map: MapRef) {
   const mapInstance = map.getMap();
 
@@ -96,7 +106,10 @@ export function EventMap({
   const mapRef = useRef<MapRef>(null);
   const [activeGroup, setActiveGroup] = useState<MapEvent[] | null>(null);
   const hasCenteredInitially = useRef(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches
+  );
+  const [todayKey] = useState(() => getLocalDateKey());
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -134,11 +147,12 @@ export function EventMap({
     const byId: globalThis.Map<number, MapEvent[]> = new globalThis.Map();
     const features: GeoJSON.Feature[] = [];
     for (const [, group] of coordGroups) {
-      group.sort(compareEventsByDate);
+      group.sort((a, b) => compareEventsForMap(a, b, todayKey));
       const first = group[0];
       byId.set(first.id, group);
       const groupContainsSelected = selectedEventId != null && group.some((e) => e.id === selectedEventId);
       const groupContainsHovered = hoveredEventId != null && group.some((e) => e.id === hoveredEventId);
+      const groupIsPast = group.every((event) => isEventPast(event, todayKey));
       features.push({
         type: "Feature",
         geometry: {
@@ -150,6 +164,7 @@ export function EventMap({
           count: group.length,
           isSelected: groupContainsSelected ? 1 : 0,
           isHovered: groupContainsHovered ? 1 : 0,
+          isPast: groupIsPast ? 1 : 0,
           typeColor: getEventTypeColor(first.type_event),
         },
       });
@@ -159,7 +174,7 @@ export function EventMap({
       geojson: { type: "FeatureCollection" as const, features },
       groupedById: byId,
     };
-  }, [validEvents, selectedEventId, hoveredEventId]);
+  }, [hoveredEventId, selectedEventId, todayKey, validEvents]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -275,12 +290,14 @@ export function EventMap({
       }}
       cursor="pointer"
     >
-      <NavigationControl
-        position="top-left"
-        showCompass={false}
-        showZoom
-        visualizePitch={false}
-      />
+      {!isMobile ? (
+        <NavigationControl
+          position="top-left"
+          showCompass={false}
+          showZoom
+          visualizePitch={false}
+        />
+      ) : null}
 
       {/* Main dots */}
       <Source key="events-source" id="events" type="geojson" data={geojson}>
@@ -348,6 +365,7 @@ export function EventMap({
               "case",
               ["==", ["get", "isSelected"], 1], 1,
               ["==", ["get", "isHovered"], 1], 1,
+              ["==", ["get", "isPast"], 1], dimOtherMarkers ? 0.18 : 0.35,
               dimOtherMarkers ? 0.25 : 0.85,
             ],
           }}

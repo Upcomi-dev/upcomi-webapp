@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
+import { getLocalDateKey } from "@/lib/utils/event-dates";
 import { parseEventSlug, makeEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 import type { Event, SousEvent } from "@/lib/types/database";
@@ -12,6 +13,7 @@ import { FavoriteCTA } from "@/components/events/favorite-cta";
 import { ExternalRegistrationLink } from "@/components/events/external-registration-link";
 import { EventCard } from "@/components/events/event-card";
 import { EventViewTracker } from "@/components/events/event-view-tracker";
+import { MixiteBadge } from "@/components/events/mixite-badge";
 import { TopNav } from "@/components/layout/top-nav";
 
 interface PageProps {
@@ -189,6 +191,11 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+              {event.mint && (
+                <div className="absolute left-5 top-5 z-10 max-w-[calc(100%-2.5rem)]">
+                  <MixiteBadge />
+                </div>
+              )}
               <div className="absolute bottom-5 left-5 right-5 z-10 flex flex-wrap gap-2">
                 {event.type_event && (
                   <span className="rounded-full bg-white/88 px-3 py-1 text-xs font-semibold" style={{ color: typeColor }}>
@@ -331,12 +338,14 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                       id={relatedEvent.id}
                       nomEvent={relatedEvent.nomEvent}
                       dateEvent={relatedEvent.dateEvent}
+                      dateFin={relatedEvent.dateFin}
                       image={relatedEvent.image}
                       bike_type={relatedEvent.bike_type}
                       type_event={relatedEvent.type_event}
                       villeDepart={relatedEvent.villeDepart}
                       paysDepart={relatedEvent.paysDepart}
                       distance={relatedEvent.distance}
+                      mint={relatedEvent.mint}
                     />
                   ))}
                 </div>
@@ -454,7 +463,7 @@ async function fetchOrganizerEvents(
   const today = getTodayDateKey();
   const { data } = await supabase
     .from("events")
-    .select("id, nomEvent, dateEvent, image, bike_type, type_event, villeDepart, paysDepart, distance")
+    .select("id, nomEvent, dateEvent, dateFin, image, bike_type, type_event, villeDepart, paysDepart, distance, mint")
     .eq("organisateur", organizer)
     .neq("id", currentEventId)
     .or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`)
@@ -465,5 +474,5 @@ async function fetchOrganizerEvents(
 }
 
 function getTodayDateKey() {
-  return new Date().toISOString().split("T")[0];
+  return getLocalDateKey();
 }

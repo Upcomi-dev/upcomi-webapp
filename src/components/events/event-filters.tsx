@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { buildEventTypeOptions, DEFAULT_EVENT_TYPES } from "@/lib/events/filter-options";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { PastEventsToggle } from "./past-events-toggle";
 
 const BIKE_TYPES = ["Gravel", "VTT", "Route"];
 const DISTANCE_OPTIONS = [
@@ -55,7 +56,7 @@ function removeValue(current: URLSearchParams, key: string, value?: string) {
 }
 
 function countActiveFilters(params: URLSearchParams) {
-  const keys = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to", "mint"];
+  const keys = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to", "mint", "show_past"];
   return keys.reduce((count, key) => {
     const value = params.get(key);
     if (!value) return count;
@@ -86,6 +87,7 @@ export function InlineFilters({
   const [openPanel, setOpenPanel] = useState<PanelKey | null>(null);
   const dateFrom = searchParams.get("date_from") ?? "";
   const dateTo = searchParams.get("date_to") ?? "";
+  const showPastEvents = searchParams.get("show_past") === "true";
   const selectedEventTypes = useMemo(
     () => searchParams.get("type_event")?.split(",").filter(Boolean) ?? [],
     [searchParams]
@@ -167,6 +169,22 @@ export function InlineFilters({
     [searchParams, updateParams, variant]
   );
 
+  const togglePastEvents = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (params.get("show_past") === "true") {
+      params.delete("show_past");
+    } else {
+      params.set("show_past", "true");
+    }
+
+    updateParams(params);
+    trackAnalyticsEvent("Past Events Toggled", {
+      enabled: params.get("show_past") === "true",
+      active_filter_count: countActiveFilters(params),
+      surface: variant,
+    });
+  }, [searchParams, updateParams, variant]);
+
   const clearAll = useCallback(() => {
     router.push("/", { scroll: false });
     trackAnalyticsEvent("Filters Cleared", {
@@ -224,6 +242,7 @@ export function InlineFilters({
     distance: searchParams.get("distance")?.split(",").filter(Boolean).length || 0,
     region: searchParams.get("region") ? 1 : 0,
     mint: searchParams.get("mint") === "true" ? 1 : 0,
+    past: showPastEvents ? 1 : 0,
   };
 
   const hasFilters = activeTags.length > 0;
@@ -341,6 +360,17 @@ export function InlineFilters({
           </div>
         ) : null}
 
+        {!isDrawerVariant ? (
+          <div className="mt-3 flex justify-end">
+            <PastEventsToggle
+              active={showPastEvents}
+              onToggle={togglePastEvents}
+              label="Afficher les évènements passés"
+              className="bg-white/64 px-4 py-3 text-left normal-case tracking-normal"
+            />
+          </div>
+        ) : null}
+
         {(expandAllPanels || openPanel) && (
           <div className={cn(
             "mt-3",
@@ -438,6 +468,15 @@ export function InlineFilters({
                 ))}
               </FilterSection>
             )}
+
+            {isDrawerVariant ? (
+              <PastEventsToggle
+                active={showPastEvents}
+                onToggle={togglePastEvents}
+                label="Afficher les évènements passés"
+                className="w-full bg-white/64 px-4 py-3 text-left normal-case tracking-normal"
+              />
+            ) : null}
           </div>
         )}
 

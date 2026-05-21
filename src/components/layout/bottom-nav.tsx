@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
+import { FavoritesSheet } from "@/components/favorites/favorites-sheet";
 
 const navItems = [
   {
@@ -38,54 +40,78 @@ const profileIcon = (
 export function BottomNav() {
   const pathname = usePathname();
   const { openAuthModal } = useAuthModal();
+  const [showFavorites, setShowFavorites] = useState(false);
 
   return (
-    <nav
-      className="glass-nav fixed bottom-0 left-0 right-0 z-50 border-t border-white/45 md:hidden"
-      style={{
-        paddingBottom: "max(16px, env(safe-area-inset-bottom))",
-        boxShadow: "0 -18px 50px rgba(36,23,15,0.12)",
-      }}
-    >
-      <div className="flex items-center justify-around px-3 pt-2.5">
-        {navItems.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-1 flex-col items-center gap-1 rounded-[20px] px-2 py-2 transition-all",
-                isActive
-                  ? "bg-white/58 text-coral shadow-[var(--shadow-sm)]"
-                  : "text-foreground/55"
-              )}
-            >
-              <div className="flex h-6 w-6 items-center justify-center">
-                {item.icon}
-              </div>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => openAuthModal()}
-          className="flex flex-1 flex-col items-center gap-1 rounded-[20px] px-2 py-2 text-foreground/55 transition-all"
-        >
-          <div className="flex h-6 w-6 items-center justify-center">
-            {profileIcon}
-          </div>
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">
-            Profil
-          </span>
-        </button>
-      </div>
-    </nav>
+    <>
+      <nav
+        className="glass-nav fixed bottom-0 left-0 right-0 z-50 border-t border-white/45 md:hidden"
+        style={{
+          paddingBottom: "max(16px, env(safe-area-inset-bottom))",
+          boxShadow: "0 -18px 50px rgba(36,23,15,0.12)",
+        }}
+      >
+        <div className="flex items-center justify-around px-3 pt-2.5">
+          {navItems.map((item) => {
+            const isActive =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href) || (item.href === "/favorites" && showFavorites);
+            const className = cn(
+              "flex flex-1 flex-col items-center gap-1 rounded-[20px] px-2 py-2 transition-all",
+              isActive
+                ? "bg-white/58 text-coral shadow-[var(--shadow-sm)]"
+                : "text-foreground/55"
+            );
+
+            if (item.href === "/favorites") {
+              return (
+                <button
+                  key={item.href}
+                  type="button"
+                  onClick={() => setShowFavorites(true)}
+                  className={className}
+                >
+                  <div className="flex h-6 w-6 items-center justify-center">
+                    {item.icon}
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">
+                    {item.label}
+                  </span>
+                </button>
+              );
+            }
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={className}
+              >
+                <div className="flex h-6 w-6 items-center justify-center">
+                  {item.icon}
+                </div>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => openAuthModal()}
+            className="flex flex-1 flex-col items-center gap-1 rounded-[20px] px-2 py-2 text-foreground/55 transition-all"
+          >
+            <div className="flex h-6 w-6 items-center justify-center">
+              {profileIcon}
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em]">
+              Profil
+            </span>
+          </button>
+        </div>
+      </nav>
+      <FavoritesSheet open={showFavorites} onOpenChange={setShowFavorites} />
+    </>
   );
 }
