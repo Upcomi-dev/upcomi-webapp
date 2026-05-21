@@ -20,6 +20,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
+function normalizeSearchText(value: string) {
+  return value
+    .toLocaleLowerCase("fr-FR")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+}
+
 /* ── Panel state machine ── */
 type PanelMode = "collections" | "filtered" | "detail";
 
@@ -203,10 +210,10 @@ function MapPageContent({
 
   const matchesSearch = useCallback(
     (event: MapEvent) => {
-      const q = searchQuery.trim().toLowerCase();
+      const q = normalizeSearchText(searchQuery.trim());
       if (!q) return true;
-      return [event.nomEvent, event.villeDepart, event.paysDepart, event.type_event, event.bike_type]
-        .some((field) => field?.toLowerCase().includes(q));
+      return [event.nomEvent, event.organisateur, event.villeDepart, event.paysDepart, event.type_event, event.bike_type]
+        .some((field) => field ? normalizeSearchText(field).includes(q) : false);
     },
     [searchQuery]
   );

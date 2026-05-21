@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { Event, SousEvent, MapEvent } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
@@ -32,6 +32,36 @@ export function EventDetailPanel({
   const [sousEvents, setSousEvents] = useState<SousEvent[]>([]);
   const [favCount, setFavCount] = useState(0);
   const [relatedEvents, setRelatedEvents] = useState<RelatedEventCardData[]>([]);
+  const relatedScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollRelatedLeft, setCanScrollRelatedLeft] = useState(false);
+  const [canScrollRelatedRight, setCanScrollRelatedRight] = useState(false);
+
+  const updateRelatedScrollState = useCallback(() => {
+    const el = relatedScrollRef.current;
+    if (!el) return;
+    setCanScrollRelatedLeft(el.scrollLeft > 4);
+    setCanScrollRelatedRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = relatedScrollRef.current;
+    if (!el) return;
+    updateRelatedScrollState();
+    el.addEventListener("scroll", updateRelatedScrollState, { passive: true });
+    const ro = new ResizeObserver(updateRelatedScrollState);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", updateRelatedScrollState);
+      ro.disconnect();
+    };
+  }, [relatedEvents.length, updateRelatedScrollState]);
+
+  const scrollRelated = useCallback((direction: "left" | "right") => {
+    const el = relatedScrollRef.current;
+    if (!el) return;
+    const amount = 280;
+    el.scrollBy({ left: direction === "left" ? -amount : amount, behavior: "smooth" });
+  }, []);
 
   // Fetch full details (description, URL, organisateur, sous_events)
   useEffect(() => {
@@ -326,11 +356,38 @@ export function EventDetailPanel({
       <FavoriteCTA eventId={event.id} initialCount={favCount} />
 
       {relatedEvents.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-[14px] font-semibold text-foreground">
-            Autres événements de cette organisation
-          </h2>
-          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="space-y-3">
+          <div className="flex items-end justify-between gap-3">
+            <h2 className="text-[14px] font-semibold text-foreground">
+              Autres événements de cette organisation
+            </h2>
+
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => scrollRelated("left")}
+                disabled={!canScrollRelatedLeft}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-white/70 text-foreground/50 transition-all hover:bg-white hover:text-foreground disabled:cursor-default disabled:opacity-30"
+                aria-label="Précédent"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollRelated("right")}
+                disabled={!canScrollRelatedRight}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-white/70 text-foreground/50 transition-all hover:bg-white hover:text-foreground disabled:cursor-default disabled:opacity-30"
+                aria-label="Suivant"
+              >
+                →
+              </button>
+            </div>
+          </div>
+
+          <div
+            ref={relatedScrollRef}
+            className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
             {relatedEvents.map((relatedEvent) => (
               <EventCard
                 key={relatedEvent.id}

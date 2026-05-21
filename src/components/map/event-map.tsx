@@ -46,6 +46,18 @@ function coordKey(lng: number, lat: number) {
   return `${lng.toFixed(4)},${lat.toFixed(4)}`;
 }
 
+function getEventTime(event: MapEvent) {
+  if (!event.dateEvent) return Number.POSITIVE_INFINITY;
+
+  const time = new Date(event.dateEvent).getTime();
+  return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
+}
+
+function compareEventsByDate(a: MapEvent, b: MapEvent) {
+  const dateDiff = getEventTime(a) - getEventTime(b);
+  return dateDiff || a.id - b.id;
+}
+
 function localizeMapLabels(map: MapRef) {
   const mapInstance = map.getMap();
 
@@ -122,6 +134,7 @@ export function EventMap({
     const byId: globalThis.Map<number, MapEvent[]> = new globalThis.Map();
     const features: GeoJSON.Feature[] = [];
     for (const [, group] of coordGroups) {
+      group.sort(compareEventsByDate);
       const first = group[0];
       byId.set(first.id, group);
       const groupContainsSelected = selectedEventId != null && group.some((e) => e.id === selectedEventId);
@@ -381,14 +394,15 @@ export function EventMap({
           >
             <div
               className={`flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-                activeGroup.length === 1 ? "justify-center" : ""
+                activeGroup.length === 1
+                  ? "justify-center"
+                  : "pl-5 scroll-pl-5 md:pl-6 md:scroll-pl-6"
               }`}
             >
-              {activeGroup.map((event, index) => (
+              {activeGroup.map((event) => (
                 <div
                   key={event.id}
                   className={[
-                    activeGroup.length > 1 && index === 0 ? "ml-4" : "",
                     selectedEventId === event.id
                       ? "rounded-[24px] ring-2 ring-coral/45 ring-offset-2 ring-offset-transparent"
                       : "",

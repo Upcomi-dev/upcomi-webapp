@@ -52,6 +52,7 @@ export interface MapEvent {
   budget: string | null;
   villeDepart: string | null;
   paysDepart: string | null;
+  organisateur: string | null;
   mint: boolean;
 }
 

@@ -827,10 +827,7 @@ function DateRangeCalendar({
         })}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="text-[11px] uppercase tracking-[0.14em] text-foreground/45">
-          1 clic = debut, 2e clic = fin
-        </div>
+      <div className="mt-3 flex items-center justify-end gap-2">
         {(dateFrom || dateTo) && (
           <button
             onClick={() => onChange("", "")}
