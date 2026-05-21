@@ -14,6 +14,8 @@ const FILTER_KEYS = [
   "mint",
 ] as const;
 
+const POPULAR_COLLECTION_LIMIT = 10;
+
 export type HomeSearchParams = Record<string, string | string[] | undefined>;
 
 interface HomeMapContentProps {
@@ -154,17 +156,15 @@ async function fetchCollections(
 
   for (const col of autoCollections) {
     if (col.auto_type === "popular") {
-      const { data: popularData } = await supabase.rpc("get_popular_events", { p_limit: 20 });
+      const { data: popularData } = await supabase.rpc("get_popular_events", {
+        p_limit: POPULAR_COLLECTION_LIMIT,
+      });
 
-      let eventIds: number[] = (popularData || []).map((r: { event_id: number }) => r.event_id);
-
-      if (eventIds.length === 0) {
-        eventIds = allEvents
-          .filter((e) => e.dateEvent)
-          .sort((a, b) => new Date(a.dateEvent!).getTime() - new Date(b.dateEvent!).getTime())
-          .slice(0, 20)
-          .map((e) => e.id);
-      }
+      const eventIds: number[] = [...((popularData || []) as Array<{ event_id: number; fav_count: number }>)]
+        .filter((row) => Number(row.fav_count) > 0)
+        .sort((a, b) => Number(b.fav_count) - Number(a.fav_count))
+        .slice(0, POPULAR_COLLECTION_LIMIT)
+        .map((r) => r.event_id);
 
       const collectionEvents = eventIds
         .map((id) => allEvents.find((e) => e.id === id))

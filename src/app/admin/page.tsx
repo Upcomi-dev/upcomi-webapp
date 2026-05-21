@@ -21,6 +21,16 @@ interface AdminCollection {
   auto_type: string | null;
   eventCount: number;
   eventIds: number[];
+  events: AdminCollectionEvent[];
+}
+
+interface AdminCollectionEvent {
+  id: number;
+  name: string;
+  date: string | null;
+  type: string | null;
+  city: string | null;
+  favouriteCount: number;
 }
 
 interface AdminEvent {
@@ -31,6 +41,7 @@ interface AdminEvent {
   city: string | null;
   verified: boolean;
   featuredOrder: number | null;
+  favouriteCount: number;
 }
 
 interface AdminPublicUser {
@@ -109,6 +120,8 @@ const ADMIN_TABS = [
 
 type AdminTabId = (typeof ADMIN_TABS)[number]["id"];
 
+const POPULAR_COLLECTION_LIMIT = 10;
+
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const activeTab = parseAdminTab(params.tab);
@@ -119,7 +132,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
   const collectionsPromise = supabase
     .from("collections")
-    .select("*, collection_events(event_id)")
+    .select("*, collection_events(event_id, order)")
     .order("order", { ascending: true });
   const allEventsPromise = supabase
     .from("events")
@@ -155,6 +168,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .from("feedback_entries")
     .select("*")
     .order("created_at", { ascending: false });
+  const popularEventsPromise = supabase.rpc("get_popular_events", {
+    p_limit: POPULAR_COLLECTION_LIMIT,
+  });
 
   const [
     collectionsResult,
@@ -166,6 +182,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     organisateursResult,
     favouritesCountResult,
     feedbackEntriesResult,
+    popularEventsResult,
   ] = await Promise.all([
     collectionsPromise,
     allEventsPromise,
@@ -176,10 +193,37 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     organisateursPromise,
     favouritesCountPromise,
     feedbackEntriesPromise,
+    popularEventsPromise,
   ]);
 
   const collections = collectionsResult.data ?? [];
   const allEvents = (allEventsResult.data ?? []) as Event[];
+  const eventById = new Map(allEvents.map((event) => [event.id as number, event]));
+  const popularRows = normalizePopularRows(popularEventsResult.data);
+  const manualCollectionEventIds = [
+    ...new Set(
+      collections.flatMap((collection) =>
+        Array.isArray(collection.collection_events)
+          ? (collection.collection_events as Array<{ event_id: number }>).map((ce) => ce.event_id)
+          : []
+      )
+    ),
+  ];
+  const collectionEventIds = [...new Set([...manualCollectionEventIds, ...popularRows.map((row) => row.event_id)])];
+  const favouriteCountsByEventId = new Map<number, number>(
+    popularRows.map((row) => [row.event_id, row.fav_count])
+  );
+
+  if (collectionEventIds.length > 0) {
+    const { data: favouriteCountRows } = await supabase.rpc("get_event_favourite_counts", {
+      p_event_ids: collectionEventIds,
+    });
+
+    for (const row of normalizeFavouriteCountRows(favouriteCountRows)) {
+      favouriteCountsByEventId.set(row.event_id, row.fav_count);
+    }
+  }
+
   const upcomingEvents = (upcomingEventsResult.data ?? []) as Array<{
     id: number;
     nomEvent: string | null;
@@ -198,19 +242,32 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const favouritesCount = favouritesCountResult.count ?? 0;
   const feedbackEntries = (feedbackEntriesResult.data ?? []) as FeedbackEntry[];
 
-  const collectionsWithCounts: AdminCollection[] = collections.map((c) => ({
-    id: c.id as string,
-    name: c.name as string,
-    description: c.description as string | null,
-    order: c.order as number,
-    is_auto: c.is_auto as boolean,
-    is_active: (c.is_active ?? false) as boolean,
-    auto_type: c.auto_type as string | null,
-    eventCount: Array.isArray(c.collection_events) ? c.collection_events.length : 0,
-    eventIds: Array.isArray(c.collection_events)
-      ? (c.collection_events as { event_id: number }[]).map((ce) => ce.event_id)
-      : [],
-  }));
+  const collectionsWithCounts: AdminCollection[] = collections.map((c) => {
+    const isAuto = c.is_auto as boolean;
+    const autoType = c.auto_type as string | null;
+    const manualEventIds = Array.isArray(c.collection_events)
+      ? [...(c.collection_events as Array<{ event_id: number; order: number | null }>)]
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          .map((ce) => ce.event_id)
+      : [];
+    const eventIds = isAuto && autoType === "popular"
+      ? popularRows.map((row) => row.event_id).filter((id) => eventById.has(id))
+      : manualEventIds;
+    const events = buildAdminCollectionEvents(eventIds, eventById, favouriteCountsByEventId);
+
+    return {
+      id: c.id as string,
+      name: c.name as string,
+      description: c.description as string | null,
+      order: c.order as number,
+      is_auto: isAuto,
+      is_active: (c.is_active ?? false) as boolean,
+      auto_type: autoType,
+      eventCount: events.length,
+      eventIds,
+      events,
+    };
+  });
 
   const eventsList: AdminEvent[] = allEvents.map((e) => ({
     id: e.id as number,
@@ -220,6 +277,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     city: e.villeDepart as string | null,
     verified: Boolean(e.verifie),
     featuredOrder: (e.AlaUne ?? null) as number | null,
+    favouriteCount: favouriteCountsByEventId.get(e.id as number) ?? 0,
   }));
 
   const activeCollectionsCount = collectionsWithCounts.filter((collection) => collection.is_active).length;
@@ -682,6 +740,53 @@ function StatusPill({
       {children}
     </span>
   );
+}
+
+function normalizePopularRows(value: unknown) {
+  return normalizeFavouriteCountRows(value)
+    .filter((row) => row.fav_count > 0)
+    .sort((a, b) => b.fav_count - a.fav_count)
+    .slice(0, POPULAR_COLLECTION_LIMIT);
+}
+
+function normalizeFavouriteCountRows(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((row) => {
+      const record = row as { event_id?: unknown; fav_count?: unknown };
+      const eventId = Number(record.event_id);
+      const favouriteCount = Number(record.fav_count ?? 0);
+
+      if (!Number.isInteger(eventId) || Number.isNaN(favouriteCount)) {
+        return null;
+      }
+
+      return { event_id: eventId, fav_count: favouriteCount };
+    })
+    .filter((row): row is { event_id: number; fav_count: number } => row !== null);
+}
+
+function buildAdminCollectionEvents(
+  eventIds: number[],
+  eventById: Map<number, Event>,
+  favouriteCountsByEventId: Map<number, number>
+): AdminCollectionEvent[] {
+  return eventIds
+    .map((eventId) => {
+      const event = eventById.get(eventId);
+      if (!event) return null;
+
+      return {
+        id: eventId,
+        name: event.nomEvent || "Sans nom",
+        date: event.dateEvent,
+        type: event.type_event,
+        city: event.villeDepart,
+        favouriteCount: favouriteCountsByEventId.get(eventId) ?? 0,
+      };
+    })
+    .filter((event): event is AdminCollectionEvent => event !== null);
 }
 
 function parseAdminTab(value: string | string[] | undefined): AdminTabId {

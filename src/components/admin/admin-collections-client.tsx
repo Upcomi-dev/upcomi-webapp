@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   createCollection,
   updateCollection,
@@ -22,6 +23,16 @@ interface AdminCollection {
   auto_type: string | null;
   eventCount: number;
   eventIds: number[];
+  events: AdminCollectionEvent[];
+}
+
+interface AdminCollectionEvent {
+  id: number;
+  name: string;
+  date: string | null;
+  type: string | null;
+  city: string | null;
+  favouriteCount: number;
 }
 
 interface AdminEvent {
@@ -30,6 +41,7 @@ interface AdminEvent {
   date: string | null;
   type: string | null;
   city: string | null;
+  favouriteCount: number;
 }
 
 interface AdminCollectionsClientProps {
@@ -174,19 +186,29 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
               <button
                 type="button"
                 onClick={() => setExpandedId(expandedId === col.id ? null : col.id)}
-                className="flex flex-1 items-center gap-3 text-left"
+                aria-expanded={expandedId === col.id}
+                className="group flex flex-1 items-center justify-between gap-4 rounded-2xl px-3 py-2 text-left transition-colors hover:bg-white/55 focus:outline-none focus:ring-2 focus:ring-coral/25"
               >
-                <span className="font-serif text-[18px] text-foreground">{col.name}</span>
-                {col.is_auto && (
-                  <span className="rounded-full bg-violet/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet">
-                    Auto
+                <span className="flex min-w-0 flex-wrap items-center gap-3">
+                  <span className="font-serif text-[18px] text-foreground">{col.name}</span>
+                  {col.is_auto && (
+                    <span className="rounded-full bg-violet/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet">
+                      Auto
+                    </span>
+                  )}
+                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${col.is_active ? "bg-green-100 text-green-700" : "bg-foreground/8 text-foreground/40"}`}>
+                    {col.is_active ? "Active" : "Inactive"}
                   </span>
-                )}
-                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${col.is_active ? "bg-green-100 text-green-700" : "bg-foreground/8 text-foreground/40"}`}>
-                  {col.is_active ? "Active" : "Inactive"}
+                  <span className="text-[12px] text-foreground/40">
+                    {col.eventCount} événement{col.eventCount !== 1 ? "s" : ""}
+                  </span>
                 </span>
-                <span className="text-[12px] text-foreground/40">
-                  {col.eventCount} événement{col.eventCount !== 1 ? "s" : ""}
+                <span className="flex shrink-0 items-center gap-2 rounded-full border border-coral/18 bg-coral/8 px-3 py-1.5 text-[11px] font-semibold text-coral transition-colors group-hover:border-coral/28 group-hover:bg-coral/12">
+                  {expandedId === col.id ? "Masquer" : "Voir"}
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={`h-3.5 w-3.5 transition-transform ${expandedId === col.id ? "rotate-180" : ""}`}
+                  />
                 </span>
               </button>
 
@@ -267,40 +289,40 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
             )}
 
             {/* Expanded: events + search */}
-            {expandedId === col.id && !col.is_auto && (
+            {expandedId === col.id && (
               <div className="border-t border-foreground/8 p-4 space-y-4">
                 {/* Current events */}
-                {col.eventIds.length > 0 && (
+                {col.events.length > 0 ? (
                   <div className="space-y-2">
                     <p className="text-[12px] font-semibold uppercase tracking-wider text-foreground/40">
-                      Événements dans cette collection
+                      {col.is_auto ? "Événements générés dans cette collection" : "Événements dans cette collection"}
                     </p>
-                    {col.eventIds.map((eventId, eventIndex) => {
-                      const event = events.find((e) => e.id === eventId);
-                      if (!event) return null;
+                    {col.events.map((event, eventIndex) => {
                       return (
                         <div
-                          key={eventId}
+                          key={event.id}
                           className="flex items-center gap-2 rounded-xl bg-white/50 px-3 py-2"
                         >
-                          <div className="flex flex-col gap-0.5">
-                            <button
-                              type="button"
-                              onClick={() => handleMoveEventUp(col.id, col.eventIds, eventIndex)}
-                              disabled={eventIndex === 0}
-                              className="h-5 w-5 rounded text-[10px] text-foreground/40 hover:bg-foreground/5 disabled:opacity-20"
-                            >
-                              ↑
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveEventDown(col.id, col.eventIds, eventIndex)}
-                              disabled={eventIndex >= col.eventIds.length - 1}
-                              className="h-5 w-5 rounded text-[10px] text-foreground/40 hover:bg-foreground/5 disabled:opacity-20"
-                            >
-                              ↓
-                            </button>
-                          </div>
+                          {!col.is_auto && (
+                            <div className="flex flex-col gap-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveEventUp(col.id, col.eventIds, eventIndex)}
+                                disabled={eventIndex === 0}
+                                className="h-5 w-5 rounded text-[10px] text-foreground/40 hover:bg-foreground/5 disabled:opacity-20"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveEventDown(col.id, col.eventIds, eventIndex)}
+                                disabled={eventIndex >= col.eventIds.length - 1}
+                                className="h-5 w-5 rounded text-[10px] text-foreground/40 hover:bg-foreground/5 disabled:opacity-20"
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <span className="text-[13px] font-medium text-foreground">
                               {event.name}
@@ -310,21 +332,37 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
                                 {event.city}
                               </span>
                             )}
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-foreground/38">
+                              {event.date && <span>{formatCollectionEventDate(event.date)}</span>}
+                              {event.type && <span>{event.type}</span>}
+                            </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveEvent(col.id, eventId)}
-                            className="text-[12px] text-red-400 hover:text-red-600"
-                          >
-                            Retirer
-                          </button>
+                          <span className="shrink-0 rounded-full bg-coral/10 px-2.5 py-1 text-[11px] font-semibold text-coral">
+                            {formatFavouriteCount(event.favouriteCount)}
+                          </span>
+                          {!col.is_auto && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveEvent(col.id, event.id)}
+                              className="text-[12px] text-red-400 hover:text-red-600"
+                            >
+                              Retirer
+                            </button>
+                          )}
                         </div>
                       );
                     })}
                   </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-foreground/12 bg-white/35 px-4 py-5 text-[13px] text-foreground/45">
+                    {col.is_auto
+                      ? "Aucun événement populaire à venir pour le moment."
+                      : "Aucun événement dans cette collection."}
+                  </div>
                 )}
 
                 {/* Add event search */}
+                {!col.is_auto && (
                 <div>
                   <p className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-foreground/40">
                     Ajouter un événement
@@ -362,6 +400,13 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
                     </div>
                   )}
                 </div>
+                )}
+
+                {col.is_auto && (
+                  <p className="text-[12px] leading-5 text-foreground/45">
+                    Collection automatique limitée aux 10 événements à venir les plus ajoutés en favoris.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -378,4 +423,16 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
       )}
     </div>
   );
+}
+
+function formatFavouriteCount(count: number) {
+  return `${count} favori${count > 1 ? "s" : ""}`;
+}
+
+function formatCollectionEventDate(value: string) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
 }

@@ -50,7 +50,7 @@ export function AuthModalDialog({
       }}
     >
       <DialogContent
-        className="gap-0 overflow-hidden p-0 sm:max-w-[400px]"
+        className="gap-0 p-0 sm:max-w-[400px]"
         showCloseButton={showCloseButton}
       >
         {/* Header with gradient mesh */}

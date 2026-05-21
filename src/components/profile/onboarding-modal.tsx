@@ -32,7 +32,7 @@ export function OnboardingModal({ initialValues }: OnboardingModalProps) {
       <DialogContent
         showCloseButton={false}
         overlayClassName="bg-[rgba(244,235,223,0.12)] supports-backdrop-filter:backdrop-blur-md"
-        className="max-w-[calc(100%-1.5rem)] gap-0 overflow-hidden rounded-[32px] border border-white/60 bg-[linear-gradient(135deg,rgba(255,252,247,0.88),rgba(250,242,232,0.84)_52%,rgba(247,237,221,0.86))] p-0 shadow-[0_28px_90px_rgba(40,24,11,0.18)] backdrop-blur-2xl sm:max-w-[860px]"
+        className="max-w-[calc(100%-1.5rem)] gap-0 rounded-[32px] border border-white/60 bg-[linear-gradient(135deg,rgba(255,252,247,0.88),rgba(250,242,232,0.84)_52%,rgba(247,237,221,0.86))] p-0 shadow-[0_28px_90px_rgba(40,24,11,0.18)] backdrop-blur-2xl sm:max-w-[860px]"
       >
         <div className="relative overflow-hidden rounded-[32px]">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(235,95,59,0.12),transparent_32%),radial-gradient(circle_at_top_right,rgba(213,143,56,0.13),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(235,95,59,0.08),transparent_24%)]" />

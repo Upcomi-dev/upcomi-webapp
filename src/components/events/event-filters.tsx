@@ -146,6 +146,27 @@ export function InlineFilters({
     [searchParams, updateParams, variant]
   );
 
+  const setDateRange = useCallback(
+    (nextFrom: string, nextTo: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      if (nextFrom) params.set("date_from", nextFrom);
+      else params.delete("date_from");
+
+      if (nextTo) params.set("date_to", nextTo);
+      else params.delete("date_to");
+
+      updateParams(params);
+      trackAnalyticsEvent("Filter Changed", {
+        filter_key: "date",
+        action: nextFrom || nextTo ? "added" : "removed",
+        active_filter_count: countActiveFilters(params),
+        surface: variant,
+      });
+    },
+    [searchParams, updateParams, variant]
+  );
+
   const clearAll = useCallback(() => {
     router.push("/", { scroll: false });
     trackAnalyticsEvent("Filters Cleared", {
@@ -333,45 +354,13 @@ export function InlineFilters({
                   <DrawerDateFields
                     dateFrom={dateFrom}
                     dateTo={dateTo}
-                    onChange={(nextFrom, nextTo) => {
-                      const params = new URLSearchParams(searchParams.toString());
-
-                      if (nextFrom) params.set("date_from", nextFrom);
-                      else params.delete("date_from");
-
-                      if (nextTo) params.set("date_to", nextTo);
-                      else params.delete("date_to");
-
-                      updateParams(params);
-                      trackAnalyticsEvent("Filter Changed", {
-                        filter_key: "date",
-                        action: nextFrom || nextTo ? "added" : "removed",
-                        active_filter_count: countActiveFilters(params),
-                        surface: variant,
-                      });
-                    }}
+                    onChange={setDateRange}
                   />
                 ) : (
                   <DateRangeCalendar
                     dateFrom={dateFrom}
                     dateTo={dateTo}
-                    onChange={(nextFrom, nextTo) => {
-                      const params = new URLSearchParams(searchParams.toString());
-
-                      if (nextFrom) params.set("date_from", nextFrom);
-                      else params.delete("date_from");
-
-                      if (nextTo) params.set("date_to", nextTo);
-                      else params.delete("date_to");
-
-                      updateParams(params);
-                      trackAnalyticsEvent("Filter Changed", {
-                        filter_key: "date",
-                        action: nextFrom || nextTo ? "added" : "removed",
-                        active_filter_count: countActiveFilters(params),
-                        surface: variant,
-                      });
-                    }}
+                    onChange={setDateRange}
                   />
                 )}
               </FilterSection>
@@ -600,38 +589,85 @@ function DrawerDateFields({
   dateTo: string;
   onChange: (dateFrom: string, dateTo: string) => void;
 }) {
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <label className="flex items-center gap-2 rounded-[18px] border border-white/55 bg-white/70 px-3 py-3 text-sm text-foreground/55 shadow-[var(--shadow-xs)]">
-        <CalendarDays className="h-4 w-4" />
-        <span className="relative flex-1">
-          <span className={cn("pointer-events-none", dateFrom ? "text-foreground" : "")}>
-            {dateFrom ? formatDateLabel(dateFrom) : "Début"}
-          </span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(event) => onChange(event.target.value, dateTo)}
-            className="absolute inset-0 opacity-0"
-          />
-        </span>
-      </label>
+  const weekendRange = getWeekendRange(new Date());
+  const weekendFrom = formatDateValue(weekendRange.start);
+  const weekendTo = formatDateValue(weekendRange.end);
+  const weekRange = getSevenDayRange(new Date());
+  const weekFrom = formatDateValue(weekRange.start);
+  const weekTo = formatDateValue(weekRange.end);
 
-      <label className="flex items-center gap-2 rounded-[18px] border border-white/55 bg-white/70 px-3 py-3 text-sm text-foreground/55 shadow-[var(--shadow-xs)]">
-        <CalendarDays className="h-4 w-4" />
-        <span className="relative flex-1">
-          <span className={cn("pointer-events-none", dateTo ? "text-foreground" : "")}>
-            {dateTo ? formatDateLabel(dateTo) : "Fin"}
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <DatePresetButton
+          label="Ce week-end"
+          active={dateFrom === weekendFrom && dateTo === weekendTo}
+          onClick={() => onChange(weekendFrom, weekendTo)}
+        />
+        <DatePresetButton
+          label="Cette semaine"
+          active={dateFrom === weekFrom && dateTo === weekTo}
+          onClick={() => onChange(weekFrom, weekTo)}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="flex items-center gap-2 rounded-[18px] border border-white/55 bg-white/70 px-3 py-3 text-sm text-foreground/55 shadow-[var(--shadow-xs)]">
+          <CalendarDays className="h-4 w-4" />
+          <span className="relative flex-1">
+            <span className={cn("pointer-events-none", dateFrom ? "text-foreground" : "")}>
+              {dateFrom ? formatDateLabel(dateFrom) : "Début"}
+            </span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(event) => onChange(event.target.value, dateTo)}
+              className="absolute inset-0 opacity-0"
+            />
           </span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(event) => onChange(dateFrom, event.target.value)}
-            className="absolute inset-0 opacity-0"
-          />
-        </span>
-      </label>
+        </label>
+
+        <label className="flex items-center gap-2 rounded-[18px] border border-white/55 bg-white/70 px-3 py-3 text-sm text-foreground/55 shadow-[var(--shadow-xs)]">
+          <CalendarDays className="h-4 w-4" />
+          <span className="relative flex-1">
+            <span className={cn("pointer-events-none", dateTo ? "text-foreground" : "")}>
+              {dateTo ? formatDateLabel(dateTo) : "Fin"}
+            </span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(event) => onChange(dateFrom, event.target.value)}
+              className="absolute inset-0 opacity-0"
+            />
+          </span>
+        </label>
+      </div>
     </div>
+  );
+}
+
+function DatePresetButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-full border px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all",
+        active
+          ? "border-coral bg-coral text-white"
+          : "border-white/55 bg-white/65 text-foreground/70 hover:border-coral/24 hover:text-coral"
+      )}
+    >
+      {label}
+    </button>
   );
 }
 

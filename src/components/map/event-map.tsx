@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Map, {
   Source,
   Layer,
+  NavigationControl,
   type MapRef,
   type MapLayerMouseEvent,
 } from "react-map-gl/maplibre";
@@ -15,37 +16,12 @@ import {
   type MapEvent,
 } from "@/lib/types/database";
 
-const MAP_STYLE = {
-  version: 8,
-  sources: {
-    carto: {
-      type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-        "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-      ],
-      tileSize: 256,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-    },
-  },
-  layers: [
-    {
-      id: "carto-base",
-      type: "raster",
-      source: "carto",
-      minzoom: 0,
-      maxzoom: 20,
-    },
-  ],
-} satisfies import("maplibre-gl").StyleSpecification;
+const MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 const FRANCE_VIEW = {
   longitude: 2.2137,
   latitude: 46.2276,
-  zoom: 5.4,
+  zoom: 4,
 };
 
 /** Bottom sheet peek height on mobile — keep markers above the sheet. */
@@ -68,6 +44,30 @@ interface EventMapProps {
 /** Round coordinates to ~11m precision to group co-located events. */
 function coordKey(lng: number, lat: number) {
   return `${lng.toFixed(4)},${lat.toFixed(4)}`;
+}
+
+function localizeMapLabels(map: MapRef) {
+  const mapInstance = map.getMap();
+
+  for (const layer of mapInstance.getStyle().layers ?? []) {
+    if (layer.id === "place_state") {
+      mapInstance.setLayoutProperty(layer.id, "visibility", "none");
+      continue;
+    }
+
+    if (layer.type !== "symbol") continue;
+
+    const textField = layer.layout?.["text-field"];
+    const textFieldValue = JSON.stringify(textField);
+    if (!textFieldValue.includes("name")) continue;
+
+    mapInstance.setLayoutProperty(layer.id, "text-field", [
+      "coalesce",
+      ["get", "name:fr"],
+      ["get", "name"],
+      ["get", "name_en"],
+    ]);
+  }
 }
 
 export function EventMap({
@@ -148,69 +148,6 @@ export function EventMap({
     };
   }, [validEvents, selectedEventId, hoveredEventId]);
 
-  const centerOnEvents = useCallback(() => {
-    const map = mapRef.current;
-    if (!map || validEvents.length === 0) return;
-
-    const runFit = () => {
-      map.resize();
-
-      if (validEvents.length === 1) {
-        map.easeTo({
-          center: [validEvents[0].longitude, validEvents[0].latitude],
-          zoom: 7.5,
-          duration: 900,
-          padding: isMobile
-            ? { top: 0, right: 0, bottom: MOBILE_BOTTOM_INSET, left: 0 }
-            : undefined,
-        });
-        return;
-      }
-
-      let minLng = validEvents[0].longitude;
-      let maxLng = validEvents[0].longitude;
-      let minLat = validEvents[0].latitude;
-      let maxLat = validEvents[0].latitude;
-
-      for (const event of validEvents) {
-        minLng = Math.min(minLng, event.longitude);
-        maxLng = Math.max(maxLng, event.longitude);
-        minLat = Math.min(minLat, event.latitude);
-        maxLat = Math.max(maxLat, event.latitude);
-      }
-
-      map.fitBounds(
-        [
-          [minLng, minLat],
-          [maxLng, maxLat],
-        ],
-        {
-          padding: isMobile
-            ? { top: 56, right: 24, bottom: MOBILE_BOTTOM_INSET + 24, left: 24 }
-            : { top: 56, right: 56, bottom: 56, left: 56 },
-          duration: 900,
-          maxZoom: 8.5,
-        }
-      );
-    };
-
-    if (typeof window !== "undefined") {
-      window.requestAnimationFrame(runFit);
-    } else {
-      runFit();
-    }
-  }, [validEvents, isMobile]);
-
-  // Center on events only once on mount
-  const hasFittedBounds = useRef(false);
-  useEffect(() => {
-    if (hasFittedBounds.current) return;
-    if (!isVisible) return;
-    if (validEvents.length === 0) return;
-    hasFittedBounds.current = true;
-    centerOnEvents();
-  }, [centerOnEvents, isVisible, validEvents.length]);
-
   useEffect(() => {
     if (!isVisible) return;
 
@@ -220,7 +157,7 @@ export function EventMap({
     window.requestAnimationFrame(() => {
       map.resize();
     });
-  }, [centerOnEvents, isVisible, validEvents.length]);
+  }, [isVisible, validEvents.length]);
 
   // Fly to event when clicked from panel
   const prevFlyTo = useRef<number | null>(null);
@@ -318,12 +255,22 @@ export function EventMap({
           hasCenteredInitially.current = true;
           mapRef.current?.jumpTo(FRANCE_VIEW);
         }
-        centerOnEvents();
+        const map = mapRef.current;
+        if (map) {
+          localizeMapLabels(map);
+        }
       }}
       cursor="pointer"
     >
+      <NavigationControl
+        position="top-left"
+        showCompass={false}
+        showZoom
+        visualizePitch={false}
+      />
+
       {/* Main dots */}
-      <Source id="events" type="geojson" data={geojson}>
+      <Source key="events-source" id="events" type="geojson" data={geojson}>
         <Layer
           id="event-dots-hitbox"
           type="circle"

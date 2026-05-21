@@ -102,7 +102,7 @@ function ResetPasswordModalContent() {
   return (
     <Dialog open>
       <DialogContent
-        className="gap-0 overflow-hidden p-0 sm:max-w-[400px]"
+        className="gap-0 p-0 sm:max-w-[400px]"
         showCloseButton={false}
       >
         <div className="hero-mesh relative px-6 pt-7 pb-5">
@@ -208,7 +208,7 @@ export function ResetPasswordModal() {
       fallback={
         <Dialog open>
           <DialogContent
-            className="gap-0 overflow-hidden p-0 sm:max-w-[400px]"
+            className="gap-0 p-0 sm:max-w-[400px]"
             showCloseButton={false}
           >
             <div className="hero-mesh relative px-6 pt-7 pb-5">

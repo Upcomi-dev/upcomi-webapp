@@ -13,6 +13,7 @@ export async function createClient() {
     supabasePublishableKey,
     {
       cookies: {
+        encode: "tokens-only",
         getAll() {
           return cookieStore.getAll();
         },

@@ -23,7 +23,7 @@ export function ProfilePageModal({ initialValues }: ProfilePageModalProps) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100%-1.5rem)] gap-0 overflow-hidden rounded-[32px] border border-white/60 bg-[linear-gradient(135deg,rgba(255,252,247,0.94),rgba(250,242,232,0.92)_52%,rgba(247,237,221,0.94))] p-0 shadow-[0_28px_90px_rgba(40,24,11,0.18)] backdrop-blur-2xl sm:max-w-4xl">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100%-1.5rem)] gap-0 rounded-[32px] border border-white/60 bg-[linear-gradient(135deg,rgba(255,252,247,0.94),rgba(250,242,232,0.92)_52%,rgba(247,237,221,0.94))] p-0 shadow-[0_28px_90px_rgba(40,24,11,0.18)] backdrop-blur-2xl sm:max-w-4xl">
         <div className="relative overflow-y-auto px-6 pt-6 pb-7 sm:px-8 sm:pt-8 sm:pb-8">
           <DialogHeader className="gap-3 border-b border-foreground/8 pb-6">
             <div className="space-y-2">
