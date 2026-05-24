@@ -11,6 +11,7 @@ import {
   PASSWORD_MIN_LENGTH,
   translatePasswordError,
 } from "@/lib/auth/password";
+import { GoogleAuthButton } from "./google-auth-button";
 import { PasswordRequirements } from "./password-requirements";
 
 interface SignupFormProps {
@@ -122,6 +123,35 @@ export function SignupForm({
 
   return (
     <div>
+      <GoogleAuthButton mode="signup" redirectTo={redirectTo} />
+      <p className="mt-2 text-center text-[11px] leading-4 text-foreground/45">
+        En continuant avec Google, tu acceptes les{" "}
+        <Link
+          href={termsUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold text-coral hover:text-coral-dark"
+        >
+          CGU
+        </Link>{" "}
+        et la{" "}
+        <Link
+          href={privacyPolicyUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold text-coral hover:text-coral-dark"
+        >
+          politique de confidentialité
+        </Link>
+        .
+      </p>
+
+      <div className="my-4 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/35">
+        <span className="h-px flex-1 bg-foreground/10" />
+        ou
+        <span className="h-px flex-1 bg-foreground/10" />
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-3.5">
         {error && (
           <div className="rounded-[var(--radius-sm)] border border-red-200/60 bg-red-50/80 px-3.5 py-2.5 text-[13px] text-red-600">

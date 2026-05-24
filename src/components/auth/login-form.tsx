@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { trackAnalyticsEvent } from "@/lib/analytics";
+import { GoogleAuthButton } from "./google-auth-button";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -60,6 +61,14 @@ export function LoginForm({
 
   return (
     <div>
+      <GoogleAuthButton mode="login" redirectTo={redirectTo} />
+
+      <div className="my-4 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/35">
+        <span className="h-px flex-1 bg-foreground/10" />
+        ou
+        <span className="h-px flex-1 bg-foreground/10" />
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-3.5">
         {error && (
           <div className="rounded-[var(--radius-sm)] border border-red-200/60 bg-red-50/80 px-3.5 py-2.5 text-[13px] text-red-600">
