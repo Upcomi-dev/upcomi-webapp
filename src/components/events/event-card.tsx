@@ -182,13 +182,16 @@ export function EventCard({
             </div>
           )}
         </div>
-        <div className="flex flex-1 flex-col justify-between p-3">
-          <h3 className="line-clamp-2 font-serif text-[16px] leading-[1.15] text-foreground">
-            {name}
-          </h3>
-          <div className="flex items-center gap-2 text-[13px] text-foreground/55 md:text-[11px]">
-            <span>{formattedDate || "À venir"}</span>
-            <span className="text-coral/55">·</span>
+        <div className="panel-divider flex flex-1 flex-col px-3.5 py-3">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+            <span className="min-w-0 truncate text-foreground/45">{formattedDate || "À venir"}</span>
+          </div>
+          <div className="flex min-h-0 flex-1 items-center py-1.5">
+            <h3 className="line-clamp-2 text-[16px] font-semibold leading-[1.18] text-foreground">
+              {name}
+            </h3>
+          </div>
+          <div className="flex min-w-0 items-center text-[14px] leading-snug text-foreground/55 md:text-[12px]">
             <span className="truncate">{location || "Lieu à confirmer"}</span>
           </div>
         </div>

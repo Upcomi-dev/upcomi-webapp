@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.15] - 2026-05-29
+
+### UI
+- style: ajuste la zone basse des cards collection avec date, titre centré verticalement et lieu ancré en bas
+
 ## [0.3.14] - 2026-05-05
 
 ### Analytics
