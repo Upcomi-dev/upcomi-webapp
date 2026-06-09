@@ -7,7 +7,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { CalendarDays, Check, Heart } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { FavouriteButton } from "@/components/events/favourite-button";
-import { PastEventsToggle } from "@/components/events/past-events-toggle";
 import { getEventTypeColor } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 import {
@@ -19,6 +18,7 @@ import {
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { buildRelativeUrl, withReturnTo } from "@/lib/utils/navigation";
 import { makeEventSlug } from "@/lib/utils/slugify";
+import { getPastFavoriteEvents, PAST_FAVORITES_PAGE_SIZE } from "@/lib/utils/favorites";
 import { type FavoriteEvent, useFavorites } from "./favorites-context";
 
 interface FavoritesPanelBodyProps {
@@ -37,28 +37,27 @@ export function FavoritesPanelBody({
     favoriteEvents,
     allParticipationEvents,
     participationEvents,
-    participationCount,
     toggleParticipation,
   } = useFavorites();
   const { user } = useAuth();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<"favorites" | "participations">("favorites");
-  const [showPastEvents, setShowPastEvents] = useState(false);
+  const [pastVisibleCount, setPastVisibleCount] = useState(PAST_FAVORITES_PAGE_SIZE);
   const isAuthenticated = user !== null;
   const returnTo = buildRelativeUrl(pathname, searchParams.toString());
   const activeAllEvents =
     activeTab === "favorites" ? allFavoriteEvents : allParticipationEvents;
   const activeVisibleEvents =
     activeTab === "favorites" ? favoriteEvents : participationEvents;
-  const displayedEvents = useMemo(
-    () => (showPastEvents ? activeAllEvents : activeVisibleEvents),
-    [activeAllEvents, activeVisibleEvents, showPastEvents]
+  const activePastEvents = useMemo(
+    () => getPastFavoriteEvents(activeAllEvents),
+    [activeAllEvents]
   );
-  const displayedCount = displayedEvents.length;
+  const visiblePastEvents = activePastEvents.slice(0, pastVisibleCount);
+  const hasMorePastEvents = visiblePastEvents.length < activePastEvents.length;
   const activeTotalCount =
-    activeTab === "favorites" ? allFavoriteEvents.length : participationCount;
-  const hasPastEvents = activeAllEvents.length > activeVisibleEvents.length;
+    activeTab === "favorites" ? allFavoriteEvents.length : allParticipationEvents.length;
   const title = activeTab === "favorites" ? "Mes favoris" : "Mes participations";
 
   return (
@@ -86,7 +85,7 @@ export function FavoritesPanelBody({
               label="Mes favoris"
               onClick={() => {
                 setActiveTab("favorites");
-                setShowPastEvents(false);
+                setPastVisibleCount(PAST_FAVORITES_PAGE_SIZE);
               }}
             />
             <TabButton
@@ -95,7 +94,7 @@ export function FavoritesPanelBody({
               label="Mes participations"
               onClick={() => {
                 setActiveTab("participations");
-                setShowPastEvents(false);
+                setPastVisibleCount(PAST_FAVORITES_PAGE_SIZE);
               }}
             />
           </div>
@@ -116,107 +115,162 @@ export function FavoritesPanelBody({
         </div>
       ) : (
         <>
-          {hasPastEvents ? (
-            <div className="border-y border-white/45 px-6 py-3 md:px-7">
-              <PastEventsToggle
-                active={showPastEvents}
-                onToggle={() => setShowPastEvents((value) => !value)}
-                compact
-                className="w-full"
-              />
-            </div>
-          ) : null}
-
-          {displayedCount === 0 ? (
-            <EmptyState activeTab={activeTab} showPastEvents={showPastEvents} />
+          {activeAllEvents.length === 0 ? (
+            <EmptyState activeTab={activeTab} />
           ) : (
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-5 md:px-7">
-              {activeTab === "participations" ? (
+              {activeVisibleEvents.length > 0 ? (
                 <p className="pb-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-                  {showPastEvents ? "Tous" : "À venir"} · {displayedCount} événement{displayedCount > 1 ? "s" : ""}
+                  À venir · {activeVisibleEvents.length} événement{activeVisibleEvents.length > 1 ? "s" : ""}
                 </p>
-              ) : null}
+              ) : (
+                <div className="py-6 text-center">
+                  <p className="text-[13px] font-medium text-foreground/56">
+                    Aucun {activeTab === "favorites" ? "favori" : "événement"} à venir
+                  </p>
+                </div>
+              )}
 
               <div className="divide-y divide-foreground/[0.08]">
-                {displayedEvents.map((event) => {
-                  const typeColor = getEventTypeColor(event.type_event);
-                  const eventSlug = makeEventSlug(event.id, event.nomEvent);
-                  const eventHref = withReturnTo(`/event/${eventSlug}`, returnTo);
-                  const past = isEventPast(event);
-                  const handleEventClick = (clickEvent: MouseEvent<HTMLAnchorElement>) => {
-                    if (!onEventOpen) return;
-                    clickEvent.preventDefault();
-                    onEventOpen(event);
-                  };
-
-                  return (
-                    <div key={event.id} className="group flex items-center gap-3 py-3.5">
-                      <Link
-                        href={eventHref}
-                        onNavigate={onNavigate}
-                        onClick={handleEventClick}
-                        className="flex min-w-0 flex-1 items-center gap-4"
-                      >
-                        <EventThumb event={event} typeColor={typeColor} />
-
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-[15px] font-semibold leading-tight text-foreground">
-                            {event.nomEvent || "Événement"}
-                          </div>
-                          <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-foreground/42">
-                            {event.dateEvent ? (
-                              <span className="whitespace-nowrap">
-                                {formatDateValue(event.dateEvent, "fr-FR", {
-                                  day: "numeric",
-                                  month: "short",
-                                })}
-                              </span>
-                            ) : null}
-                            {event.dateEvent && event.villeDepart ? (
-                              <span className="text-coral/40">·</span>
-                            ) : null}
-                            {event.villeDepart ? (
-                              <span className="truncate">{event.villeDepart}</span>
-                            ) : null}
-                            {past ? (
-                              <>
-                                <span className="text-coral/40">·</span>
-                                <span className="rounded-full bg-foreground/8 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-foreground/48">
-                                  Terminé
-                                </span>
-                              </>
-                            ) : null}
-                          </div>
-                        </div>
-                      </Link>
-
-                      <div className="flex flex-none items-center gap-2">
-                        {activeTab === "participations" ? (
-                          <DatePill event={event} />
-                        ) : (
-                          <>
-                            <FavouriteButton eventId={event.id} />
-                            <ParticipationButton
-                              active={event.participates}
-                              onClick={async () => {
-                                const nextParticipates = await toggleParticipation(event.id);
-                                trackAnalyticsEvent("Participation Toggled", {
-                                  event_id: event.id,
-                                  action: nextParticipates ? "added" : "removed",
-                                });
-                              }}
-                            />
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {activeVisibleEvents.map((event) => (
+                  <FavoritePanelEventRow
+                    key={event.id}
+                    event={event}
+                    activeTab={activeTab}
+                    onEventOpen={onEventOpen}
+                    onNavigate={onNavigate}
+                    returnTo={returnTo}
+                    toggleParticipation={toggleParticipation}
+                  />
+                ))}
               </div>
+
+              {activePastEvents.length > 0 ? (
+                <section className="mt-5">
+                  <div className="pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
+                    Terminés · {activePastEvents.length} événement{activePastEvents.length > 1 ? "s" : ""}
+                  </div>
+
+                  <div className="divide-y divide-foreground/[0.08]">
+                    {visiblePastEvents.map((event) => (
+                      <FavoritePanelEventRow
+                        key={event.id}
+                        event={event}
+                        activeTab={activeTab}
+                        onEventOpen={onEventOpen}
+                        onNavigate={onNavigate}
+                        returnTo={returnTo}
+                        toggleParticipation={toggleParticipation}
+                      />
+                    ))}
+                  </div>
+
+                  {hasMorePastEvents ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPastVisibleCount((value) => value + PAST_FAVORITES_PAGE_SIZE)
+                      }
+                      className="mt-3 flex h-10 w-full items-center justify-center rounded-full border border-foreground/10 bg-white/64 text-[13px] font-semibold text-foreground transition-colors hover:bg-white"
+                    >
+                      Voir plus
+                    </button>
+                  ) : null}
+                </section>
+              ) : null}
             </div>
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function FavoritePanelEventRow({
+  event,
+  activeTab,
+  onEventOpen,
+  onNavigate,
+  returnTo,
+  toggleParticipation,
+}: {
+  event: FavoriteEvent;
+  activeTab: "favorites" | "participations";
+  onEventOpen?: (event: FavoriteEvent) => void;
+  onNavigate?: () => void;
+  returnTo: string;
+  toggleParticipation: (eventId: number) => Promise<boolean>;
+}) {
+  const typeColor = getEventTypeColor(event.type_event);
+  const eventSlug = makeEventSlug(event.id, event.nomEvent);
+  const eventHref = withReturnTo(`/event/${eventSlug}`, returnTo);
+  const past = isEventPast(event);
+  const handleEventClick = (clickEvent: MouseEvent<HTMLAnchorElement>) => {
+    if (!onEventOpen) return;
+    clickEvent.preventDefault();
+    onEventOpen(event);
+  };
+
+  return (
+    <div className="group flex items-center gap-3 py-3.5">
+      <Link
+        href={eventHref}
+        onNavigate={onNavigate}
+        onClick={handleEventClick}
+        className="flex min-w-0 flex-1 items-center gap-4"
+      >
+        <EventThumb event={event} typeColor={typeColor} />
+
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[15px] font-semibold leading-tight text-foreground">
+            {event.nomEvent || "Événement"}
+          </div>
+          <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-foreground/42">
+            {event.dateEvent ? (
+              <span className="whitespace-nowrap">
+                {formatDateValue(event.dateEvent, "fr-FR", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            ) : null}
+            {event.dateEvent && event.villeDepart ? (
+              <span className="text-coral/40">·</span>
+            ) : null}
+            {event.villeDepart ? (
+              <span className="truncate">{event.villeDepart}</span>
+            ) : null}
+            {past ? (
+              <>
+                <span className="text-coral/40">·</span>
+                <span className="rounded-full bg-foreground/8 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-foreground/48">
+                  Terminé
+                </span>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </Link>
+
+      <div className="flex flex-none items-center gap-2">
+        {activeTab === "participations" ? (
+          <DatePill event={event} />
+        ) : (
+          <>
+            <FavouriteButton eventId={event.id} />
+            <ParticipationButton
+              active={event.participates}
+              onClick={async () => {
+                const nextParticipates = await toggleParticipation(event.id);
+                trackAnalyticsEvent("Participation Toggled", {
+                  event_id: event.id,
+                  action: nextParticipates ? "added" : "removed",
+                });
+              }}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -337,10 +391,8 @@ function DatePill({ event }: { event: FavoriteEvent }) {
 
 function EmptyState({
   activeTab,
-  showPastEvents,
 }: {
   activeTab: "favorites" | "participations";
-  showPastEvents: boolean;
 }) {
   const isParticipationTab = activeTab === "participations";
 
@@ -361,9 +413,7 @@ function EmptyState({
       <p className="mt-1 text-[12px] text-foreground/42">
         {isParticipationTab
           ? "Coche J'y participe depuis tes favoris"
-          : showPastEvents
-            ? "Tu n'as pas encore de favoris terminés"
-            : "Active les terminés pour revoir tes anciens favoris"}
+          : "Sauvegarde les événements qui te plaisent"}
       </p>
     </div>
   );

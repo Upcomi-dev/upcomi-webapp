@@ -187,7 +187,7 @@ export function EventCard({
             <span className="min-w-0 truncate text-foreground/45">{formattedDate || "À venir"}</span>
           </div>
           <div className="flex min-h-0 flex-1 items-center py-1.5">
-            <h3 className="line-clamp-2 text-[16px] font-semibold leading-[1.18] text-foreground">
+            <h3 className="line-clamp-2 font-serif text-[16px] leading-[1.18] text-foreground">
               {name}
             </h3>
           </div>

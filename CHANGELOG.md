@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.16] - 2026-06-09
+
+### UI
+- feat: sépare les favoris à venir et terminés avec affichage progressif des anciens événements
+- feat: ouvre le filtre de dates dans une modale calendrier
+- style: applique la police serif Upcomi aux titres d'événements des cards collection
+
 ## [0.3.15] - 2026-05-29
 
 ### UI

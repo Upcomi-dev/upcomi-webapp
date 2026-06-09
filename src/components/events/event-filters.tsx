@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useId, useMemo, useState } from "react";
-import { CalendarDays, Info, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Info, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { buildEventTypeOptions, DEFAULT_EVENT_TYPES } from "@/lib/events/filter-options";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PastEventsToggle } from "./past-events-toggle";
 
 const BIKE_TYPES = ["Gravel", "VTT", "Route"];
@@ -55,13 +56,23 @@ function removeValue(current: URLSearchParams, key: string, value?: string) {
   return params;
 }
 
+function removeDateRange(current: URLSearchParams) {
+  const params = new URLSearchParams(current.toString());
+  params.delete("date_from");
+  params.delete("date_to");
+  return params;
+}
+
 function countActiveFilters(params: URLSearchParams) {
   const keys = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to", "mint", "show_past"];
-  return keys.reduce((count, key) => {
+  const count = keys.reduce((total, key) => {
     const value = params.get(key);
-    if (!value) return count;
-    return count + value.split(",").filter(Boolean).length;
+    if (!value) return total;
+    return total + value.split(",").filter(Boolean).length;
   }, 0);
+  return params.get("date_from") && params.get("date_from") === params.get("date_to")
+    ? count - 1
+    : count;
 }
 
 interface InlineFiltersProps {
@@ -85,6 +96,7 @@ export function InlineFilters({
   const searchParams = useSearchParams();
   const searchInputId = useId();
   const [openPanel, setOpenPanel] = useState<PanelKey | null>(null);
+  const [dateModalOpen, setDateModalOpen] = useState(false);
   const dateFrom = searchParams.get("date_from") ?? "";
   const dateTo = searchParams.get("date_to") ?? "";
   const showPastEvents = searchParams.get("show_past") === "true";
@@ -196,11 +208,16 @@ export function InlineFilters({
   const activeTags = useMemo(() => {
     const tags: Array<{ key: string; label: string; value?: string }> = [];
 
-    if (dateFrom) {
+    if (dateFrom && dateTo) {
+      tags.push({
+        key: "date",
+        label: dateFrom === dateTo
+          ? `Le ${formatDateLabel(dateFrom)}`
+          : `Du ${formatDateLabel(dateFrom)} au ${formatDateLabel(dateTo)}`,
+      });
+    } else if (dateFrom) {
       tags.push({ key: "date_from", label: `À partir du ${formatDateLabel(dateFrom)}` });
-    }
-
-    if (dateTo) {
+    } else if (dateTo) {
       tags.push({ key: "date_to", label: `Jusqu'au ${formatDateLabel(dateTo)}` });
     }
 
@@ -235,8 +252,12 @@ export function InlineFilters({
     return tags;
   }, [dateFrom, dateTo, isActive, resolvedEventTypes, searchParams]);
 
+  const dateFilterCount = dateFrom && dateTo && dateFrom === dateTo
+    ? 1
+    : Number(Boolean(dateFrom)) + Number(Boolean(dateTo));
+
   const counts = {
-    date: Number(Boolean(dateFrom)) + Number(Boolean(dateTo)),
+    date: dateFilterCount,
     bike: searchParams.get("bike_type")?.split(",").filter(Boolean).length || 0,
     type: searchParams.get("type_event")?.split(",").filter(Boolean).length || 0,
     distance: searchParams.get("distance")?.split(",").filter(Boolean).length || 0,
@@ -247,7 +268,7 @@ export function InlineFilters({
 
   const hasFilters = activeTags.length > 0;
   const isDrawerVariant = variant === "drawer";
-  const showDatePanel = expandAllPanels || openPanel === "date";
+  const showDatePanel = isDrawerVariant && expandAllPanels;
   const showTypePanel = expandAllPanels || openPanel === "type";
   const showDistancePanel = expandAllPanels || openPanel === "distance";
   const showBikePanel = expandAllPanels || openPanel === "bike";
@@ -292,13 +313,10 @@ export function InlineFilters({
           {!isDrawerVariant ? (
             <ActionButton
               label={getDateButtonLabel(dateFrom, dateTo)}
-              active={showDatePanel || counts.date > 0}
+              active={dateModalOpen || counts.date > 0}
               badge={counts.date || undefined}
               icon={CalendarDays}
-              onClick={() => {
-                if (expandAllPanels) return;
-                setOpenPanel((current) => (current === "date" ? null : "date"));
-              }}
+              onClick={() => setDateModalOpen(true)}
             />
           ) : null}
         </div>
@@ -379,20 +397,12 @@ export function InlineFilters({
               : "rounded-[28px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.94),rgba(248,240,230,0.9))] p-4 shadow-[var(--shadow-md)]"
           )}>
             {showDatePanel && (
-              <FilterSection label={isDrawerVariant ? "Dates" : "Période"} variant={variant}>
-                {isDrawerVariant ? (
-                  <DrawerDateFields
-                    dateFrom={dateFrom}
-                    dateTo={dateTo}
-                    onChange={setDateRange}
-                  />
-                ) : (
-                  <DateRangeCalendar
-                    dateFrom={dateFrom}
-                    dateTo={dateTo}
-                    onChange={setDateRange}
-                  />
-                )}
+              <FilterSection label="Dates" variant={variant}>
+                <DateSelectionButton
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  onClick={() => setDateModalOpen(true)}
+                />
               </FilterSection>
             )}
 
@@ -486,7 +496,9 @@ export function InlineFilters({
               <button
                 key={`${tag.key}-${tag.value || tag.label}`}
                 onClick={() => {
-                  const params = removeValue(searchParams, tag.key, tag.value);
+                  const params = tag.key === "date"
+                    ? removeDateRange(searchParams)
+                    : removeValue(searchParams, tag.key, tag.value);
                   updateParams(params);
                   trackAnalyticsEvent("Filter Changed", {
                     filter_key: tag.key,
@@ -504,6 +516,16 @@ export function InlineFilters({
           </div>
         )}
       </div>
+
+      {dateModalOpen ? (
+        <DateFilterDialog
+          open={dateModalOpen}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onOpenChange={setDateModalOpen}
+          onConfirm={setDateRange}
+        />
+      ) : null}
     </div>
   );
 }
@@ -619,94 +641,117 @@ function FilterPill({
   );
 }
 
-function DrawerDateFields({
+function DateSelectionButton({
   dateFrom,
   dateTo,
-  onChange,
+  onClick,
 }: {
   dateFrom: string;
   dateTo: string;
-  onChange: (dateFrom: string, dateTo: string) => void;
-}) {
-  const weekendRange = getWeekendRange(new Date());
-  const weekendFrom = formatDateValue(weekendRange.start);
-  const weekendTo = formatDateValue(weekendRange.end);
-  const weekRange = getSevenDayRange(new Date());
-  const weekFrom = formatDateValue(weekRange.start);
-  const weekTo = formatDateValue(weekRange.end);
-
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2">
-        <DatePresetButton
-          label="Ce week-end"
-          active={dateFrom === weekendFrom && dateTo === weekendTo}
-          onClick={() => onChange(weekendFrom, weekendTo)}
-        />
-        <DatePresetButton
-          label="Cette semaine"
-          active={dateFrom === weekFrom && dateTo === weekTo}
-          onClick={() => onChange(weekFrom, weekTo)}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="flex items-center gap-2 rounded-[18px] border border-white/55 bg-white/70 px-3 py-3 text-sm text-foreground/55 shadow-[var(--shadow-xs)]">
-          <CalendarDays className="h-4 w-4" />
-          <span className="relative flex-1">
-            <span className={cn("pointer-events-none", dateFrom ? "text-foreground" : "")}>
-              {dateFrom ? formatDateLabel(dateFrom) : "Début"}
-            </span>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(event) => onChange(event.target.value, dateTo)}
-              className="absolute inset-0 opacity-0"
-            />
-          </span>
-        </label>
-
-        <label className="flex items-center gap-2 rounded-[18px] border border-white/55 bg-white/70 px-3 py-3 text-sm text-foreground/55 shadow-[var(--shadow-xs)]">
-          <CalendarDays className="h-4 w-4" />
-          <span className="relative flex-1">
-            <span className={cn("pointer-events-none", dateTo ? "text-foreground" : "")}>
-              {dateTo ? formatDateLabel(dateTo) : "Fin"}
-            </span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(event) => onChange(dateFrom, event.target.value)}
-              className="absolute inset-0 opacity-0"
-            />
-          </span>
-        </label>
-      </div>
-    </div>
-  );
-}
-
-function DatePresetButton({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
   onClick: () => void;
 }) {
+  const hasDate = Boolean(dateFrom || dateTo);
+
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all",
-        active
-          ? "border-coral bg-coral text-white"
-          : "border-white/55 bg-white/65 text-foreground/70 hover:border-coral/24 hover:text-coral"
+        "flex w-full items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-left text-sm shadow-[var(--shadow-xs)] transition-all",
+        hasDate
+          ? "border-coral/25 bg-coral/8 text-coral"
+          : "border-white/55 bg-white/70 text-foreground/58 hover:border-coral/24 hover:text-coral"
       )}
     >
-      {label}
+      <span className="flex min-w-0 items-center gap-2">
+        <CalendarDays className="h-4 w-4 flex-none" />
+        <span className="truncate font-semibold">
+          {getDateButtonLabel(dateFrom, dateTo)}
+        </span>
+      </span>
+      <span className="flex-none text-[11px] font-semibold uppercase tracking-[0.14em]">
+        Modifier
+      </span>
     </button>
+  );
+}
+
+function DateFilterDialog({
+  open,
+  dateFrom,
+  dateTo,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  dateFrom: string;
+  dateTo: string;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (dateFrom: string, dateTo: string) => void;
+}) {
+  const [draftFrom, setDraftFrom] = useState(dateFrom);
+  const [draftTo, setDraftTo] = useState(dateTo);
+
+  const handleConfirm = useCallback(() => {
+    if (!draftFrom && !draftTo) {
+      onConfirm("", "");
+      onOpenChange(false);
+      return;
+    }
+
+    const nextFrom = draftFrom || draftTo;
+    const nextTo = draftTo || draftFrom;
+    onConfirm(nextFrom, nextTo);
+    onOpenChange(false);
+  }, [draftFrom, draftTo, onConfirm, onOpenChange]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-h-[calc(100dvh-1rem)] max-w-[calc(100%-1rem)] gap-0 rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(248,240,230,0.96))] p-0 shadow-[0_28px_90px_rgba(40,24,11,0.2)] sm:max-w-[31rem]"
+        overlayClassName="bg-[rgba(36,23,15,0.34)] supports-backdrop-filter:backdrop-blur-md"
+      >
+        <DialogHeader className="border-b border-white/50 px-5 pb-4 pt-5">
+          <DialogTitle className="font-serif text-[26px] font-normal leading-tight text-foreground">
+            Dates
+          </DialogTitle>
+          <DialogDescription className="text-sm leading-6 text-foreground/58">
+            Sélectionne une date ou une période.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="px-3 py-4 sm:px-5">
+          <DateRangeCalendar
+            dateFrom={draftFrom}
+            dateTo={draftTo}
+            onChange={(nextFrom, nextTo) => {
+              setDraftFrom(nextFrom);
+              setDraftTo(nextTo);
+            }}
+          />
+        </div>
+
+        <div className="sticky bottom-0 flex items-center gap-3 border-t border-white/50 bg-white/78 px-4 py-4 backdrop-blur-md">
+          <button
+            type="button"
+            onClick={() => {
+              setDraftFrom("");
+              setDraftTo("");
+            }}
+            className="rounded-full border border-white/65 bg-white/80 px-4 py-3 text-[13px] font-semibold text-foreground/68 shadow-[var(--shadow-xs)] transition-all hover:text-coral"
+          >
+            Effacer
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            className="flex-1 rounded-full bg-coral px-5 py-3 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(235,95,59,0.28)] transition-all hover:bg-coral/92 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral/45"
+          >
+            Confirmer
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -722,6 +767,10 @@ function formatDateLabel(value: string) {
 }
 
 function getDateButtonLabel(dateFrom: string, dateTo: string) {
+  if (dateFrom && dateTo && dateFrom === dateTo) {
+    return `Le ${formatDateLabel(dateFrom)}`;
+  }
+
   if (dateFrom && dateTo) {
     return `${formatDateLabel(dateFrom)} - ${formatDateLabel(dateTo)}`;
   }
@@ -782,10 +831,12 @@ function DateRangeCalendar({
     <div className="w-full rounded-[24px] border border-white/55 bg-white/45 p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
         <button
+          type="button"
+          aria-label="Mois précédent"
           onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))}
-          className="rounded-full border border-white/55 bg-white/70 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/70 transition-all hover:border-coral/25 hover:text-coral"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/55 bg-white/70 text-foreground/70 transition-all hover:border-coral/25 hover:text-coral"
         >
-          Prec
+          <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="text-center">
           <div className="text-sm font-semibold text-foreground">
@@ -796,15 +847,18 @@ function DateRangeCalendar({
           </div>
         </div>
         <button
+          type="button"
+          aria-label="Mois suivant"
           onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))}
-          className="rounded-full border border-white/55 bg-white/70 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/70 transition-all hover:border-coral/25 hover:text-coral"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/55 bg-white/70 text-foreground/70 transition-all hover:border-coral/25 hover:text-coral"
         >
-          Suiv
+          <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
       <div className="mb-3 flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={() => {
             const { start, end } = getWeekendRange(new Date());
             onChange(formatDateValue(start), formatDateValue(end));
@@ -815,6 +869,7 @@ function DateRangeCalendar({
           Ce week-end
         </button>
         <button
+          type="button"
           onClick={() => {
             const { start, end } = getSevenDayRange(new Date());
             onChange(formatDateValue(start), formatDateValue(end));
@@ -847,6 +902,7 @@ function DateRangeCalendar({
 
           return (
             <button
+              type="button"
               key={day.toISOString()}
               onClick={() => handleDayClick(day)}
               className={cn(
@@ -869,6 +925,7 @@ function DateRangeCalendar({
       <div className="mt-3 flex items-center justify-end gap-2">
         {(dateFrom || dateTo) && (
           <button
+            type="button"
             onClick={() => onChange("", "")}
             className="rounded-full border border-coral/20 bg-coral/8 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-coral transition-all hover:bg-coral/14"
           >
@@ -927,6 +984,10 @@ function isSameDay(a: Date, b: Date) {
 }
 
 function getDateRangeSummary(dateFrom: string, dateTo: string) {
+  if (dateFrom && dateTo && dateFrom === dateTo) {
+    return `Le ${formatDateLabel(dateFrom)}`;
+  }
+
   if (dateFrom && dateTo) {
     return `${formatDateLabel(dateFrom)} -> ${formatDateLabel(dateTo)}`;
   }
