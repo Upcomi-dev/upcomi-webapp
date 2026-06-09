@@ -691,19 +691,16 @@ function DateFilterDialog({
 }) {
   const [draftFrom, setDraftFrom] = useState(dateFrom);
   const [draftTo, setDraftTo] = useState(dateTo);
+  const canConfirm = Boolean(draftFrom || draftTo);
 
   const handleConfirm = useCallback(() => {
-    if (!draftFrom && !draftTo) {
-      onConfirm("", "");
-      onOpenChange(false);
-      return;
-    }
+    if (!canConfirm) return;
 
     const nextFrom = draftFrom || draftTo;
     const nextTo = draftTo || draftFrom;
     onConfirm(nextFrom, nextTo);
     onOpenChange(false);
-  }, [draftFrom, draftTo, onConfirm, onOpenChange]);
+  }, [canConfirm, draftFrom, draftTo, onConfirm, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -745,7 +742,8 @@ function DateFilterDialog({
           <button
             type="button"
             onClick={handleConfirm}
-            className="flex-1 rounded-full bg-coral px-5 py-3 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(235,95,59,0.28)] transition-all hover:bg-coral/92 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral/45"
+            disabled={!canConfirm}
+            className="flex-1 rounded-full bg-coral px-5 py-3 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(235,95,59,0.28)] transition-all hover:bg-coral/92 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral/45 disabled:cursor-not-allowed disabled:bg-foreground/18 disabled:text-foreground/38 disabled:shadow-none disabled:hover:bg-foreground/18"
           >
             Confirmer
           </button>

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.17] - 2026-06-09
+
+### UI
+- fix: désactive la confirmation de la modale dates tant qu'aucune date n'est sélectionnée
+
 ## [0.3.16] - 2026-06-09
 
 ### UI
