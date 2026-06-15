@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.19] - 2026-06-16
+
+### UI
+- fix: déplace les compteurs favoris et participations dans leurs onglets avec comptage limité aux événements à venir
+
 ## [0.3.18] - 2026-06-15
 
 ### Features

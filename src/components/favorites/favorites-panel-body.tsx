@@ -57,8 +57,6 @@ export function FavoritesPanelBody({
   );
   const visiblePastEvents = activePastEvents.slice(0, pastVisibleCount);
   const hasMorePastEvents = visiblePastEvents.length < activePastEvents.length;
-  const activeTotalCount =
-    activeTab === "favorites" ? allFavoriteEvents.length : allParticipationEvents.length;
   const title = activeTab === "favorites" ? "Mes favoris" : "Mes participations";
 
   return (
@@ -71,17 +69,13 @@ export function FavoritesPanelBody({
           <h2 className="min-w-0 truncate font-serif text-[30px] font-bold leading-none text-foreground md:text-[34px]">
             {title}
           </h2>
-          {isAuthenticated && activeTotalCount > 0 ? (
-            <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-coral/10 px-2.5 text-[13px] font-semibold text-coral">
-              {activeTotalCount}
-            </span>
-          ) : null}
         </div>
 
         {isAuthenticated ? (
           <div className="mt-5 grid h-[50px] grid-cols-2 rounded-full bg-foreground/[0.055] p-1">
             <TabButton
               active={activeTab === "favorites"}
+              count={favoriteEvents.length}
               icon={<Heart className="h-[15px] w-[15px]" />}
               label="Mes favoris"
               onClick={() => {
@@ -91,6 +85,7 @@ export function FavoritesPanelBody({
             />
             <TabButton
               active={activeTab === "participations"}
+              count={participationEvents.length}
               icon={<Check className="h-[15px] w-[15px]" />}
               label="Mes participations"
               onClick={() => {
@@ -278,11 +273,13 @@ function FavoritePanelEventRow({
 
 function TabButton({
   active,
+  count,
   icon,
   label,
   onClick,
 }: {
   active: boolean;
+  count: number;
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
@@ -301,6 +298,16 @@ function TabButton({
     >
       {icon}
       <span className="truncate">{label}</span>
+      <span
+        className={cn(
+          "flex h-5 min-w-5 flex-none items-center justify-center rounded-full px-1.5 text-[11px] font-bold leading-none",
+          active
+            ? "bg-coral/10 text-coral"
+            : "bg-foreground/[0.075] text-foreground/42"
+        )}
+      >
+        {count}
+      </span>
     </button>
   );
 }
