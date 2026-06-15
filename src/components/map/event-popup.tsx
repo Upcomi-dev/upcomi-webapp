@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { MapEvent } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
+import { getAppStorageImageUrl } from "@/lib/storage/urls";
 import { makeEventSlug } from "@/lib/utils/slugify";
 
 interface EventPopupProps {
@@ -12,6 +13,7 @@ export function EventPopup({ event }: EventPopupProps) {
   const typeColor = getEventTypeColor(event.type_event);
   const slug = makeEventSlug(event.id, event.nomEvent);
   const name = event.nomEvent || "Événement";
+  const eventImage = getAppStorageImageUrl(event.image);
 
   const formattedDate = event.dateEvent
     ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
@@ -29,10 +31,10 @@ export function EventPopup({ event }: EventPopupProps) {
     <div className="min-w-[280px] overflow-hidden rounded-[var(--radius)] border border-white/60 bg-popover shadow-[var(--shadow-lg)] backdrop-blur-xl">
       {/* Hero image */}
       <div className="relative h-[140px] w-full overflow-hidden">
-        {event.image ? (
+        {eventImage ? (
           <>
             <Image
-              src={event.image}
+              src={eventImage}
               alt={name}
               fill
               className="object-cover"

@@ -4,7 +4,7 @@ import { AdminCollectionsClient } from "@/components/admin/admin-collections-cli
 import { AdminFeedbackClient } from "@/components/admin/admin-feedback-client";
 import { AdminUsersClient } from "@/components/admin/admin-users-client";
 import { requireAdmin } from "@/lib/auth/assert-admin";
-import type { Event, FeedbackEntry } from "@/lib/types/database";
+import type { Event, EventSubmissionContact, FeedbackEntry } from "@/lib/types/database";
 import { makeEventSlug } from "@/lib/utils/slugify";
 
 interface AdminPageProps {
@@ -168,6 +168,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .from("feedback_entries")
     .select("*")
     .order("created_at", { ascending: false });
+  const eventSubmissionContactsPromise = supabase
+    .from("event_submission_contacts")
+    .select("*")
+    .order("submitted_at", { ascending: false });
   const popularEventsPromise = supabase.rpc("get_popular_events", {
     p_limit: POPULAR_COLLECTION_LIMIT,
   });
@@ -182,6 +186,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     organisateursResult,
     favouritesCountResult,
     feedbackEntriesResult,
+    eventSubmissionContactsResult,
     popularEventsResult,
   ] = await Promise.all([
     collectionsPromise,
@@ -193,6 +198,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     organisateursPromise,
     favouritesCountPromise,
     feedbackEntriesPromise,
+    eventSubmissionContactsPromise,
     popularEventsPromise,
   ]);
 
@@ -241,6 +247,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .filter((value): value is string => Boolean(value));
   const favouritesCount = favouritesCountResult.count ?? 0;
   const feedbackEntries = (feedbackEntriesResult.data ?? []) as FeedbackEntry[];
+  const eventSubmissionContacts =
+    (eventSubmissionContactsResult.data ?? []) as EventSubmissionContact[];
 
   const collectionsWithCounts: AdminCollection[] = collections.map((c) => {
     const isAuto = c.is_auto as boolean;
@@ -583,7 +591,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             { label: "À vérifier", value: pendingReviewCount.toString() },
           ]}
         >
-          <AdminEventsClient events={allEvents} organisateurs={organisateurs} />
+          <AdminEventsClient
+            events={allEvents}
+            organisateurs={organisateurs}
+            submissionContacts={eventSubmissionContacts}
+          />
         </AdminSectionShell>
       )}
 

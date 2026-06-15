@@ -7,7 +7,10 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.searchParams.has("code")
   ) {
     const url = request.nextUrl.clone();
-    url.pathname = "/reset-password";
+    url.pathname =
+      request.nextUrl.searchParams.get("type") === "recovery"
+        ? "/reset-password"
+        : "/auth/callback";
     return NextResponse.redirect(url);
   }
 

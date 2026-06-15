@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { createEvent, deleteEvent, updateEvent } from "@/app/admin/actions";
+import { createEvent, deleteEvent, updateEvent, validateEvent } from "@/app/admin/actions";
+import type { EventSubmissionContact } from "@/lib/types/database";
 
 interface AdminEventRecord {
   id: number;
@@ -45,6 +46,7 @@ interface AdminEventRecord {
 interface AdminEventsClientProps {
   events: AdminEventRecord[];
   organisateurs: string[];
+  submissionContacts: EventSubmissionContact[];
 }
 
 const inputClassName =
@@ -54,20 +56,50 @@ const textAreaClassName =
 const checkboxClassName =
   "flex items-center gap-2 rounded-xl border border-foreground/10 bg-white/72 px-3 py-2 text-[13px] text-foreground/72";
 
-export function AdminEventsClient({ events, organisateurs }: AdminEventsClientProps) {
+export function AdminEventsClient({ events, organisateurs, submissionContacts }: AdminEventsClientProps) {
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState("");
+  const [showOnlyPending, setShowOnlyPending] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  const contactsByEventId = useMemo(() => {
+    return new Map(submissionContacts.map((contact) => [contact.event_id, contact]));
+  }, [submissionContacts]);
+
+  const pendingCount = useMemo(
+    () => events.filter((event) => !event.verifie).length,
+    [events]
+  );
+
   const filteredEvents = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
+    const rankedEvents = [...events].sort((left, right) => {
+      if (left.verifie !== right.verifie) {
+        return left.verifie ? 1 : -1;
+      }
+
+      const leftContact = contactsByEventId.get(left.id);
+      const rightContact = contactsByEventId.get(right.id);
+      const leftSubmittedAt = leftContact?.submitted_at ?? "";
+      const rightSubmittedAt = rightContact?.submitted_at ?? "";
+
+      if (leftSubmittedAt || rightSubmittedAt) {
+        return rightSubmittedAt.localeCompare(leftSubmittedAt);
+      }
+
+      return (left.dateEvent ?? "").localeCompare(right.dateEvent ?? "");
+    });
+
+    const scopedEvents = showOnlyPending
+      ? rankedEvents.filter((event) => !event.verifie)
+      : rankedEvents;
 
     if (!normalizedQuery) {
-      return events.slice(0, 40);
+      return scopedEvents.slice(0, 40);
     }
 
-    return events
+    return scopedEvents
       .filter((event) =>
         [
           event.nomEvent,
@@ -81,7 +113,7 @@ export function AdminEventsClient({ events, organisateurs }: AdminEventsClientPr
           .some((value) => value!.toLowerCase().includes(normalizedQuery))
       )
       .slice(0, 40);
-  }, [events, searchQuery]);
+  }, [contactsByEventId, events, searchQuery, showOnlyPending]);
 
   const handleCreate = (formData: FormData) => {
     startTransition(async () => {
@@ -102,6 +134,10 @@ export function AdminEventsClient({ events, organisateurs }: AdminEventsClientPr
     startTransition(() => deleteEvent(id));
   };
 
+  const handleValidate = (id: number) => {
+    startTransition(() => validateEvent(id));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -119,6 +155,17 @@ export function AdminEventsClient({ events, organisateurs }: AdminEventsClientPr
             placeholder="Chercher un événement..."
             className={`${inputClassName} min-w-[260px]`}
           />
+          <button
+            type="button"
+            onClick={() => setShowOnlyPending((current) => !current)}
+            className={`rounded-full border px-4 py-2 text-[12px] font-semibold transition-colors ${
+              showOnlyPending
+                ? "border-amber-200 bg-amber-100 text-amber-800"
+                : "border-foreground/12 bg-white/60 text-foreground/58 hover:bg-foreground/5"
+            }`}
+          >
+            À vérifier ({pendingCount})
+          </button>
           <button
             type="button"
             onClick={() => setShowCreateForm((current) => !current)}
@@ -164,6 +211,7 @@ export function AdminEventsClient({ events, organisateurs }: AdminEventsClientPr
         {filteredEvents.map((event) => {
           const label = event.nomEvent || `Événement #${event.id}`;
           const isEditing = editingId === event.id;
+          const submissionContact = contactsByEventId.get(event.id);
 
           return (
             <div
@@ -186,6 +234,11 @@ export function AdminEventsClient({ events, organisateurs }: AdminEventsClientPr
                     >
                       {event.verifie ? "Vérifié" : "À vérifier"}
                     </span>
+                    {!event.verifie && submissionContact ? (
+                      <span className="rounded-full bg-coral/10 px-2.5 py-1 text-[11px] font-semibold text-coral">
+                        Proposition
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-2 text-[14px] text-foreground/58">
                     {[event.dateEvent, event.villeDepart, event.paysDepart].filter(Boolean).join(" · ") ||
@@ -196,9 +249,37 @@ export function AdminEventsClient({ events, organisateurs }: AdminEventsClientPr
                     {event.organisateur && <span>Organisateur: {event.organisateur}</span>}
                     {event.AlaUne !== null && <span>À la une: {event.AlaUne}</span>}
                   </div>
+                  {!event.verifie && submissionContact ? (
+                    <div className="mt-4 rounded-[18px] border border-coral/12 bg-coral/6 px-4 py-3 text-[13px] text-foreground/66">
+                      <p className="font-semibold text-foreground">
+                        Contact: {submissionContact.contact_name}
+                      </p>
+                      <a
+                        href={`mailto:${submissionContact.contact_email}`}
+                        className="mt-1 inline-flex text-coral hover:text-coral-dark"
+                      >
+                        {submissionContact.contact_email}
+                      </a>
+                      <p className="mt-2 text-[12px] leading-5 text-foreground/58">
+                        Départ: {formatDepartureAddress(submissionContact)}
+                      </p>
+                      <p className="mt-1 text-[12px] text-foreground/45">
+                        Proposé le {formatSubmittedAt(submissionContact.submitted_at)}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  {!event.verifie ? (
+                    <button
+                      type="button"
+                      onClick={() => handleValidate(event.id)}
+                      className="rounded-full bg-green-600 px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-green-700"
+                    >
+                      Valider
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setEditingId((current) => (current === event.id ? null : event.id))}
@@ -394,4 +475,23 @@ function CheckboxField({
 
 function toInputValue(value: number | null | undefined) {
   return value === null || value === undefined ? "" : String(value);
+}
+
+function formatSubmittedAt(value: string) {
+  return new Date(value).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatDepartureAddress(contact: EventSubmissionContact) {
+  return [
+    contact.departure_address,
+    contact.departure_postal_code,
+    contact.departure_city,
+    contact.departure_country,
+  ]
+    .filter(Boolean)
+    .join(", ");
 }

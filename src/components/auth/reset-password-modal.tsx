@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { AppLogo } from "@/components/layout/app-logo";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
@@ -12,6 +13,7 @@ import {
   PASSWORD_MIN_LENGTH,
   translatePasswordError,
 } from "@/lib/auth/password";
+import { PASSWORD_RECOVERY_PENDING_KEY } from "@/lib/auth/recovery";
 import { PasswordRequirements } from "./password-requirements";
 
 type LinkState = "checking" | "ready" | "invalid";
@@ -28,19 +30,50 @@ function ResetPasswordModalContent() {
 
   useEffect(() => {
     let active = true;
+    let invalidTimer: number | null = null;
+    let recoverySubscription: { unsubscribe: () => void } | null = null;
+
+    const unsubscribeRecovery = () => {
+      recoverySubscription?.unsubscribe();
+      recoverySubscription = null;
+    };
 
     async function prepareRecoverySession() {
       const supabase = createClient();
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      let hasRecoverySession =
+        window.sessionStorage.getItem(PASSWORD_RECOVERY_PENDING_KEY) === "true";
+      const hasCode = searchParams.has("code");
       const hasRecoveryParams =
-        searchParams.has("code") ||
+        searchParams.get("type") === "recovery" ||
         hashParams.get("type") === "recovery" ||
         hashParams.has("access_token");
       const urlError =
         searchParams.get("error_description") ||
         hashParams.get("error_description");
 
+      const markReady = () => {
+        if (!active) return;
+        if (invalidTimer !== null) {
+          window.clearTimeout(invalidTimer);
+          invalidTimer = null;
+        }
+        hasRecoverySession = true;
+        window.sessionStorage.setItem(PASSWORD_RECOVERY_PENDING_KEY, "true");
+        setLinkState("ready");
+      };
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+        if (event === "PASSWORD_RECOVERY" && session) {
+          markReady();
+        }
+      });
+      recoverySubscription = subscription;
+
       if (urlError) {
+        unsubscribeRecovery();
         if (!active) return;
         setLinkError(urlError);
         setLinkState("invalid");
@@ -53,19 +86,40 @@ function ResetPasswordModalContent() {
       } = await supabase.auth.getSession();
 
       if (!active) return;
-      if (sessionError || !session || !hasRecoveryParams) {
+      if (sessionError || !session) {
+        unsubscribeRecovery();
         setLinkError(sessionError?.message ?? null);
         setLinkState("invalid");
         return;
       }
 
-      setLinkState("ready");
+      if (hasRecoverySession || hasRecoveryParams) {
+        markReady();
+        unsubscribeRecovery();
+        return;
+      }
+
+      if (hasCode) {
+        invalidTimer = window.setTimeout(() => {
+          if (!active || hasRecoverySession) return;
+          unsubscribeRecovery();
+          setLinkState("invalid");
+        }, 300);
+        return;
+      }
+
+      unsubscribeRecovery();
+      setLinkState("invalid");
     }
 
     void prepareRecoverySession();
 
     return () => {
       active = false;
+      if (invalidTimer !== null) {
+        window.clearTimeout(invalidTimer);
+      }
+      unsubscribeRecovery();
     };
   }, [searchParams]);
 
@@ -95,6 +149,7 @@ function ResetPasswordModalContent() {
       return;
     }
 
+    window.sessionStorage.removeItem(PASSWORD_RECOVERY_PENDING_KEY);
     router.replace("/");
     router.refresh();
   }

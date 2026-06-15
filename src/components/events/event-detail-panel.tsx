@@ -12,6 +12,7 @@ import { MixiteBadge } from "./mixite-badge";
 import { makeEventSlug } from "@/lib/utils/slugify";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
+import { getAppStorageImageUrl } from "@/lib/storage/urls";
 
 interface EventDetailPanelProps {
   /** Basic event data already available from the list. */
@@ -77,6 +78,7 @@ export function EventDetailPanel({
       const [events, sous, count] = await Promise.all([
         fetch(buildRestUrl(url, "events", {
           id: `eq.${mapEvent.id}`,
+          verifie: "eq.true",
           select: "*",
           limit: "1",
         }), { headers }).then((r) => r.json()),
@@ -110,6 +112,7 @@ export function EventDetailPanel({
 
       const related = await fetch(buildRestUrl(url, "events", {
         organisateur: `eq.${nextEvent.organisateur}`,
+        verifie: "eq.true",
         id: `neq.${nextEvent.id}`,
         select: "id,nomEvent,dateEvent,dateFin,image,bike_type,type_event,villeDepart,paysDepart,distance,mint",
         or: `(dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today}))`,
@@ -133,6 +136,7 @@ export function EventDetailPanel({
 
   // Use mapEvent data immediately, enrich with fullEvent when available
   const event = fullEvent ?? (mapEvent as unknown as Event);
+  const eventImage = getAppStorageImageUrl(event.image);
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = makeEventSlug(event.id, event.nomEvent);
 
@@ -175,10 +179,10 @@ export function EventDetailPanel({
         className="relative overflow-hidden rounded-[var(--radius)]"
         style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.14)" }}
       >
-        {event.image ? (
+        {eventImage ? (
           <div className="relative h-[200px] w-full">
             <Image
-              src={event.image}
+              src={eventImage}
               alt={event.nomEvent || "Événement"}
               fill
               className="object-cover"

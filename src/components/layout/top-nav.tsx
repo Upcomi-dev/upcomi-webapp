@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { User } from "lucide-react";
+import Link from "next/link";
+import { CalendarPlus, User } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
@@ -63,6 +64,24 @@ export function TopNav() {
             imageClassName="h-12 md:h-14 w-auto"
           />
           <div className="ml-auto flex items-center gap-2.5">
+            <Link
+              href="/proposer-un-evenement"
+              className="soft-ring flex h-9 w-9 items-center justify-center rounded-full border border-white/38 bg-white/42 text-foreground/54 transition-all hover:border-coral/22 hover:bg-white/58 hover:text-foreground/72 md:hidden"
+              aria-label="Proposer un événement"
+            >
+              <CalendarPlus className="h-4 w-4" />
+            </Link>
+            <div className="hidden flex-col items-end gap-1.5 md:flex">
+              <span className="text-[14px] font-semibold tracking-[0.08em] text-foreground/54">
+                Vous êtes organisateur ?
+              </span>
+              <Link
+                href="/proposer-un-evenement"
+                className="inline-flex h-7 items-center justify-center rounded-full border border-white/50 bg-white/56 px-3 text-[10px] font-semibold tracking-[0.08em] text-foreground/68 transition-all hover:-translate-y-0.5 hover:border-coral/24 hover:bg-white/76 hover:text-coral"
+              >
+                Proposer un événement
+              </Link>
+            </div>
             <FeedbackDialog />
 
             <div className="relative">

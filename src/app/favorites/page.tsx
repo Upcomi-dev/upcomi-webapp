@@ -8,6 +8,7 @@ import { makeEventSlug } from "@/lib/utils/slugify";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { AppLogo } from "@/components/layout/app-logo";
 import { formatDateValue, isEventPast } from "@/lib/utils/event-dates";
+import { getAppStorageImageUrl } from "@/lib/storage/urls";
 import {
   getPastFavoriteEvents,
   getVisibleFavoriteEvents,
@@ -44,7 +45,8 @@ export default async function FavoritesPage({ searchParams }: FavoritesPageProps
     const { data } = await supabase
       .from("events")
       .select("*")
-      .in("id", eventIds);
+      .in("id", eventIds)
+      .eq("verifie", true);
     const favoriteRows = (data as Event[]) || [];
     upcomingEvents = getVisibleFavoriteEvents(favoriteRows);
     pastEvents = getPastFavoriteEvents(favoriteRows);
@@ -158,6 +160,7 @@ function FavoriteEventRow({ event }: { event: Event }) {
   const eventHref = withReturnTo(`/event/${slug}`, "/favorites");
   const typeColor = getEventTypeColor(event.type_event);
   const past = isEventPast(event);
+  const eventImage = getAppStorageImageUrl(event.image);
 
   return (
     <div
@@ -165,10 +168,10 @@ function FavoriteEventRow({ event }: { event: Event }) {
       style={{ boxShadow: "var(--shadow-sm)" }}
     >
       <Link href={eventHref} className="flex-shrink-0">
-        {event.image ? (
+        {eventImage ? (
           <div className="relative h-20 w-28 overflow-hidden rounded-2xl">
             <Image
-              src={event.image}
+              src={eventImage}
               alt={event.nomEvent || "Event"}
               fill
               className="object-cover"

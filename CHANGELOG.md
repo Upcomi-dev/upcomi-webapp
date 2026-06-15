@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.18] - 2026-06-15
+
+### Features
+- feat: ajoute le parcours de proposition d'événement avec contact de soumission
+
+### Security
+- fix: verrouille l'accès aux fichiers Storage `flutterflow` via un proxy applicatif
+
+### Auth
+- fix: fiabilise le callback de réinitialisation de mot de passe
+
 ## [0.3.17] - 2026-06-09
 
 ### UI

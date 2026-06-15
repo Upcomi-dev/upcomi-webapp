@@ -7,6 +7,7 @@ import { makeEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { formatDateValue, getDateKey, isEventPast } from "@/lib/utils/event-dates";
+import { getAppStorageImageUrl } from "@/lib/storage/urls";
 import { FavouriteButton } from "./favourite-button";
 
 interface EventCardProps {
@@ -95,6 +96,7 @@ export function EventCard({
   const typeColor = getEventTypeColor(type_event);
   const name = nomEvent || "Événement";
   const normalizedImage = image?.trim() ?? "";
+  const displayImage = getAppStorageImageUrl(normalizedImage) ?? "";
   const hasUsableImageValue =
     normalizedImage.length > 0 &&
     normalizedImage.toLowerCase() !== "null" &&
@@ -102,8 +104,8 @@ export function EventCard({
     !isPlaceholderImageSrc(normalizedImage);
   const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
   const [loadedImageSrc, setLoadedImageSrc] = useState<string | null>(null);
-  const hasImage = hasUsableImageValue && failedImageSrc !== normalizedImage;
-  const imageLoaded = loadedImageSrc === normalizedImage;
+  const hasImage = hasUsableImageValue && failedImageSrc !== displayImage;
+  const imageLoaded = loadedImageSrc === displayImage;
 
   const formattedStartDate = formatDateValue(dateEvent, "fr-FR", {
     day: "numeric",
@@ -140,13 +142,13 @@ export function EventCard({
           {hasImage ? (
             <>
               <Image
-                src={normalizedImage}
+                src={displayImage}
                 alt={name}
                 fill
                 className={`object-cover transition-all duration-500 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
                 sizes="260px"
-                onError={() => setFailedImageSrc(normalizedImage)}
-                onLoad={() => setLoadedImageSrc(normalizedImage)}
+                onError={() => setFailedImageSrc(displayImage)}
+                onLoad={() => setLoadedImageSrc(displayImage)}
               />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,10,0.04),rgba(20,14,10,0.34))]" />
             </>
@@ -251,13 +253,13 @@ export function EventCard({
           {hasImage ? (
             <>
               <Image
-                src={normalizedImage}
+                src={displayImage}
                 alt={name}
                 fill
                 className={`object-cover transition-all duration-500 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
                 sizes="128px"
-                onError={() => setFailedImageSrc(normalizedImage)}
-                onLoad={() => setLoadedImageSrc(normalizedImage)}
+                onError={() => setFailedImageSrc(displayImage)}
+                onLoad={() => setLoadedImageSrc(displayImage)}
               />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,10,0.04),rgba(20,14,10,0.34))]" />
             </>
@@ -341,13 +343,13 @@ export function EventCard({
         {hasImage ? (
           <>
             <Image
-              src={normalizedImage}
+              src={displayImage}
               alt={name}
               fill
               className={`object-cover transition-all duration-500 group-hover:scale-108 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
               sizes="(max-width: 768px) 200px, 220px"
-              onError={() => setFailedImageSrc(normalizedImage)}
-              onLoad={() => setLoadedImageSrc(normalizedImage)}
+              onError={() => setFailedImageSrc(displayImage)}
+              onLoad={() => setLoadedImageSrc(displayImage)}
             />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,10,0.05),rgba(20,14,10,0.58))]" />
           </>

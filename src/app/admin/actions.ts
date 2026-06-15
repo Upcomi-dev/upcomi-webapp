@@ -8,6 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 function revalidateAdminViews() {
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/event/[slug]", "page");
+  revalidatePath("/sitemap.xml");
 }
 
 function getText(formData: FormData, name: string) {
@@ -298,6 +300,18 @@ export async function updateEvent(id: number, formData: FormData) {
   const { error } = await supabase
     .from("events")
     .update(payload)
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+  revalidateAdminViews();
+}
+
+export async function validateEvent(id: number) {
+  const { supabase } = await assertAdmin();
+
+  const { error } = await supabase
+    .from("events")
+    .update({ verifie: true })
     .eq("id", id);
 
   if (error) throw new Error(error.message);

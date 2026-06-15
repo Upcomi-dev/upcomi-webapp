@@ -37,6 +37,17 @@ export interface Event {
   longitude: number | null;
 }
 
+export interface EventSubmissionContact {
+  event_id: number;
+  contact_name: string;
+  contact_email: string;
+  departure_address: string;
+  departure_postal_code: string;
+  departure_city: string;
+  departure_country: string;
+  submitted_at: string;
+}
+
 export interface MapEvent {
   id: number;
   nomEvent: string | null;

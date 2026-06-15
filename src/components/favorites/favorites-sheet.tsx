@@ -31,7 +31,7 @@ export function FavoritesSheet({
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="top-auto right-0 bottom-0 left-0 z-[60] flex w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-t-[32px] rounded-b-none border-x-0 border-b-0 border-t border-white/60 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(246,236,223,0.96))] p-0 shadow-[0_-18px_50px_rgba(36,23,15,0.16)] md:top-1/2 md:left-1/2 md:right-auto md:bottom-auto md:h-[min(720px,calc(100dvh-3rem))] md:w-[min(560px,calc(100vw-2rem))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[32px] md:border md:shadow-[0_24px_80px_rgba(36,23,15,0.16)]"
+          className="top-auto right-0 bottom-0 left-0 z-[60] flex h-[min(82dvh,46rem)] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-t-[32px] rounded-b-none border-x-0 border-b-0 border-t border-white/60 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(246,236,223,0.96))] p-0 shadow-[0_-18px_50px_rgba(36,23,15,0.16)] md:top-1/2 md:left-1/2 md:right-auto md:bottom-auto md:h-[min(720px,calc(100dvh-3rem))] md:w-[min(560px,calc(100vw-2rem))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[32px] md:border md:shadow-[0_24px_80px_rgba(36,23,15,0.16)]"
         >
           <DialogTitle className="sr-only">Mes favoris et participations</DialogTitle>
 
@@ -40,7 +40,7 @@ export function FavoritesSheet({
           </div>
 
           <div
-            className="flex max-h-[min(82dvh,46rem)] min-h-[24rem] flex-col md:min-h-0 md:flex-1"
+            className="flex min-h-0 flex-1 flex-col"
             style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
           >
             <FavoritesPanelBody

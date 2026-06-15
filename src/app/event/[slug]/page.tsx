@@ -6,6 +6,7 @@ import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
 import { parseEventSlug, makeEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
+import { getAppStorageImageUrl } from "@/lib/storage/urls";
 import type { Event, SousEvent } from "@/lib/types/database";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { ShareButton } from "@/components/events/share-button";
@@ -31,6 +32,7 @@ export async function generateMetadata({ params }: PageProps) {
     .from("events")
     .select("nomEvent, dateEvent, villeDepart, paysDepart, description, image")
     .eq("id", id)
+    .eq("verifie", true)
     .single();
 
   if (!event) return { title: "Événement non trouvé" };
@@ -39,6 +41,7 @@ export async function generateMetadata({ params }: PageProps) {
   const description =
     event.description?.substring(0, 160) ||
     `${event.nomEvent} à ${event.villeDepart || "France"}`;
+  const metadataImage = getAppStorageImageUrl(event.image, { absolute: true });
 
   return {
     title,
@@ -46,7 +49,7 @@ export async function generateMetadata({ params }: PageProps) {
     openGraph: {
       title: event.nomEvent || "Événement Upcomi",
       description,
-      images: event.image ? [{ url: event.image }] : [],
+      images: metadataImage ? [{ url: metadataImage }] : [],
       type: "website",
     },
   };
@@ -65,7 +68,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   const supabase = await createClient();
 
   const [eventResult, sousEventsResult] = await Promise.all([
-    supabase.from("events").select("*").eq("id", id).single(),
+    supabase.from("events").select("*").eq("id", id).eq("verifie", true).single(),
     supabase
       .from("sous_events")
       .select("*")
@@ -76,6 +79,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   if (eventResult.error || !eventResult.data) notFound();
 
   const event = eventResult.data as Event;
+  const eventImage = getAppStorageImageUrl(event.image);
   const sousEvents = (sousEventsResult.data as SousEvent[]) || [];
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = makeEventSlug(event.id, event.nomEvent);
@@ -127,7 +131,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
         addressCountry: event.paysDepart || "France",
       },
     },
-    ...(event.image && { image: event.image }),
+    ...(eventImage && { image: getAppStorageImageUrl(event.image, { absolute: true }) }),
     description: event.description,
     organizer: event.organisateur
       ? { "@type": "Organization", name: event.organisateur }
@@ -171,10 +175,10 @@ export default async function EventPage({ params, searchParams }: PageProps) {
               className="relative mb-6 overflow-hidden rounded-[var(--radius)]"
               style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.14)" }}
             >
-              {event.image ? (
+              {eventImage ? (
                 <div className="relative h-[260px] w-full">
                   <Image
-                    src={event.image}
+                    src={eventImage}
                     alt={event.nomEvent || "Événement"}
                     fill
                     className="object-cover"
@@ -465,6 +469,7 @@ async function fetchOrganizerEvents(
     .from("events")
     .select("id, nomEvent, dateEvent, dateFin, image, bike_type, type_event, villeDepart, paysDepart, distance, mint")
     .eq("organisateur", organizer)
+    .eq("verifie", true)
     .neq("id", currentEventId)
     .or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`)
     .order("dateEvent", { ascending: true })

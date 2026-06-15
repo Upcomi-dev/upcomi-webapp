@@ -86,7 +86,8 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     const { data: events } = await supabase
       .from("events")
       .select("id, nomEvent, dateEvent, dateFin, image, type_event, villeDepart")
-      .in("id", ids);
+      .in("id", ids)
+      .eq("verifie", true);
 
     if (events) {
       const favoriteRows = (events as Omit<FavoriteEvent, "participates">[]).map((event) => ({
@@ -186,6 +187,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
           .from("events")
           .select("id, nomEvent, dateEvent, dateFin, image, type_event, villeDepart")
           .eq("id", eventId)
+          .eq("verifie", true)
           .single();
         if (data) {
           const nextEvent = { ...(data as Omit<FavoriteEvent, "participates">), participates: false };
