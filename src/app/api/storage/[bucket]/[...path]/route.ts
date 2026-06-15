@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSupabasePublicStorageUrl } from "@/lib/storage/urls";
 
-const APP_STORAGE_BUCKETS = new Set(["flutterflow"]);
+const APP_STORAGE_BUCKETS = new Set(["upcomi", "flutterflow"]);
 const SIGNED_URL_TTL_SECONDS = 60;
 const IMAGE_CACHE_CONTROL = "public, max-age=3600, s-maxage=86400";
 

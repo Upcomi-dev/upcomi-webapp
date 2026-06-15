@@ -6,7 +6,7 @@
 - feat: ajoute le parcours de proposition d'événement avec contact de soumission
 
 ### Security
-- fix: verrouille l'accès aux fichiers Storage `flutterflow` via un proxy applicatif
+- fix: verrouille l'accès aux fichiers Storage Upcomi via un proxy applicatif
 
 ### Auth
 - fix: fiabilise le callback de réinitialisation de mot de passe
