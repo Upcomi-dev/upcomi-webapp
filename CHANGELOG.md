@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.20] - 2026-06-16
+
+### UI
+- fix: retire le CTA organisateur du header sans supprimer la page de proposition d'événement
+
 ## [0.3.19] - 2026-06-16
 
 ### UI
