@@ -129,12 +129,13 @@ function MapPageContent({
   const includePastEvents = searchParams.get("show_past") === "true";
   const mobileView = searchParams.get("view") === "map" ? "map" : "list";
   const activeFilterCount = useMemo(() => {
-    const keys = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to", "mint", "show_past"];
-    return keys.reduce((count, key) => {
+    const keys = ["bike_type", "type_event", "distance", "region", "budget", "mint", "show_past"];
+    const count = keys.reduce((count, key) => {
       const value = searchParams.get(key);
       if (!value) return count;
       return count + value.split(",").filter(Boolean).length;
     }, 0);
+    return count + Number(Boolean(searchParams.get("date_from") || searchParams.get("date_to")));
   }, [searchParams]);
   const clearMobileFilters = useCallback(() => {
     const params = new URLSearchParams();

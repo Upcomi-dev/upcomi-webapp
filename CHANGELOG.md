@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.21] - 2026-07-02
+
+### UI
+- feat: ajoute les raccourcis de date « Ce week-end » et « Cette semaine » dans la liste des filtres
+- style: sépare les filtres de dates des autres filtres avec un séparateur léger
+
 ## [0.3.20] - 2026-06-16
 
 ### UI

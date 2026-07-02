@@ -22,6 +22,7 @@ const REGION_OPTIONS = [
 ];
 const MINT_FILTER_DESCRIPTION = "Événements non-mixtes, entre femmes et minorités de genre";
 type PanelKey = "bike" | "type" | "distance" | "region" | "date" | "mint";
+type DatePreset = { label: string; dateFrom: string; dateTo: string; start: Date };
 
 function buildParams(current: URLSearchParams, key: string, value: string, multi: boolean) {
   const params = new URLSearchParams(current.toString());
@@ -64,15 +65,13 @@ function removeDateRange(current: URLSearchParams) {
 }
 
 function countActiveFilters(params: URLSearchParams) {
-  const keys = ["bike_type", "type_event", "distance", "region", "budget", "date_from", "date_to", "mint", "show_past"];
+  const keys = ["bike_type", "type_event", "distance", "region", "budget", "mint", "show_past"];
   const count = keys.reduce((total, key) => {
     const value = params.get(key);
     if (!value) return total;
     return total + value.split(",").filter(Boolean).length;
   }, 0);
-  return params.get("date_from") && params.get("date_from") === params.get("date_to")
-    ? count - 1
-    : count;
+  return count + Number(Boolean(params.get("date_from") || params.get("date_to")));
 }
 
 interface InlineFiltersProps {
@@ -100,6 +99,7 @@ export function InlineFilters({
   const dateFrom = searchParams.get("date_from") ?? "";
   const dateTo = searchParams.get("date_to") ?? "";
   const showPastEvents = searchParams.get("show_past") === "true";
+  const datePresets = useMemo(() => getDatePresets(new Date()), []);
   const selectedEventTypes = useMemo(
     () => searchParams.get("type_event")?.split(",").filter(Boolean) ?? [],
     [searchParams]
@@ -161,7 +161,7 @@ export function InlineFilters({
   );
 
   const setDateRange = useCallback(
-    (nextFrom: string, nextTo: string) => {
+    (nextFrom: string, nextTo: string, filterValue?: string) => {
       const params = new URLSearchParams(searchParams.toString());
 
       if (nextFrom) params.set("date_from", nextFrom);
@@ -173,12 +173,25 @@ export function InlineFilters({
       updateParams(params);
       trackAnalyticsEvent("Filter Changed", {
         filter_key: "date",
+        filter_value: filterValue,
         action: nextFrom || nextTo ? "added" : "removed",
         active_filter_count: countActiveFilters(params),
         surface: variant,
       });
     },
     [searchParams, updateParams, variant]
+  );
+
+  const toggleDatePreset = useCallback(
+    (preset: DatePreset) => {
+      if (isDatePresetActive(dateFrom, dateTo, preset)) {
+        setDateRange("", "", preset.label);
+        return;
+      }
+
+      setDateRange(preset.dateFrom, preset.dateTo, preset.label);
+    },
+    [dateFrom, dateTo, setDateRange]
   );
 
   const togglePastEvents = useCallback(() => {
@@ -209,11 +222,12 @@ export function InlineFilters({
     const tags: Array<{ key: string; label: string; value?: string }> = [];
 
     if (dateFrom && dateTo) {
+      const presetLabel = getActiveDatePresetLabel(dateFrom, dateTo, datePresets);
       tags.push({
         key: "date",
-        label: dateFrom === dateTo
+        label: presetLabel ?? (dateFrom === dateTo
           ? `Le ${formatDateLabel(dateFrom)}`
-          : `Du ${formatDateLabel(dateFrom)} au ${formatDateLabel(dateTo)}`,
+          : `Du ${formatDateLabel(dateFrom)} au ${formatDateLabel(dateTo)}`),
       });
     } else if (dateFrom) {
       tags.push({ key: "date_from", label: `À partir du ${formatDateLabel(dateFrom)}` });
@@ -250,11 +264,9 @@ export function InlineFilters({
     }
 
     return tags;
-  }, [dateFrom, dateTo, isActive, resolvedEventTypes, searchParams]);
+  }, [dateFrom, datePresets, dateTo, isActive, resolvedEventTypes, searchParams]);
 
-  const dateFilterCount = dateFrom && dateTo && dateFrom === dateTo
-    ? 1
-    : Number(Boolean(dateFrom)) + Number(Boolean(dateTo));
+  const dateFilterCount = Number(Boolean(dateFrom || dateTo));
 
   const counts = {
     date: dateFilterCount,
@@ -278,9 +290,9 @@ export function InlineFilters({
   return (
     <div className="w-full">
       <div>
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="mb-3">
           {showSearch ? (
-            <div className="block flex-1">
+            <div className="block">
               <label
                 htmlFor={searchInputId}
                 className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42"
@@ -309,71 +321,84 @@ export function InlineFilters({
               </div>
             </div>
           ) : null}
-
-          {!isDrawerVariant ? (
-            <ActionButton
-              label={getDateButtonLabel(dateFrom, dateTo)}
-              active={dateModalOpen || counts.date > 0}
-              badge={counts.date || undefined}
-              icon={CalendarDays}
-              onClick={() => setDateModalOpen(true)}
-            />
-          ) : null}
         </div>
 
         {!isDrawerVariant ? (
-          <div className="flex flex-wrap items-center gap-2.5">
-            <ActionButton
-              label="Type"
-              active={showTypePanel || counts.type > 0}
-              badge={counts.type || undefined}
-              onClick={() => {
-                if (expandAllPanels) return;
-                setOpenPanel((current) => (current === "type" ? null : "type"));
-              }}
-            />
-            <ActionButton
-              label="Distance"
-              active={showDistancePanel || counts.distance > 0}
-              badge={counts.distance || undefined}
-              onClick={() => {
-                if (expandAllPanels) return;
-                setOpenPanel((current) => (current === "distance" ? null : "distance"));
-              }}
-            />
-            <ActionButton
-              label="Vélo"
-              active={showBikePanel || counts.bike > 0}
-              badge={counts.bike || undefined}
-              onClick={() => {
-                if (expandAllPanels) return;
-                setOpenPanel((current) => (current === "bike" ? null : "bike"));
-              }}
-            />
-            <ActionButton
-              label="Zone"
-              active={showRegionPanel || counts.region > 0}
-              badge={counts.region || undefined}
-              onClick={() => {
-                if (expandAllPanels) return;
-                setOpenPanel((current) => (current === "region" ? null : "region"));
-              }}
-            />
-            <ActionButton
-              label="Mixité choisie"
-              active={counts.mint > 0}
-              onClick={() => setSingle("mint", "true")}
-              tooltip={MINT_FILTER_DESCRIPTION}
-            />
-            <div className="ml-auto flex items-center gap-2">
-              {hasFilters && (
-                <button
-                  onClick={clearAll}
-                  className="rounded-full border border-coral/20 bg-coral/8 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-coral transition-all hover:bg-coral/14"
-                >
-                  Effacer tout
-                </button>
-              )}
+          <div className="space-y-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <ActionButton
+                label={getDateButtonLabel(dateFrom, dateTo)}
+                active={dateModalOpen || counts.date > 0}
+                badge={counts.date || undefined}
+                icon={CalendarDays}
+                onClick={() => setDateModalOpen(true)}
+              />
+              {datePresets.map((preset) => (
+                <ActionButton
+                  key={preset.label}
+                  label={preset.label}
+                  active={isDatePresetActive(dateFrom, dateTo, preset)}
+                  className="px-3 tracking-[0.12em]"
+                  onClick={() => toggleDatePreset(preset)}
+                />
+              ))}
+            </div>
+
+            <div aria-hidden="true" className="h-px w-1/2 bg-foreground/8" />
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <ActionButton
+                label="Type"
+                active={showTypePanel || counts.type > 0}
+                badge={counts.type || undefined}
+                onClick={() => {
+                  if (expandAllPanels) return;
+                  setOpenPanel((current) => (current === "type" ? null : "type"));
+                }}
+              />
+              <ActionButton
+                label="Distance"
+                active={showDistancePanel || counts.distance > 0}
+                badge={counts.distance || undefined}
+                onClick={() => {
+                  if (expandAllPanels) return;
+                  setOpenPanel((current) => (current === "distance" ? null : "distance"));
+                }}
+              />
+              <ActionButton
+                label="Vélo"
+                active={showBikePanel || counts.bike > 0}
+                badge={counts.bike || undefined}
+                onClick={() => {
+                  if (expandAllPanels) return;
+                  setOpenPanel((current) => (current === "bike" ? null : "bike"));
+                }}
+              />
+              <ActionButton
+                label="Zone"
+                active={showRegionPanel || counts.region > 0}
+                badge={counts.region || undefined}
+                onClick={() => {
+                  if (expandAllPanels) return;
+                  setOpenPanel((current) => (current === "region" ? null : "region"));
+                }}
+              />
+              <ActionButton
+                label="Mixité choisie"
+                active={counts.mint > 0}
+                onClick={() => setSingle("mint", "true")}
+                tooltip={MINT_FILTER_DESCRIPTION}
+              />
+              <div className="ml-auto flex items-center gap-2">
+                {hasFilters && (
+                  <button
+                    onClick={clearAll}
+                    className="rounded-full border border-coral/20 bg-coral/8 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-coral transition-all hover:bg-coral/14"
+                  >
+                    Effacer tout
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ) : null}
@@ -398,6 +423,15 @@ export function InlineFilters({
           )}>
             {showDatePanel && (
               <FilterSection label="Dates" variant={variant}>
+                {datePresets.map((preset) => (
+                  <FilterPill
+                    key={preset.label}
+                    label={preset.label}
+                    active={isDatePresetActive(dateFrom, dateTo, preset)}
+                    variant={variant}
+                    onClick={() => toggleDatePreset(preset)}
+                  />
+                ))}
                 <DateSelectionButton
                   dateFrom={dateFrom}
                   dateTo={dateTo}
@@ -536,6 +570,7 @@ function ActionButton({
   badge,
   icon: Icon,
   tooltip,
+  className,
   onClick,
 }: {
   label: string;
@@ -543,6 +578,7 @@ function ActionButton({
   badge?: number;
   icon?: React.ComponentType<{ className?: string }>;
   tooltip?: string;
+  className?: string;
   onClick: () => void;
 }) {
   return (
@@ -552,7 +588,8 @@ function ActionButton({
         "group/btn relative inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all",
         active
           ? "border-coral/30 bg-coral text-white shadow-[var(--shadow-sm)]"
-          : "border-white/55 bg-white/60 text-foreground/70 hover:border-coral/25 hover:text-coral"
+          : "border-white/55 bg-white/60 text-foreground/70 hover:border-coral/25 hover:text-coral",
+        className
       )}
     >
       {Icon ? <Icon className="h-4 w-4" /> : null}
@@ -798,6 +835,7 @@ function DateRangeCalendar({
   const [visibleMonth, setVisibleMonth] = useState(() =>
     startOfMonth(selectedStart ?? selectedEnd ?? new Date())
   );
+  const datePresets = useMemo(() => getDatePresets(new Date()), []);
 
   const days = useMemo(() => buildCalendarDays(visibleMonth), [visibleMonth]);
 
@@ -855,28 +893,24 @@ function DateRangeCalendar({
       </div>
 
       <div className="mb-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            const { start, end } = getWeekendRange(new Date());
-            onChange(formatDateValue(start), formatDateValue(end));
-            setVisibleMonth(startOfMonth(start));
-          }}
-          className="rounded-full border border-white/55 bg-white/70 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/70 transition-all hover:border-coral/25 hover:text-coral"
-        >
-          Ce week-end
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const { start, end } = getSevenDayRange(new Date());
-            onChange(formatDateValue(start), formatDateValue(end));
-            setVisibleMonth(startOfMonth(start));
-          }}
-          className="rounded-full border border-white/55 bg-white/70 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/70 transition-all hover:border-coral/25 hover:text-coral"
-        >
-          Cette semaine
-        </button>
+        {datePresets.map((preset) => (
+          <button
+            type="button"
+            key={preset.label}
+            onClick={() => {
+              onChange(preset.dateFrom, preset.dateTo);
+              setVisibleMonth(startOfMonth(preset.start));
+            }}
+            className={cn(
+              "rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all",
+              isDatePresetActive(dateFrom, dateTo, preset)
+                ? "border-coral bg-coral text-white"
+                : "border-white/55 bg-white/70 text-foreground/70 hover:border-coral/25 hover:text-coral"
+            )}
+          >
+            {preset.label}
+          </button>
+        ))}
       </div>
 
       <div className="mb-2 grid grid-cols-7 gap-1">
@@ -982,6 +1016,9 @@ function isSameDay(a: Date, b: Date) {
 }
 
 function getDateRangeSummary(dateFrom: string, dateTo: string) {
+  const presetLabel = getActiveDatePresetLabel(dateFrom, dateTo, getDatePresets(new Date()));
+  if (presetLabel) return presetLabel;
+
   if (dateFrom && dateTo && dateFrom === dateTo) {
     return `Le ${formatDateLabel(dateFrom)}`;
   }
@@ -999,6 +1036,34 @@ function getDateRangeSummary(dateFrom: string, dateTo: string) {
   }
 
   return "Choisir une plage";
+}
+
+function getDatePresets(referenceDate: Date): DatePreset[] {
+  const weekend = getWeekendRange(referenceDate);
+  const week = getSevenDayRange(referenceDate);
+
+  return [
+    {
+      label: "Ce week-end",
+      dateFrom: formatDateValue(weekend.start),
+      dateTo: formatDateValue(weekend.end),
+      start: weekend.start,
+    },
+    {
+      label: "Cette semaine",
+      dateFrom: formatDateValue(week.start),
+      dateTo: formatDateValue(week.end),
+      start: week.start,
+    },
+  ];
+}
+
+function isDatePresetActive(dateFrom: string, dateTo: string, preset: DatePreset) {
+  return dateFrom === preset.dateFrom && dateTo === preset.dateTo;
+}
+
+function getActiveDatePresetLabel(dateFrom: string, dateTo: string, presets: DatePreset[]) {
+  return presets.find((preset) => isDatePresetActive(dateFrom, dateTo, preset))?.label;
 }
 
 function getWeekendRange(referenceDate: Date) {
