@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { buildSupabasePublicStorageUrl } from "@/lib/storage/urls";
 
-const APP_STORAGE_BUCKETS = new Set(["upcomi", "flutterflow"]);
+const APP_STORAGE_BUCKETS = new Set(["upcomi"]);
 const SIGNED_URL_TTL_SECONDS = 60;
-const IMAGE_CACHE_CONTROL = "public, max-age=3600, s-maxage=86400";
+const PUBLIC_IMAGE_CACHE_CONTROL = "public, max-age=3600, s-maxage=86400";
+const PRIVATE_IMAGE_CACHE_CONTROL = "private, max-age=300";
+
+type StorageReferenceKind = "event" | "avatar";
 
 type StorageRouteContext = {
   params: Promise<{
@@ -23,9 +27,12 @@ function buildCandidatePublicUrls(bucket: string, objectPath: string) {
   return Array.from(new Set([encodedUrl, decodedUrl].filter(Boolean))) as string[];
 }
 
-async function hasAppReference(bucket: string, objectPath: string) {
+async function findAppReference(
+  bucket: string,
+  objectPath: string
+): Promise<StorageReferenceKind | null> {
   const publicUrls = buildCandidatePublicUrls(bucket, objectPath);
-  if (publicUrls.length === 0) return false;
+  if (publicUrls.length === 0) return null;
 
   const supabase = createAdminClient();
 
@@ -46,12 +53,26 @@ async function hasAppReference(bucket: string, objectPath: string) {
       throw eventResult.error ?? userResult.error;
     }
 
-    if ((eventResult.count ?? 0) > 0 || (userResult.count ?? 0) > 0) {
-      return true;
+    if ((eventResult.count ?? 0) > 0) {
+      return "event";
+    }
+
+    if ((userResult.count ?? 0) > 0) {
+      return "avatar";
     }
   }
 
-  return false;
+  return null;
+}
+
+async function hasAuthenticatedUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  return !error && user != null;
 }
 
 export async function GET(_request: Request, context: StorageRouteContext) {
@@ -62,14 +83,18 @@ export async function GET(_request: Request, context: StorageRouteContext) {
     return new NextResponse("Not found", { status: 404 });
   }
 
-  let isReferenced: boolean;
+  let referenceKind: StorageReferenceKind | null;
   try {
-    isReferenced = await hasAppReference(bucket, objectPath);
+    referenceKind = await findAppReference(bucket, objectPath);
   } catch {
     return new NextResponse("Unable to verify storage access", { status: 500 });
   }
 
-  if (!isReferenced) {
+  if (!referenceKind) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+
+  if (referenceKind === "avatar" && !(await hasAuthenticatedUser())) {
     return new NextResponse("Not found", { status: 404 });
   }
 
@@ -95,7 +120,12 @@ export async function GET(_request: Request, context: StorageRouteContext) {
   if (contentType) responseHeaders.set("content-type", contentType);
   if (contentLength) responseHeaders.set("content-length", contentLength);
   if (etag) responseHeaders.set("etag", etag);
-  responseHeaders.set("cache-control", IMAGE_CACHE_CONTROL);
+  responseHeaders.set(
+    "cache-control",
+    referenceKind === "event"
+      ? PUBLIC_IMAGE_CACHE_CONTROL
+      : PRIVATE_IMAGE_CACHE_CONTROL
+  );
 
   return new NextResponse(storageResponse.body, {
     status: storageResponse.status,
