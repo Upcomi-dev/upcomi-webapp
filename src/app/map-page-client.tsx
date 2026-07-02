@@ -1,6 +1,15 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Filter, List, Map as MapIcon, Search, X } from "lucide-react";
@@ -32,6 +41,20 @@ function normalizeSearchText(value: string) {
     .toLocaleLowerCase("fr-FR")
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "");
+}
+
+function getEventSearchText(event: MapEvent) {
+  return [
+    event.nomEvent,
+    event.organisateur,
+    event.villeDepart,
+    event.paysDepart,
+    event.type_event,
+    event.bike_type,
+  ]
+    .filter((field): field is string => Boolean(field))
+    .map(normalizeSearchText)
+    .join("\n");
 }
 
 /* ── Panel state machine ── */
@@ -109,11 +132,12 @@ function MapPageContent({
 }: MapPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const urlSearchQuery = searchParams.get("q") ?? "";
   const listRef = useRef<HTMLDivElement>(null);
   const [hoveredEventId, setHoveredEventId] = useState<number | null>(null);
   const [flyToEventId, setFlyToEventId] = useState<number | null>(null);
   const [todayKey] = useState(() => getLocalDateKey());
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(urlSearchQuery);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -138,6 +162,7 @@ function MapPageContent({
     return count + Number(Boolean(searchParams.get("date_from") || searchParams.get("date_to")));
   }, [searchParams]);
   const clearMobileFilters = useCallback(() => {
+    setSearchQuery("");
     const params = new URLSearchParams();
     if (mobileView === "map") {
       params.set("view", "map");
@@ -203,6 +228,38 @@ function MapPageContent({
 
     return Array.from(eventMap.values());
   }, [collections, initialEvents]);
+  const detailEventMap = useMemo(
+    () => new Map(detailEvents.map((event) => [event.id, event])),
+    [detailEvents]
+  );
+  const searchIndex = useMemo(
+    () => new Map(detailEvents.map((event) => [event.id, getEventSearchText(event)])),
+    [detailEvents]
+  );
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const normalizedSearchQuery = useMemo(
+    () => normalizeSearchText(deferredSearchQuery.trim()),
+    [deferredSearchQuery]
+  );
+
+  useEffect(() => {
+    const trimmedQuery = searchQuery.trim();
+    if (trimmedQuery === urlSearchQuery) return;
+
+    const timeout = window.setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (trimmedQuery) {
+        params.set("q", trimmedQuery.slice(0, 120));
+      } else {
+        params.delete("q");
+      }
+
+      const query = params.toString();
+      router.replace(query ? `/?${query}` : "/", { scroll: false });
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [router, searchParams, searchQuery, urlSearchQuery]);
 
   const toggleMultiFilter = useCallback(
     (key: string, value: string) => {
@@ -235,12 +292,10 @@ function MapPageContent({
 
   const matchesSearch = useCallback(
     (event: MapEvent) => {
-      const q = normalizeSearchText(searchQuery.trim());
-      if (!q) return true;
-      return [event.nomEvent, event.organisateur, event.villeDepart, event.paysDepart, event.type_event, event.bike_type]
-        .some((field) => field ? normalizeSearchText(field).includes(q) : false);
+      if (!normalizedSearchQuery) return true;
+      return searchIndex.get(event.id)?.includes(normalizedSearchQuery) ?? false;
     },
-    [searchQuery]
+    [normalizedSearchQuery, searchIndex]
   );
 
   const visibleDetailEvents = useMemo(
@@ -347,7 +402,7 @@ function MapPageContent({
 
   const trackEventOpened = useCallback(
     (eventId: number, source: string) => {
-      const event = detailEvents.find((item) => item.id === eventId);
+      const event = detailEventMap.get(eventId);
       trackAnalyticsEvent("Event Opened", {
         event_id: eventId,
         source,
@@ -355,7 +410,7 @@ function MapPageContent({
         bike_type: event?.bike_type,
       });
     },
-    [detailEvents]
+    [detailEventMap]
   );
 
   const handleEventClick = useCallback((eventId: number, source = "list") => {
@@ -417,7 +472,7 @@ function MapPageContent({
 
   const detailEvent =
     panel.mode === "detail" && panel.detailEventId != null
-      ? detailEvents.find((event) => event.id === panel.detailEventId) ?? null
+      ? detailEventMap.get(panel.detailEventId) ?? null
       : null;
   const showMobileCollections = !detailEvent && !searchQuery.trim() && activeFilterCount === 0 && collections.length > 0;
   const showMobileViewToggle = detailEvent == null;
@@ -426,7 +481,7 @@ function MapPageContent({
   const renderPanelContent = () => {
     // Detail mode
     if (panel.mode === "detail" && panel.detailEventId != null) {
-      const detailEvent = detailEvents.find((e) => e.id === panel.detailEventId);
+      const detailEvent = detailEventMap.get(panel.detailEventId);
       if (detailEvent) {
         return (
           <EventDetailPanel

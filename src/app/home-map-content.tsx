@@ -14,6 +14,7 @@ const FILTER_KEYS = [
   "date_to",
   "mint",
   "show_past",
+  "q",
 ] as const;
 
 const POPULAR_COLLECTION_LIMIT = 10;
@@ -30,12 +31,85 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
   const supabase = await createClient();
   const today = getLocalDateKey();
   const includePastEvents = params.show_past === "true";
+  const searchQuery = getSearchQuery(params);
 
   const hasFilters = FILTER_KEYS.some((key) => {
     const val = params[key];
     return typeof val === "string" && val.length > 0;
   });
 
+  let eventTypeQuery = supabase
+    .from("events")
+    .select("type_event")
+    .not("type_event", "is", null)
+    .not("latitude", "is", null)
+    .not("longitude", "is", null)
+    .not("dateEvent", "is", null)
+    .eq("verifie", true);
+
+  if (!includePastEvents) {
+    eventTypeQuery = eventTypeQuery.or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`);
+  }
+
+  const [
+    eventsResult,
+    { data: eventTypeRows },
+  ] = await Promise.all([
+    buildEventsQuery(supabase, params, today, includePastEvents, Boolean(searchQuery)),
+    eventTypeQuery,
+  ]);
+
+  let events = eventsResult.data;
+  let error = eventsResult.error;
+
+  if (error && searchQuery && isMissingTextSearchMigrationError(error)) {
+    const retryResult = await buildEventsQuery(supabase, params, today, includePastEvents, false);
+    events = retryResult.data;
+    error = retryResult.error;
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <h1 className="font-serif text-2xl font-bold text-foreground">
+            Impossible de charger les événements
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            Réessayez dans quelques instants.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const allEvents = (events as MapEvent[]) || [];
+  const eventTypeOptions = buildEventTypeOptions(
+    (eventTypeRows || []).map((row) => row.type_event)
+  );
+
+  let collections: CollectionWithEvents[] = [];
+  if (!hasFilters) {
+    collections = await fetchCollections(supabase, allEvents);
+  }
+
+  return (
+    <MapPageClient
+      initialEvents={allEvents}
+      collections={collections}
+      hasFilters={hasFilters}
+      eventTypeOptions={eventTypeOptions}
+    />
+  );
+}
+
+function buildEventsQuery(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  params: HomeSearchParams,
+  today: string,
+  includePastEvents: boolean,
+  includeTextSearch: boolean
+) {
   let query = supabase
     .from("events")
     .select(MAP_EVENT_SELECT)
@@ -94,59 +168,26 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
     query = query.eq("mint", true);
   }
 
-  let eventTypeQuery = supabase
-    .from("events")
-    .select("type_event")
-    .not("type_event", "is", null)
-    .not("latitude", "is", null)
-    .not("longitude", "is", null)
-    .not("dateEvent", "is", null)
-    .eq("verifie", true);
-
-  if (!includePastEvents) {
-    eventTypeQuery = eventTypeQuery.or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`);
+  const searchQuery = getSearchQuery(params);
+  if (includeTextSearch && searchQuery) {
+    query = query.textSearch("search_fts", searchQuery, {
+      config: "public.upcomi_unaccent",
+      type: "websearch",
+    });
   }
 
-  const [
-    { data: events, error },
-    { data: eventTypeRows },
-  ] = await Promise.all([
-    query,
-    eventTypeQuery,
-  ]);
+  return query;
+}
 
-  if (error) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-serif text-2xl font-bold text-foreground">
-            Impossible de charger les événements
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            Réessayez dans quelques instants.
-          </p>
-        </div>
-      </div>
-    );
-  }
+function getSearchQuery(params: HomeSearchParams) {
+  return typeof params.q === "string" ? params.q.trim().slice(0, 120) : null;
+}
 
-  const allEvents = (events as MapEvent[]) || [];
-  const eventTypeOptions = buildEventTypeOptions(
-    (eventTypeRows || []).map((row) => row.type_event)
-  );
-
-  let collections: CollectionWithEvents[] = [];
-  if (!hasFilters) {
-    collections = await fetchCollections(supabase, allEvents);
-  }
-
+function isMissingTextSearchMigrationError(error: { code?: string; message?: string }) {
   return (
-    <MapPageClient
-      initialEvents={allEvents}
-      collections={collections}
-      hasFilters={hasFilters}
-      eventTypeOptions={eventTypeOptions}
-    />
+    error.code === "42703" ||
+    error.message?.includes("search_fts") === true ||
+    error.message?.includes("upcomi_unaccent") === true
   );
 }
 

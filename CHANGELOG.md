@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.22] - 2026-07-02
+
+### Performance
+- perf: accélère la recherche événements avec index Supabase dédiés aux dates, filtres et texte
+- perf: réduit les recalculs côté client pendant la saisie de recherche
+
 ## [0.3.21] - 2026-07-02
 
 ### UI

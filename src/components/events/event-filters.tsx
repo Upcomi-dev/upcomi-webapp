@@ -211,12 +211,13 @@ export function InlineFilters({
   }, [searchParams, updateParams, variant]);
 
   const clearAll = useCallback(() => {
+    onSearchChange?.("");
     router.push("/", { scroll: false });
     trackAnalyticsEvent("Filters Cleared", {
       active_filter_count: countActiveFilters(searchParams),
       surface: variant,
     });
-  }, [router, searchParams, variant]);
+  }, [onSearchChange, router, searchParams, variant]);
 
   const activeTags = useMemo(() => {
     const tags: Array<{ key: string; label: string; value?: string }> = [];
