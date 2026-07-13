@@ -148,6 +148,10 @@ function MapPageContent({
     previousMode: hasFilters ? "filtered" : "collections",
   });
 
+  useEffect(() => {
+    dispatch({ type: "FILTERS_CHANGED", hasFilters });
+  }, [hasFilters]);
+
   const sort = searchParams.get("sort");
   const eventParam = searchParams.get("event");
   const includePastEvents = searchParams.get("show_past") === "true";

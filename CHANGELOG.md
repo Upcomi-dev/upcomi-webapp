@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.23] - 2026-07-13
+
+### UI
+- fix: active les raccourcis « Ce week-end » et « Cette semaine » dans le panneau desktop
+
 ## [0.3.22] - 2026-07-02
 
 ### Performance
