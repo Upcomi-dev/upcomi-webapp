@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.26] - 2026-07-15
+
+### UI
+- feat: met en évidence la date du jour dans le filtre calendrier
+
 ## [0.3.25] - 2026-07-15
 
 ### SEO

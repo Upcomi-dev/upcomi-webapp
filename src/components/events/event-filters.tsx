@@ -836,6 +836,7 @@ function DateRangeCalendar({
   const [visibleMonth, setVisibleMonth] = useState(() =>
     startOfMonth(selectedStart ?? selectedEnd ?? new Date())
   );
+  const today = new Date();
   const datePresets = useMemo(() => getDatePresets(new Date()), []);
 
   const days = useMemo(() => buildCalendarDays(visibleMonth), [visibleMonth]);
@@ -932,12 +933,14 @@ function DateRangeCalendar({
           const isInRange =
             selectedStart && selectedEnd ? day > selectedStart && day < selectedEnd : false;
           const isCurrentMonth = day.getMonth() === visibleMonth.getMonth();
+          const isToday = isSameDay(day, today);
 
           return (
             <button
               type="button"
               key={day.toISOString()}
               onClick={() => handleDayClick(day)}
+              aria-current={isToday ? "date" : undefined}
               className={cn(
                 "rounded-[16px] px-0 py-3 text-sm transition-all",
                 isSelectedStart || isSelectedEnd
@@ -946,7 +949,8 @@ function DateRangeCalendar({
                     ? "bg-coral/14 text-coral"
                     : isCurrentMonth
                       ? "bg-white/72 text-foreground hover:border-coral/25 hover:text-coral"
-                      : "bg-white/30 text-foreground/32 hover:text-foreground/55"
+                      : "bg-white/30 text-foreground/32 hover:text-foreground/55",
+                isToday && "ring-2 ring-coral ring-inset"
               )}
             >
               {day.getDate()}
