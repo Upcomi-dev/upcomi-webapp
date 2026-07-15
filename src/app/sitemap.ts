@@ -18,7 +18,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       return {
         url: getEventUrl(event.slug),
-        lastModified: event.dateEvent || new Date().toISOString(),
         changeFrequency: "weekly" as const,
         priority: 0.8,
         ...(imageUrl ? { images: [imageUrl] } : {}),
@@ -28,13 +27,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     {
       url: getCanonicalUrl("/"),
-      lastModified: new Date().toISOString(),
       changeFrequency: "daily",
       priority: 1,
     },
     {
       url: getCanonicalUrl("/proposer-un-evenement"),
-      lastModified: new Date().toISOString(),
       changeFrequency: "monthly",
       priority: 0.6,
     },

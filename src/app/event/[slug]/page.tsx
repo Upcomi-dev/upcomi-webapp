@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
-import { getEventPath, getEventUrl, SITE_NAME } from "@/lib/seo";
+import { getEventPath, getEventUrl, serializeJsonLd, SITE_NAME } from "@/lib/seo";
 import { parseLegacyEventId } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 import { getAppStorageImageUrl } from "@/lib/storage/urls";
@@ -158,6 +158,8 @@ export default async function EventPage({ params, searchParams }: PageProps) {
     name: event.nomEvent,
     startDate: event.dateEvent,
     ...(event.dateFin && { endDate: event.dateFin }),
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     location: {
       "@type": "Place",
       name: event.villeDepart || "France",
@@ -172,11 +174,17 @@ export default async function EventPage({ params, searchParams }: PageProps) {
     organizer: event.organisateur
       ? { "@type": "Organization", name: event.organisateur }
       : undefined,
+    ...(event.type_event && { keywords: [event.type_event, event.bike_type].filter(Boolean) }),
     url: canonicalUrl,
     ...(event.URL && {
       offers: {
         "@type": "Offer",
         url: event.URL,
+        availability:
+          event.inscriptions_ouvertes === false
+            ? "https://schema.org/SoldOut"
+            : "https://schema.org/InStock",
+        ...(minPrice != null && { price: minPrice, priceCurrency: "EUR" }),
       },
     }),
   };
@@ -191,7 +199,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
 
       <TopNav />

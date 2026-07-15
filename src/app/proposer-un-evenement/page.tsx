@@ -10,6 +10,13 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/proposer-un-evenement",
   },
+  openGraph: {
+    title: "Proposer un événement vélo",
+    description: "Proposez gratuitement votre événement vélo à la communauté Upcomi.",
+    url: "/proposer-un-evenement",
+    type: "website",
+    locale: "fr_FR",
+  },
 };
 
 export default async function ProposerUnEvenementPage() {

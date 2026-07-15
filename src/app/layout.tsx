@@ -15,7 +15,12 @@ import {
   type UserProfileRow,
 } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
-import { DEFAULT_SEO_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
+import {
+  DEFAULT_SEO_DESCRIPTION,
+  SEO_KEYWORDS,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 
 const workSans = Work_Sans({
   variable: "--font-work-sans",
@@ -36,6 +41,10 @@ export const metadata: Metadata = {
   },
   applicationName: SITE_NAME,
   description: DEFAULT_SEO_DESCRIPTION,
+  keywords: SEO_KEYWORDS,
+  category: "sports",
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
   alternates: {
     canonical: "/",
   },

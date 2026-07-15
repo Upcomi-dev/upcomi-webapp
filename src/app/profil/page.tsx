@@ -3,6 +3,9 @@ import { TopNav } from "@/components/layout/top-nav";
 import { UserProfileForm } from "@/components/profile/user-profile-form";
 import { buildInitialUserProfile, type UserProfileRow } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
+import { getPrivatePageMetadata } from "@/lib/seo";
+
+export const metadata = getPrivatePageMetadata("Mon profil", "/profil");
 
 export default async function ProfilePage() {
   const supabase = await createClient();

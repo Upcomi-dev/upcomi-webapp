@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { AppLogo } from "@/components/layout/app-logo";
 import { requireAdmin } from "@/lib/auth/assert-admin";
+import { getPrivatePageMetadata } from "@/lib/seo";
+
+export const metadata = getPrivatePageMetadata("Administration", "/admin");
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin("/admin");

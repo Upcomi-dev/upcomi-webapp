@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.25] - 2026-07-15
+
+### SEO
+- feat: enrichit les métadonnées globales, les données structurées et les aperçus Open Graph
+- fix: empêche l’indexation des pages privées et fiabilise les dates du sitemap
+
+### Navigation
+- feat: ouvre chaque événement sur son URL canonique partageable depuis les listes et la carte
+
 ## [0.3.24] - 2026-07-15
 
 ### Features

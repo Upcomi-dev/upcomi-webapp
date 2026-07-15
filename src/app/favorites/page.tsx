@@ -14,6 +14,9 @@ import {
   getVisibleFavoriteEvents,
   PAST_FAVORITES_PAGE_SIZE,
 } from "@/lib/utils/favorites";
+import { getPrivatePageMetadata } from "@/lib/seo";
+
+export const metadata = getPrivatePageMetadata("Mes favoris", "/favorites");
 
 interface FavoritesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

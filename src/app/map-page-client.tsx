@@ -28,7 +28,9 @@ import { TopNav } from "@/components/layout/top-nav";
 import { CollectionsView } from "@/components/collections/collections-view";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trackAnalyticsEvent } from "@/lib/analytics";
+import { getEventPath } from "@/lib/seo";
 import { cn } from "@/lib/utils";
+import { buildRelativeUrl, withReturnTo } from "@/lib/utils/navigation";
 import {
   compareEventsByStartDate,
   getLocalDateKey,
@@ -417,39 +419,43 @@ function MapPageContent({
     [detailEventMap]
   );
 
+  const openEventPage = useCallback(
+    (eventId: number, source: string) => {
+      const event = detailEventMap.get(eventId);
+      if (!event?.slug) return;
+
+      const returnParams = new URLSearchParams(searchParams.toString());
+      returnParams.delete("event");
+      const returnTo = buildRelativeUrl("/", returnParams.toString());
+
+      trackEventOpened(eventId, source);
+      router.push(withReturnTo(getEventPath(event.slug), returnTo));
+    },
+    [detailEventMap, router, searchParams, trackEventOpened]
+  );
+
   const handleEventClick = useCallback((eventId: number, source = "list") => {
     setHoveredEventId(null);
-    dispatch({ type: "SELECT_EVENT", eventId });
-    setFlyToEventId(eventId);
-    trackEventOpened(eventId, source);
-  }, [trackEventOpened]);
+    openEventPage(eventId, source);
+  }, [openEventPage]);
 
   const handleMapEventSelect = useCallback((eventId: number | null) => {
     setHoveredEventId(null);
 
-    if (eventId == null && searchParams.get("event")) {
+    if (eventId != null) {
+      openEventPage(eventId, "map");
+      return;
+    }
+
+    if (searchParams.get("event")) {
       const params = new URLSearchParams(searchParams.toString());
       params.delete("event");
       const query = params.toString();
       router.replace(query ? `/?${query}` : "/", { scroll: false });
     }
 
-    if (isMobile) {
-      if (eventId == null) {
-        dispatch({ type: "MAP_SELECT", eventId: null });
-        return;
-      }
-
-      dispatch({ type: "SELECT_EVENT", eventId });
-      trackEventOpened(eventId, "map");
-      return;
-    }
-
-    dispatch({ type: "MAP_SELECT", eventId });
-    if (eventId != null) {
-      trackEventOpened(eventId, "map");
-    }
-  }, [isMobile, router, searchParams, trackEventOpened]);
+    dispatch({ type: "MAP_SELECT", eventId: null });
+  }, [openEventPage, router, searchParams]);
 
   const handleBackFromDetail = useCallback(() => {
     setHoveredEventId(null);
