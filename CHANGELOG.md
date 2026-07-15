@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.27] - 2026-07-15
+
+### Formulaire événement
+- feat: regroupe les informations détaillées dans chaque parcours et impose l’email du contact
+- feat: clarifie la sélection ou la création d’un organisateur existant
+- style: réorganise et aligne les champs, les dates et le sélecteur d’image
+
 ## [0.3.26] - 2026-07-15
 
 ### UI

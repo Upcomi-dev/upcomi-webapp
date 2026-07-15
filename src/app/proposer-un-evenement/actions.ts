@@ -7,7 +7,16 @@ import { buildSupabasePublicStorageUrl } from "@/lib/storage/urls";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type EventProposalResult = { ok: true } | { ok: false; message: string };
-type RouteProposal = { distance: number; price: number };
+type RouteProposal = {
+  name: string | null;
+  eventType: string;
+  bikeType: string;
+  distance: number;
+  elevation: number | null;
+  price: number;
+  fixedTrack: boolean;
+  delay: string | null;
+};
 
 const EVENT_TYPES = new Set(["Social Ride", "Aventure", "Brevet", "Course", "Ultra", "Événement", "Autre"]);
 const BIKE_TYPES = new Set(["Route", "Gravel", "VTT"]);
@@ -54,31 +63,51 @@ function getOptionalHttpUrl(formData: FormData) {
   } catch { throw new Error("Le site ou la page Instagram doit être une URL valide."); }
   return value;
 }
-function getOptionalEmail(formData: FormData) {
-  const email = getOptionalText(formData, "contact_email", "L'email de contact", 254);
-  if (!email) return null;
+function getRequiredEmail(formData: FormData) {
+  const email = getRequiredText(formData, "contact_email", "L'email de contact", 254);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("L'email de contact est invalide.");
   return email;
 }
-function getAllowedValue(formData: FormData, name: string, label: string, allowed: Set<string>) {
-  const value = getRequiredText(formData, name, label, 120);
-  if (!allowed.has(value)) throw new Error(`${label} est invalide.`);
-  return value;
-}
 function getRoutes(formData: FormData): RouteProposal[] {
+  const routeIds = formData.getAll("route_id");
+  const names = formData.getAll("route_name");
+  const eventTypes = formData.getAll("route_type_event");
+  const bikeTypes = formData.getAll("route_bike_type");
   const distances = formData.getAll("route_distance");
+  const elevations = formData.getAll("route_elevation");
   const prices = formData.getAll("route_price");
-  if (distances.length === 0 || distances.length !== prices.length) throw new Error("Ajoutez au moins un parcours complet.");
+  const delays = formData.getAll("route_delay");
+  const fixedRouteIds = new Set(formData.getAll("route_trace_fixe").filter((value): value is string => typeof value === "string"));
+  const fieldGroups = [names, eventTypes, bikeTypes, distances, elevations, prices, delays];
+  if (routeIds.length === 0 || fieldGroups.some((values) => values.length !== routeIds.length)) throw new Error("Ajoutez au moins un parcours complet.");
   if (distances.length > 50) throw new Error("Un événement ne peut pas contenir plus de 50 parcours.");
   return distances.map((rawDistance, index) => {
+    const routeId = routeIds[index];
+    if (typeof routeId !== "string" || !/^\d+$/.test(routeId)) throw new Error(`Le parcours ${index + 1} est invalide.`);
+    const selectedEventType = eventTypes[index];
+    if (typeof selectedEventType !== "string" || !EVENT_TYPES.has(selectedEventType)) throw new Error(`Le type d'événement du parcours ${index + 1} est invalide.`);
+    const eventType = selectedEventType === "Autre"
+      ? getRequiredText(formData, `route_type_other_${routeId}`, `Le type personnalisé du parcours ${index + 1}`, 80)
+      : selectedEventType;
+    const bikeType = bikeTypes[index];
+    if (typeof bikeType !== "string" || !BIKE_TYPES.has(bikeType)) throw new Error(`Le type de vélo du parcours ${index + 1} est invalide.`);
     const distance = typeof rawDistance === "string" ? Number(rawDistance) : NaN;
+    const rawElevation = elevations[index];
+    const elevation = typeof rawElevation === "string" && rawElevation !== "" ? Number(rawElevation) : null;
     const rawPrice = prices[index];
     const price = typeof rawPrice === "string" ? Number(rawPrice) : NaN;
     if (!Number.isSafeInteger(distance) || distance <= 0) throw new Error(`La distance du parcours ${index + 1} doit être un nombre entier positif.`);
-    if (typeof rawPrice !== "string" || !/^\d+(?:[.,]\d{1,2})?$/.test(rawPrice) || !Number.isFinite(price) || price < 0) {
+    if (elevation !== null && (!Number.isSafeInteger(elevation) || elevation < 0)) throw new Error(`Le dénivelé du parcours ${index + 1} est invalide.`);
+    if (typeof rawPrice !== "string" || !/^\d+$/.test(rawPrice) || !Number.isSafeInteger(price) || price < 0) {
       throw new Error(`Le prix du parcours ${index + 1} est invalide.`);
     }
-    return { distance, price };
+    const rawName = names[index];
+    const name = typeof rawName === "string" ? rawName.trim() : "";
+    if (name.length > 180) throw new Error(`Le nom du parcours ${index + 1} est trop long.`);
+    const rawDelay = delays[index];
+    const delay = typeof rawDelay === "string" ? rawDelay.trim() : "";
+    if (delay.length > 120) throw new Error(`Le délai du parcours ${index + 1} est trop long.`);
+    return { name: name || null, eventType, bikeType, distance, elevation, price, fixedTrack: fixedRouteIds.has(routeId), delay: delay || null };
   });
 }
 async function getImage(formData: FormData) {
@@ -118,19 +147,16 @@ export async function submitEventProposal(formData: FormData): Promise<EventProp
     if (getText(formData, "company_url")) return { ok: true };
 
     const contactName = getOptionalText(formData, "contact_name", "Le nom de contact", 160);
-    const contactEmail = getOptionalEmail(formData);
+    const contactEmail = getRequiredEmail(formData);
     const departureCity = getRequiredText(formData, "villeDepart", "La ville de départ", 120);
     const departureCountry = getOptionalText(formData, "paysDepart", "Le pays de départ", 120);
     const dateEvent = getRequiredDate(formData, "dateEvent", "La date de début");
     const dateFin = getOptionalDate(formData, "dateFin", "La date de fin");
     if (dateFin && dateFin < dateEvent) throw new Error("La date de fin doit être après la date de début.");
 
-    const selectedEventType = getAllowedValue(formData, "type_event", "Le type d'événement", EVENT_TYPES);
-    const eventType = selectedEventType === "Autre"
-      ? getRequiredText(formData, "type_event_other", "Le type d'événement personnalisé", 80)
-      : selectedEventType;
-    const bikeType = getAllowedValue(formData, "bike_type", "Le type de vélo", BIKE_TYPES);
     const routes = getRoutes(formData);
+    const eventType = [...new Set(routes.map((route) => route.eventType))].join(", ");
+    const bikeType = [...new Set(routes.map((route) => route.bikeType))].join(", ");
     const eventName = getRequiredText(formData, "nomEvent", "Le nom de l'événement", 180);
     const organizerInput = getRequiredText(formData, "organisateur", "L'organisateur", 180);
     const description = getRequiredText(formData, "description", "La description", 4000);
@@ -215,12 +241,14 @@ export async function submitEventProposal(formData: FormData): Promise<EventProp
     const { error: routesError } = await supabase.from("sous_events").insert(routes.map((route) => ({
       event_id: createdEventId,
       event_name: eventName,
-      nom: `${route.distance} km`,
-      bikeType,
+      nom: route.name ?? `${route.distance} km`,
+      bikeType: route.bikeType,
       distance: route.distance,
+      elevation: route.elevation,
       prix: route.price,
-      trace_fixe: false,
-      typeEvent: eventType,
+      trace_fixe: route.fixedTrack,
+      typeEvent: route.eventType,
+      delai: route.delay,
     })) as never);
     if (routesError) {
       console.error("Event proposal routes insert failed", routesError);
