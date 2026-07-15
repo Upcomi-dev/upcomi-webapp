@@ -1,6 +1,6 @@
 const STORAGE_PUBLIC_PATH_PREFIX = "/storage/v1/object/public/";
 const APP_STORAGE_PATH_PREFIX = "/api/storage";
-const FALLBACK_PUBLIC_APP_URL = "https://upcomi.com";
+const FALLBACK_PUBLIC_APP_URL = "https://app.upcomi.cc";
 
 function getSupabaseUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? null;

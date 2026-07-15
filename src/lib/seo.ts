@@ -1,4 +1,4 @@
-export const SITE_URL = "https://upcomi.com";
+export const SITE_URL = "https://app.upcomi.cc";
 export const SITE_NAME = "Upcomi";
 export const DEFAULT_SEO_DESCRIPTION =
   "Découvre les courses, aventures, brevets et social rides vélo en France et à l'étranger.";
