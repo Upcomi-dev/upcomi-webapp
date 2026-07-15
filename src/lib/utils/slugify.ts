@@ -8,12 +8,16 @@ export function slugify(text: string): string {
   });
 }
 
-export function makeEventSlug(id: number, name: string | null): string {
+export function makeEventSlug(name: string | null): string {
+  return name ? slugify(name) : "event";
+}
+
+export function makeLegacyEventSlug(id: number, name: string | null): string {
   const slug = name ? slugify(name) : "event";
   return `${id}-${slug}`;
 }
 
-export function parseEventSlug(slug: string): number | null {
-  const match = slug.match(/^(\d+)/);
+export function parseLegacyEventId(slug: string): number | null {
+  const match = slug.match(/^(\d+)-/);
   return match ? parseInt(match[1], 10) : null;
 }

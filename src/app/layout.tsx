@@ -15,6 +15,7 @@ import {
   type UserProfileRow,
 } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_SEO_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 const workSans = Work_Sans({
   variable: "--font-work-sans",
@@ -28,17 +29,44 @@ const averiaSerifLibre = Averia_Serif_Libre({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Upcomi",
-    template: "%s | Upcomi",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
-  applicationName: "Upcomi",
-  description:
-    "Découvre les courses, aventures, brevets et social rides vélo en France et à l'étranger.",
+  applicationName: SITE_NAME,
+  description: DEFAULT_SEO_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  openGraph: {
+    title: SITE_NAME,
+    description: DEFAULT_SEO_DESCRIPTION,
+    url: "/",
+    siteName: SITE_NAME,
+    locale: "fr_FR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: DEFAULT_SEO_DESCRIPTION,
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Upcomi",
+    title: SITE_NAME,
     statusBarStyle: "default",
   },
 };

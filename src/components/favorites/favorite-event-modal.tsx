@@ -35,6 +35,7 @@ export function FavoriteEventModal({ event, onClose }: FavoriteEventModalProps) 
 function toMapEvent(event: FavoriteEvent): MapEvent {
   return {
     id: event.id,
+    slug: event.slug,
     nomEvent: event.nomEvent,
     latitude: 0,
     longitude: 0,

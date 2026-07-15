@@ -1,10 +1,12 @@
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound, permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
-import { parseEventSlug, makeEventSlug } from "@/lib/utils/slugify";
+import { getEventPath, getEventUrl, SITE_NAME } from "@/lib/seo";
+import { parseLegacyEventId } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 import { getAppStorageImageUrl } from "@/lib/storage/urls";
 import type { Event, SousEvent } from "@/lib/types/database";
@@ -22,35 +24,50 @@ interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const id = parseEventSlug(slug);
-  if (!id) return { title: "Événement non trouvé" };
-
   const supabase = await createClient();
-  const { data: event } = await supabase
-    .from("events")
-    .select("nomEvent, dateEvent, villeDepart, paysDepart, description, image")
-    .eq("id", id)
-    .eq("verifie", true)
-    .single();
+  const event = await fetchEventForMetadata(supabase, slug);
 
   if (!event) return { title: "Événement non trouvé" };
 
   const title = event.nomEvent || "Événement";
-  const description =
-    event.description?.substring(0, 160) ||
-    `${event.nomEvent} à ${event.villeDepart || "France"}`;
+  const description = buildMetadataDescription(event);
   const metadataImage = getAppStorageImageUrl(event.image, { absolute: true });
+  const canonicalPath = getEventPath(event.slug);
+  const canonicalUrl = getEventUrl(event.slug);
 
   return {
     title,
     description,
+    alternates: {
+      canonical: canonicalPath,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
+    },
     openGraph: {
       title: event.nomEvent || "Événement Upcomi",
       description,
+      url: canonicalUrl,
+      siteName: SITE_NAME,
       images: metadataImage ? [{ url: metadataImage }] : [],
+      locale: "fr_FR",
       type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: event.nomEvent || "Événement Upcomi",
+      description,
+      images: metadataImage ? [metadataImage] : [],
     },
   };
 }
@@ -58,8 +75,6 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function EventPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const query = await searchParams;
-  const id = parseEventSlug(slug);
-  if (!id) notFound();
   const returnTo = sanitizeReturnTo(
     typeof query.returnTo === "string" ? query.returnTo : null
   ) ?? "/";
@@ -67,22 +82,43 @@ export default async function EventPage({ params, searchParams }: PageProps) {
 
   const supabase = await createClient();
 
-  const [eventResult, sousEventsResult] = await Promise.all([
-    supabase.from("events").select("*").eq("id", id).eq("verifie", true).single(),
-    supabase
+  const { data: eventData, error: eventError } = await supabase
+    .from("events")
+    .select("*")
+    .eq("slug", slug)
+    .eq("verifie", true)
+    .maybeSingle();
+
+  if (!eventData) {
+    const legacyId = parseLegacyEventId(slug);
+    if (legacyId != null) {
+      const legacyResult = await supabase
+        .from("events")
+        .select("slug")
+        .eq("id", legacyId)
+        .eq("verifie", true)
+        .maybeSingle();
+
+      if (legacyResult.data?.slug) {
+        permanentRedirect(getEventPath(legacyResult.data.slug));
+      }
+    }
+  }
+
+  if (eventError || !eventData) notFound();
+
+  const event = eventData as Event;
+  const { data: sousEventsData } = await supabase
       .from("sous_events")
       .select("*")
-      .eq("event_id", id)
-      .order("distance", { ascending: true }),
-  ]);
+      .eq("event_id", event.id)
+      .order("distance", { ascending: true });
 
-  if (eventResult.error || !eventResult.data) notFound();
-
-  const event = eventResult.data as Event;
   const eventImage = getAppStorageImageUrl(event.image);
-  const sousEvents = (sousEventsResult.data as SousEvent[]) || [];
+  const sousEvents = (sousEventsData as SousEvent[]) || [];
   const typeColor = getEventTypeColor(event.type_event);
-  const eventSlug = makeEventSlug(event.id, event.nomEvent);
+  const eventSlug = event.slug;
+  const canonicalUrl = getEventUrl(eventSlug);
   const [relatedEvents, favCountResult] = await Promise.all([
     event.organisateur
       ? fetchOrganizerEvents(supabase, event.organisateur, event.id)
@@ -136,7 +172,13 @@ export default async function EventPage({ params, searchParams }: PageProps) {
     organizer: event.organisateur
       ? { "@type": "Organization", name: event.organisateur }
       : undefined,
-    ...(event.URL && { url: event.URL }),
+    url: canonicalUrl,
+    ...(event.URL && {
+      offers: {
+        "@type": "Offer",
+        url: event.URL,
+      },
+    }),
   };
 
   return (
@@ -340,6 +382,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                     <EventCard
                       key={relatedEvent.id}
                       id={relatedEvent.id}
+                      slug={relatedEvent.slug}
                       nomEvent={relatedEvent.nomEvent}
                       dateEvent={relatedEvent.dateEvent}
                       dateFin={relatedEvent.dateFin}
@@ -467,7 +510,7 @@ async function fetchOrganizerEvents(
   const today = getTodayDateKey();
   const { data } = await supabase
     .from("events")
-    .select("id, nomEvent, dateEvent, dateFin, image, bike_type, type_event, villeDepart, paysDepart, distance, mint")
+    .select("id, slug, nomEvent, dateEvent, dateFin, image, bike_type, type_event, villeDepart, paysDepart, distance, mint")
     .eq("organisateur", organizer)
     .eq("verifie", true)
     .neq("id", currentEventId)
@@ -476,6 +519,44 @@ async function fetchOrganizerEvents(
     .limit(6);
 
   return data ?? [];
+}
+
+async function fetchEventForMetadata(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  slug: string
+) {
+  const baseSelect = "id, slug, nomEvent, dateEvent, villeDepart, paysDepart, description, image";
+  const { data: event } = await supabase
+    .from("events")
+    .select(baseSelect)
+    .eq("slug", slug)
+    .eq("verifie", true)
+    .maybeSingle();
+
+  if (event) return event;
+
+  const legacyId = parseLegacyEventId(slug);
+  if (legacyId == null) return null;
+
+  const { data: legacyEvent } = await supabase
+    .from("events")
+    .select(baseSelect)
+    .eq("id", legacyId)
+    .eq("verifie", true)
+    .maybeSingle();
+
+  return legacyEvent;
+}
+
+function buildMetadataDescription(event: {
+  nomEvent: string | null;
+  villeDepart: string | null;
+  description: string | null;
+}) {
+  const description = event.description?.replace(/\s+/g, " ").trim();
+  if (description) return description.slice(0, 160);
+
+  return `${event.nomEvent || "Événement vélo"} à ${event.villeDepart || "France"}`;
 }
 
 function getTodayDateKey() {

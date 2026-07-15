@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { isFeedbackStatus } from "@/lib/feedback";
 import { assertAdmin } from "@/lib/auth/assert-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  getUniqueEventSlug,
+  isDuplicateEventSlugError,
+} from "@/lib/events/slugs";
 
 function revalidateAdminViews() {
   revalidatePath("/");
@@ -286,24 +290,44 @@ export async function reorderCollections(orderedIds: string[]) {
 export async function createEvent(formData: FormData) {
   const { supabase } = await assertAdmin();
   const payload = buildEventPayload(formData);
+  let slug = await getUniqueEventSlug(supabase, payload.nomEvent);
 
-  const { error } = await supabase.from("events").insert(payload);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { error } = await supabase.from("events").insert({ ...payload, slug } as never);
+    if (!error) {
+      revalidateAdminViews();
+      return;
+    }
+    if (!isDuplicateEventSlugError(error)) {
+      throw new Error(error.message);
+    }
+    slug = await getUniqueEventSlug(supabase, payload.nomEvent);
+  }
 
-  if (error) throw new Error(error.message);
-  revalidateAdminViews();
+  throw new Error("Impossible de générer une URL unique pour cet événement.");
 }
 
 export async function updateEvent(id: number, formData: FormData) {
   const { supabase } = await assertAdmin();
   const payload = buildEventPayload(formData);
+  let slug = await getUniqueEventSlug(supabase, payload.nomEvent, id);
 
-  const { error } = await supabase
-    .from("events")
-    .update(payload)
-    .eq("id", id);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { error } = await supabase
+      .from("events")
+      .update({ ...payload, slug } as never)
+      .eq("id", id);
+    if (!error) {
+      revalidateAdminViews();
+      return;
+    }
+    if (!isDuplicateEventSlugError(error)) {
+      throw new Error(error.message);
+    }
+    slug = await getUniqueEventSlug(supabase, payload.nomEvent, id);
+  }
 
-  if (error) throw new Error(error.message);
-  revalidateAdminViews();
+  throw new Error("Impossible de générer une URL unique pour cet événement.");
 }
 
 export async function validateEvent(id: number) {

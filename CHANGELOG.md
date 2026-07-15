@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.24] - 2026-07-15
+
+### Features
+- feat: refond le formulaire de proposition d’événement avec parcours multiples, upload d’image et organisateurs suggérés
+- feat: ajoute des URLs d’événement basées sur des slugs et renforce les métadonnées SEO
+
+### UI
+- style: harmonise les listes déroulantes et indique clairement les champs obligatoires et facultatifs
+
 ## [0.3.23] - 2026-07-13
 
 ### UI

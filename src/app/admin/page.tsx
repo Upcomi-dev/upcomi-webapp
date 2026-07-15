@@ -5,7 +5,7 @@ import { AdminFeedbackClient } from "@/components/admin/admin-feedback-client";
 import { AdminUsersClient } from "@/components/admin/admin-users-client";
 import { requireAdmin } from "@/lib/auth/assert-admin";
 import type { Event, EventSubmissionContact, FeedbackEntry } from "@/lib/types/database";
-import { makeEventSlug } from "@/lib/utils/slugify";
+import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 
 interface AdminPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -140,7 +140,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .order("dateEvent", { ascending: true });
   const upcomingEventsPromise = supabase
     .from("events")
-    .select("id, nomEvent, dateEvent, type_event, villeDepart, verifie, AlaUne")
+    .select("id, slug, nomEvent, dateEvent, type_event, villeDepart, verifie, AlaUne")
     .gte("dateEvent", today)
     .order("dateEvent", { ascending: true })
     .limit(8);
@@ -464,7 +464,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     upcomingEvents.map((event) => (
                       <Link
                         key={event.id}
-                        href={`/event/${makeEventSlug(event.id, event.nomEvent)}`}
+                        href={`/event/${(event as { slug?: string | null }).slug || makeLegacyEventSlug(event.id, event.nomEvent)}`}
                         className="flex flex-col gap-3 rounded-[22px] border border-foreground/8 bg-white/70 px-4 py-4 transition-colors hover:border-coral/20 hover:bg-white"
                       >
                         <div className="flex items-start justify-between gap-4">

@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { MapEvent } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
 import { getAppStorageImageUrl } from "@/lib/storage/urls";
-import { makeEventSlug } from "@/lib/utils/slugify";
+import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 
 interface EventPopupProps {
   event: MapEvent;
@@ -11,7 +11,7 @@ interface EventPopupProps {
 
 export function EventPopup({ event }: EventPopupProps) {
   const typeColor = getEventTypeColor(event.type_event);
-  const slug = makeEventSlug(event.id, event.nomEvent);
+  const slug = event.slug || makeLegacyEventSlug(event.id, event.nomEvent);
   const name = event.nomEvent || "Événement";
   const eventImage = getAppStorageImageUrl(event.image);
 

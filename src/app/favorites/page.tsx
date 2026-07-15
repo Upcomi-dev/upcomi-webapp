@@ -4,7 +4,7 @@ import Image from "next/image";
 import type { Event } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
 import { withReturnTo } from "@/lib/utils/navigation";
-import { makeEventSlug } from "@/lib/utils/slugify";
+import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { AppLogo } from "@/components/layout/app-logo";
 import { formatDateValue, isEventPast } from "@/lib/utils/event-dates";
@@ -156,7 +156,7 @@ export default async function FavoritesPage({ searchParams }: FavoritesPageProps
 }
 
 function FavoriteEventRow({ event }: { event: Event }) {
-  const slug = makeEventSlug(event.id, event.nomEvent);
+  const slug = event.slug || makeLegacyEventSlug(event.id, event.nomEvent);
   const eventHref = withReturnTo(`/event/${slug}`, "/favorites");
   const typeColor = getEventTypeColor(event.type_event);
   const past = isEventPast(event);

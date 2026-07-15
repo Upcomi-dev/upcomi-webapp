@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { makeEventSlug } from "@/lib/utils/slugify";
+import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { formatDateValue, getDateKey, isEventPast } from "@/lib/utils/event-dates";
@@ -12,6 +12,7 @@ import { FavouriteButton } from "./favourite-button";
 
 interface EventCardProps {
   id: number;
+  slug: string | null;
   nomEvent: string | null;
   dateEvent: string | null;
   image: string | null;
@@ -77,6 +78,7 @@ function EventCardFallbackArt({
 
 export function EventCard({
   id,
+  slug,
   nomEvent,
   dateEvent,
   image,
@@ -92,7 +94,7 @@ export function EventCard({
   onEventClick,
   onEventHover,
 }: EventCardProps) {
-  const slug = makeEventSlug(id, nomEvent);
+  const eventSlug = slug || makeLegacyEventSlug(id, nomEvent);
   const typeColor = getEventTypeColor(type_event);
   const name = nomEvent || "Événement";
   const normalizedImage = image?.trim() ?? "";
@@ -225,7 +227,7 @@ export function EventCard({
 
     return (
       <Link
-        href={`/event/${slug}`}
+        href={`/event/${eventSlug}`}
         className={className}
         onClick={trackLinkOpen}
         onMouseEnter={() => onEventHover?.(id)}
@@ -324,7 +326,7 @@ export function EventCard({
     }
 
     return (
-      <Link href={`/event/${slug}`} className={cardClassName} onClick={trackLinkOpen}>
+      <Link href={`/event/${eventSlug}`} className={cardClassName} onClick={trackLinkOpen}>
         {content}
       </Link>
     );
@@ -332,7 +334,7 @@ export function EventCard({
 
   return (
     <Link
-      href={`/event/${slug}`}
+      href={`/event/${eventSlug}`}
       className={`glass grain-overlay group block overflow-hidden border border-white/55 transition-all duration-300 hover:-translate-y-1.5 hover:border-orange/45 ${past ? "opacity-[0.78] hover:opacity-100" : ""}`}
       onClick={trackLinkOpen}
     >

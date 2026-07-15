@@ -18,7 +18,7 @@ import {
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getAppStorageImageUrl } from "@/lib/storage/urls";
 import { buildRelativeUrl, withReturnTo } from "@/lib/utils/navigation";
-import { makeEventSlug } from "@/lib/utils/slugify";
+import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { getPastFavoriteEvents, PAST_FAVORITES_PAGE_SIZE } from "@/lib/utils/favorites";
 import { type FavoriteEvent, useFavorites } from "./favorites-context";
 
@@ -198,7 +198,7 @@ function FavoritePanelEventRow({
   toggleParticipation: (eventId: number) => Promise<boolean>;
 }) {
   const typeColor = getEventTypeColor(event.type_event);
-  const eventSlug = makeEventSlug(event.id, event.nomEvent);
+  const eventSlug = event.slug || makeLegacyEventSlug(event.id, event.nomEvent);
   const eventHref = withReturnTo(`/event/${eventSlug}`, returnTo);
   const past = isEventPast(event);
   const handleEventClick = (clickEvent: MouseEvent<HTMLAnchorElement>) => {

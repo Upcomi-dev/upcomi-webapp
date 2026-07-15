@@ -9,7 +9,7 @@ import { ShareButton } from "./share-button";
 import { FavoriteCTA } from "./favorite-cta";
 import { EventCard } from "./event-card";
 import { MixiteBadge } from "./mixite-badge";
-import { makeEventSlug } from "@/lib/utils/slugify";
+import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
 import { getAppStorageImageUrl } from "@/lib/storage/urls";
@@ -23,7 +23,7 @@ interface EventDetailPanelProps {
 
 type RelatedEventCardData = Pick<
   Event,
-  "id" | "nomEvent" | "dateEvent" | "dateFin" | "image" | "bike_type" | "type_event" | "villeDepart" | "paysDepart" | "distance" | "mint"
+  "id" | "slug" | "nomEvent" | "dateEvent" | "dateFin" | "image" | "bike_type" | "type_event" | "villeDepart" | "paysDepart" | "distance" | "mint"
 >;
 
 export function EventDetailPanel({
@@ -114,7 +114,7 @@ export function EventDetailPanel({
         organisateur: `eq.${nextEvent.organisateur}`,
         verifie: "eq.true",
         id: `neq.${nextEvent.id}`,
-        select: "id,nomEvent,dateEvent,dateFin,image,bike_type,type_event,villeDepart,paysDepart,distance,mint",
+        select: "id,slug,nomEvent,dateEvent,dateFin,image,bike_type,type_event,villeDepart,paysDepart,distance,mint",
         or: `(dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today}))`,
         order: "dateEvent.asc",
         limit: "6",
@@ -138,7 +138,7 @@ export function EventDetailPanel({
   const event = fullEvent ?? (mapEvent as unknown as Event);
   const eventImage = getAppStorageImageUrl(event.image);
   const typeColor = getEventTypeColor(event.type_event);
-  const eventSlug = makeEventSlug(event.id, event.nomEvent);
+  const eventSlug = event.slug || makeLegacyEventSlug(event.id, event.nomEvent);
 
   const formattedDate = event.dateEvent
     ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
@@ -403,6 +403,7 @@ export function EventDetailPanel({
               <EventCard
                 key={relatedEvent.id}
                 id={relatedEvent.id}
+                slug={relatedEvent.slug}
                 nomEvent={relatedEvent.nomEvent}
                 dateEvent={relatedEvent.dateEvent}
                 dateFin={relatedEvent.dateFin}

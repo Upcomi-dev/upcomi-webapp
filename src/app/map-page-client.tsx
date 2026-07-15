@@ -574,6 +574,7 @@ function MapPageContent({
                 <div key={event.id} data-event-id={event.id}>
                   <EventCard
                     id={event.id}
+                    slug={event.slug}
                     nomEvent={event.nomEvent}
                     dateEvent={event.dateEvent}
                     dateFin={event.dateFin}
@@ -653,6 +654,7 @@ function MapPageContent({
               <div key={event.id} data-event-id={event.id}>
                 <EventCard
                   id={event.id}
+                  slug={event.slug}
                   nomEvent={event.nomEvent}
                   dateEvent={event.dateEvent}
                   dateFin={event.dateFin}

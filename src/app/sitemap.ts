@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { makeEventSlug } from "@/lib/utils/slugify";
+import { getAppStorageImageUrl } from "@/lib/storage/urls";
+import { getCanonicalUrl, getEventUrl } from "@/lib/seo";
 import type { MetadataRoute } from "next";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -7,24 +8,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const { data: events } = await supabase
     .from("events")
-    .select("id, nomEvent, dateEvent")
+    .select("slug, dateEvent, image")
     .eq("verifie", true)
     .order("dateEvent", { ascending: false });
 
   const eventUrls: MetadataRoute.Sitemap =
-    events?.map((event) => ({
-      url: `https://upcomi.com/event/${makeEventSlug(event.id, event.nomEvent)}`,
-      lastModified: event.dateEvent || new Date().toISOString(),
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    })) || [];
+    events?.map((event) => {
+      const imageUrl = getAppStorageImageUrl(event.image, { absolute: true });
+
+      return {
+        url: getEventUrl(event.slug),
+        lastModified: event.dateEvent || new Date().toISOString(),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+        ...(imageUrl ? { images: [imageUrl] } : {}),
+      };
+    }) || [];
 
   return [
     {
-      url: "https://upcomi.com",
+      url: getCanonicalUrl("/"),
       lastModified: new Date().toISOString(),
       changeFrequency: "daily",
       priority: 1,
+    },
+    {
+      url: getCanonicalUrl("/proposer-un-evenement"),
+      lastModified: new Date().toISOString(),
+      changeFrequency: "monthly",
+      priority: 0.6,
     },
     ...eventUrls,
   ];

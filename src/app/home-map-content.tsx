@@ -19,7 +19,7 @@ const FILTER_KEYS = [
 
 const POPULAR_COLLECTION_LIMIT = 10;
 const MAP_EVENT_SELECT =
-  "id, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, dateFin, image, distance, distance_range_filter, region, budget, villeDepart, paysDepart, organisateur, mint";
+  "id, slug, nomEvent, latitude, longitude, bike_type, type_event, dateEvent, dateFin, image, distance, distance_range_filter, region, budget, villeDepart, paysDepart, organisateur, mint";
 
 export type HomeSearchParams = Record<string, string | string[] | undefined>;
 

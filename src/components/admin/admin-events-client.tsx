@@ -6,6 +6,7 @@ import type { EventSubmissionContact } from "@/lib/types/database";
 
 interface AdminEventRecord {
   id: number;
+  slug: string;
   nomEvent: string | null;
   dateEvent: string | null;
   dateEvent2: string | null;

@@ -1,5 +1,6 @@
 export interface Event {
   id: number;
+  slug: string;
   nomEvent: string | null;
   dateEvent: string | null;
   dateEvent2: string | null;
@@ -41,15 +42,16 @@ export interface EventSubmissionContact {
   event_id: number;
   contact_name: string;
   contact_email: string;
-  departure_address: string;
-  departure_postal_code: string;
+  departure_address: string | null;
+  departure_postal_code: string | null;
   departure_city: string;
-  departure_country: string;
+  departure_country: string | null;
   submitted_at: string;
 }
 
 export interface MapEvent {
   id: number;
+  slug: string;
   nomEvent: string | null;
   latitude: number;
   longitude: number;

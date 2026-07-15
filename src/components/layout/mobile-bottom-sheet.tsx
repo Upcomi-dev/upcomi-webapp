@@ -230,6 +230,7 @@ export function MobileBottomSheet({
                   <EventCard
                     key={event.id}
                     id={event.id}
+                    slug={event.slug}
                     nomEvent={event.nomEvent}
                     dateEvent={event.dateEvent}
                     dateFin={event.dateFin}
@@ -262,6 +263,7 @@ export function MobileBottomSheet({
                   <EventCard
                     key={event.id}
                     id={event.id}
+                    slug={event.slug}
                     nomEvent={event.nomEvent}
                     dateEvent={event.dateEvent}
                     dateFin={event.dateFin}

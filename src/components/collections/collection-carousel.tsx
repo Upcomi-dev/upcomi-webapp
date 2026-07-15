@@ -87,6 +87,7 @@ export function CollectionCarousel({ collection, onEventClick, onEventHover }: C
           <EventCard
             key={event.id}
             id={event.id}
+            slug={event.slug}
             nomEvent={event.nomEvent}
             dateEvent={event.dateEvent}
             dateFin={event.dateFin}

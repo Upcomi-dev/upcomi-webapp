@@ -14,6 +14,7 @@ import { getSortedFavoriteEvents, getVisibleFavoriteEvents, isVisibleFavoriteEve
 
 export interface FavoriteEvent {
   id: number;
+  slug: string;
   nomEvent: string | null;
   dateEvent: string | null;
   dateFin: string | null;
@@ -85,7 +86,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
     const { data: events } = await supabase
       .from("events")
-      .select("id, nomEvent, dateEvent, dateFin, image, type_event, villeDepart")
+      .select("id, slug, nomEvent, dateEvent, dateFin, image, type_event, villeDepart")
       .in("id", ids)
       .eq("verifie", true);
 
@@ -185,7 +186,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         // Fetch event details for the new favorite
         const { data } = await supabase
           .from("events")
-          .select("id, nomEvent, dateEvent, dateFin, image, type_event, villeDepart")
+          .select("id, slug, nomEvent, dateEvent, dateFin, image, type_event, villeDepart")
           .eq("id", eventId)
           .eq("verifie", true)
           .single();
