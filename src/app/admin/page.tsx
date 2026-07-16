@@ -3,8 +3,11 @@ import { AdminEventsClient } from "@/components/admin/admin-events-client";
 import { AdminCollectionsClient } from "@/components/admin/admin-collections-client";
 import { AdminFeedbackClient } from "@/components/admin/admin-feedback-client";
 import { AdminUsersClient } from "@/components/admin/admin-users-client";
+import { AdminProposalsClient, type AdminProposal } from "@/components/admin/admin-proposals-client";
 import { requireAdmin } from "@/lib/auth/assert-admin";
-import type { Event, EventSubmissionContact, FeedbackEntry } from "@/lib/types/database";
+import { parseSupabasePublicStorageUrl } from "@/lib/storage/urls";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { Event, EventSubmissionContact, FeedbackEntry, SousEvent } from "@/lib/types/database";
 import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 
 interface AdminPageProps {
@@ -96,6 +99,13 @@ const ADMIN_TABS = [
     description: "Créez, activez et réorganisez les collections visibles dans l'app.",
   },
   {
+    id: "proposals",
+    label: "Propositions",
+    eyebrow: "Modération",
+    title: "Propositions d’événements",
+    description: "Relisez, corrigez et validez les événements proposés par les organisateurs.",
+  },
+  {
     id: "events",
     label: "Événements",
     eyebrow: "Catalogue",
@@ -172,6 +182,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .from("event_submission_contacts")
     .select("*")
     .order("submitted_at", { ascending: false });
+  const proposalRoutesPromise = supabase.from("sous_events").select("*").order("sousEventID", { ascending: true });
   const popularEventsPromise = supabase.rpc("get_popular_events", {
     p_limit: POPULAR_COLLECTION_LIMIT,
   });
@@ -187,6 +198,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     favouritesCountResult,
     feedbackEntriesResult,
     eventSubmissionContactsResult,
+    proposalRoutesResult,
     popularEventsResult,
   ] = await Promise.all([
     collectionsPromise,
@@ -199,6 +211,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     favouritesCountPromise,
     feedbackEntriesPromise,
     eventSubmissionContactsPromise,
+    proposalRoutesPromise,
     popularEventsPromise,
   ]);
 
@@ -249,6 +262,25 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const feedbackEntries = (feedbackEntriesResult.data ?? []) as FeedbackEntry[];
   const eventSubmissionContacts =
     (eventSubmissionContactsResult.data ?? []) as EventSubmissionContact[];
+  const proposalRoutes = (proposalRoutesResult.data ?? []) as SousEvent[];
+  const adminStorage = createAdminClient();
+  const proposals: AdminProposal[] = await Promise.all(eventSubmissionContacts.map(async (contact) => {
+    const event = eventById.get(contact.event_id)!;
+    let imagePreviewUrl: string | null = null;
+    const parsedImage = parseSupabasePublicStorageUrl(event?.image);
+    if (parsedImage) {
+      const { data } = await adminStorage.storage.from(parsedImage.bucket).createSignedUrl(parsedImage.objectPath, 3600);
+      imagePreviewUrl = data?.signedUrl ?? null;
+    } else {
+      imagePreviewUrl = event?.image ?? null;
+    }
+    return {
+      event,
+      contact,
+      routes: proposalRoutes.filter((route) => route.event_id === contact.event_id),
+      imagePreviewUrl,
+    };
+  })).then((items) => items.filter((item) => Boolean(item.event)));
 
   const collectionsWithCounts: AdminCollection[] = collections.map((c) => {
     const isAuto = c.is_auto as boolean;
@@ -301,6 +333,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const tabCounts: Record<AdminTabId, number> = {
     overview: eventsList.length + collectionsWithCounts.length + allUsers.length + feedbackEntries.length,
     collections: collectionsWithCounts.length,
+    proposals: proposals.filter(({ contact }) => contact.review_status === "pending").length,
     events: eventsList.length,
     users: allUsers.length,
     feedback: feedbackEntries.length,
@@ -580,6 +613,21 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </AdminSectionShell>
       )}
 
+      {activeTab === "proposals" && (
+        <AdminSectionShell
+          eyebrow="Modération"
+          title="Propositions d’événements"
+          description="Modifiez les informations et les parcours avant de décider de leur publication."
+          stats={[
+            { label: "Total", value: proposals.length.toString() },
+            { label: "En attente", value: proposals.filter(({ contact }) => contact.review_status === "pending").length.toString() },
+            { label: "Refusées", value: proposals.filter(({ contact }) => contact.review_status === "rejected").length.toString() },
+          ]}
+        >
+          <AdminProposalsClient proposals={proposals} organizers={organisateurs} />
+        </AdminSectionShell>
+      )}
+
       {activeTab === "events" && (
         <AdminSectionShell
           eyebrow="Catalogue"
@@ -806,6 +854,7 @@ function parseAdminTab(value: string | string[] | undefined): AdminTabId {
 
   if (
     normalized === "collections" ||
+    normalized === "proposals" ||
     normalized === "events" ||
     normalized === "users" ||
     normalized === "feedback"

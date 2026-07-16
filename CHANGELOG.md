@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.28] - 2026-07-16
+
+### Administration
+- feat: ajoute une file de validation des propositions d’événements avec édition complète des parcours
+- feat: permet de sauvegarder, valider, refuser avec motif ou remettre une proposition en attente
+- fix: sécurise les mises à jour transactionnelles et le remplacement des images privées
+
 ## [0.3.27] - 2026-07-15
 
 ### Formulaire événement

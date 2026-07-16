@@ -47,6 +47,10 @@ export interface EventSubmissionContact {
   departure_city: string;
   departure_country: string | null;
   submitted_at: string;
+  review_status: "pending" | "approved" | "rejected";
+  review_reason: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
 }
 
 export interface MapEvent {
