@@ -23,6 +23,7 @@ const BIKE_TYPES = new Set(["Route", "Gravel", "VTT"]);
 const IMAGE_TYPES = new Map([["image/jpeg", "jpg"], ["image/png", "png"], ["image/webp", "webp"]]);
 const MAX_IMAGE_SIZE = 6 * 1024 * 1024;
 const STORAGE_BUCKET = "upcomi";
+const DESCRIPTION_MAX_LENGTH = 1000;
 const genericSubmissionError = "Impossible d'envoyer la proposition pour le moment. Réessaie dans quelques instants.";
 
 function proposalError(message: string): EventProposalResult { return { ok: false, message }; }
@@ -159,7 +160,7 @@ export async function submitEventProposal(formData: FormData): Promise<EventProp
     const bikeType = [...new Set(routes.map((route) => route.bikeType))].join(", ");
     const eventName = getRequiredText(formData, "nomEvent", "Le nom de l'événement", 180);
     const organizerInput = getRequiredText(formData, "organisateur", "L'organisateur", 180);
-    const description = getRequiredText(formData, "description", "La description", 4000);
+    const description = getRequiredText(formData, "description", "La description", DESCRIPTION_MAX_LENGTH);
     const eventUrl = getOptionalHttpUrl(formData);
     let slug = await getUniqueEventSlug(supabase, eventName);
     const imageData = await getImage(formData);

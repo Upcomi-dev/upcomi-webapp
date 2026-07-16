@@ -8,6 +8,7 @@ import { submitEventProposal } from "@/app/proposer-un-evenement/actions";
 
 const EVENT_TYPES = ["Social Ride", "Aventure", "Brevet", "Course", "Ultra", "Événement", "Autre"];
 const BIKE_TYPES = ["Route", "Gravel", "VTT"];
+const DESCRIPTION_MAX_LENGTH = 1000;
 
 const fieldClassName =
   "h-12 w-full rounded-[18px] border border-foreground/10 bg-white/86 px-4 text-[14px] text-foreground placeholder:text-foreground/35 focus:border-coral/40 focus:outline-none";
@@ -23,6 +24,7 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
   const nextRouteId = useRef(1);
   const [organizer, setOrganizer] = useState("");
   const [routes, setRoutes] = useState<RouteRow[]>([createRoute(0)]);
+  const [descriptionLength, setDescriptionLength] = useState(0);
   const [formResetKey, setFormResetKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -39,6 +41,7 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
         formRef.current?.reset();
         setOrganizer("");
         setRoutes([createRoute(nextRouteId.current++)]);
+        setDescriptionLength(0);
         setFormResetKey((current) => current + 1);
         setSubmitted(true);
         return;
@@ -139,11 +142,15 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
           <textarea
             name="description"
             required
-            maxLength={4000}
+            maxLength={DESCRIPTION_MAX_LENGTH}
             rows={8}
             placeholder="Présente le format, l'ambiance, les parcours et les informations utiles."
             className={`${fieldClassName} min-h-[180px] resize-y`}
+            onChange={(event) => setDescriptionLength(event.target.value.length)}
           />
+          <span className="block text-right text-[11px] tabular-nums text-foreground/42">
+            {descriptionLength} / {DESCRIPTION_MAX_LENGTH} caractères
+          </span>
         </label>
 
         <div className="grid gap-4 md:grid-cols-2">

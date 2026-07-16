@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.29] - 2026-07-16
+
+### Formulaire événement
+- feat: limite les descriptions proposées à 1 000 caractères avec compteur visible et validation serveur
+
 ## [0.3.28] - 2026-07-16
 
 ### Administration
