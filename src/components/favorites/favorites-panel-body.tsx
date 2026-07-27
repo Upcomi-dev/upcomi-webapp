@@ -208,17 +208,17 @@ function FavoritePanelEventRow({
   };
 
   return (
-    <div className="group flex items-center gap-3 py-3.5">
+    <div className="group flex w-full min-w-0 items-center gap-3 overflow-hidden py-3.5">
       <Link
         href={eventHref}
         onNavigate={onNavigate}
         onClick={handleEventClick}
-        className="flex min-w-0 flex-1 items-center gap-4"
+        className="flex min-w-0 flex-1 items-center gap-4 overflow-hidden"
       >
         <EventThumb event={event} typeColor={typeColor} />
 
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[15px] font-semibold leading-tight text-foreground">
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <div className="block max-w-full truncate text-[15px] font-semibold leading-tight text-foreground">
             {event.nomEvent || "Événement"}
           </div>
           <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-foreground/42">
@@ -248,7 +248,7 @@ function FavoritePanelEventRow({
         </div>
       </Link>
 
-      <div className="flex flex-none items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         {activeTab === "participations" ? (
           <DatePill event={event} />
         ) : (
@@ -372,7 +372,7 @@ function ParticipationButton({
         onClick();
       }}
       className={cn(
-        "flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors",
         active
           ? "border-coral bg-coral text-white shadow-[0_8px_18px_rgba(235,95,59,0.2)]"
           : "border-coral/20 bg-white/58 text-coral hover:border-coral/45 hover:bg-coral/10"

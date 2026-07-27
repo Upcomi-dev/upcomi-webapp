@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.36] - 2026-07-27
+
+### UI
+- fix: contraint les titres longs dans la modale de favoris et maintient les boutons d’action visibles
+
 ## [0.3.35] - 2026-07-27
 
 ### Navigation
