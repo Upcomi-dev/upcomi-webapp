@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.37] - 2026-07-27
+
+### UI
+- fix: empêche le contenu de la modale de favoris de déborder horizontalement
+
 ## [0.3.36] - 2026-07-27
 
 ### UI

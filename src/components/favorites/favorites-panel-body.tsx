@@ -60,8 +60,8 @@ export function FavoritesPanelBody({
   const title = activeTab === "favorites" ? "Mes favoris" : "Mes participations";
 
   return (
-    <div className={cn("flex min-h-0 flex-col", className)}>
-      <div className="px-6 pb-4 pt-2 md:px-7 md:pt-3">
+    <div className={cn("flex min-h-0 min-w-0 w-full max-w-full flex-col overflow-hidden", className)}>
+      <div className="min-w-0 px-6 pb-4 pt-2 md:px-7 md:pt-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-foreground/38">
           Mon compte
         </p>
@@ -114,7 +114,7 @@ export function FavoritesPanelBody({
           {activeAllEvents.length === 0 ? (
             <EmptyState activeTab={activeTab} />
           ) : (
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-5 md:px-7">
+            <div className="min-h-0 min-w-0 w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-6 pb-5 md:px-7">
               {activeVisibleEvents.length > 0 ? (
                 <p className="pb-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
                   À venir · {activeVisibleEvents.length} événement{activeVisibleEvents.length > 1 ? "s" : ""}
