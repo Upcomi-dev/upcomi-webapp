@@ -8,7 +8,7 @@ import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { AppLogo } from "@/components/layout/app-logo";
 import { formatDateValue, isEventPast } from "@/lib/utils/event-dates";
-import { getAppStorageImageUrl } from "@/lib/storage/urls";
+import { getAppStorageImage } from "@/lib/storage/urls";
 import {
   getPastFavoriteEvents,
   getVisibleFavoriteEvents,
@@ -163,7 +163,7 @@ function FavoriteEventRow({ event }: { event: Event }) {
   const eventHref = withReturnTo(`/event/${slug}`, "/favorites");
   const typeColor = getEventTypeColor(event.type_event);
   const past = isEventPast(event);
-  const eventImage = getAppStorageImageUrl(event.image);
+  const eventImage = getAppStorageImage(event.image);
 
   return (
     <div
@@ -174,9 +174,10 @@ function FavoriteEventRow({ event }: { event: Event }) {
         {eventImage ? (
           <div className="relative h-20 w-28 overflow-hidden rounded-2xl">
             <Image
-              src={eventImage}
+              src={eventImage.src}
               alt={event.nomEvent || "Event"}
               fill
+              unoptimized={eventImage.unoptimized}
               className="object-cover"
               sizes="112px"
             />

@@ -8,7 +8,7 @@ import { getLocalDateKey } from "@/lib/utils/event-dates";
 import { getEventPath, getEventUrl, serializeJsonLd, SITE_NAME } from "@/lib/seo";
 import { parseLegacyEventId } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
-import { getAppStorageImageUrl } from "@/lib/storage/urls";
+import { getAppStorageImage, getAppStorageImageUrl } from "@/lib/storage/urls";
 import type { Event, SousEvent } from "@/lib/types/database";
 import { FavouriteButton } from "@/components/events/favourite-button";
 import { ShareButton } from "@/components/events/share-button";
@@ -114,7 +114,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
       .eq("event_id", event.id)
       .order("distance", { ascending: true });
 
-  const eventImage = getAppStorageImageUrl(event.image);
+  const eventImage = getAppStorageImage(event.image);
   const sousEvents = (sousEventsData as SousEvent[]) || [];
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = event.slug;
@@ -228,9 +228,10 @@ export default async function EventPage({ params, searchParams }: PageProps) {
               {eventImage ? (
                 <div className="relative h-[260px] w-full">
                   <Image
-                    src={eventImage}
+                    src={eventImage.src}
                     alt={event.nomEvent || "Événement"}
                     fill
+                    unoptimized={eventImage.unoptimized}
                     className="object-cover"
                     priority
                     sizes="(max-width: 768px) 100vw, 600px"

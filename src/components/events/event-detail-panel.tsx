@@ -12,7 +12,7 @@ import { MixiteBadge } from "./mixite-badge";
 import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
-import { getAppStorageImageUrl } from "@/lib/storage/urls";
+import { getAppStorageImage } from "@/lib/storage/urls";
 
 interface EventDetailPanelProps {
   /** Basic event data already available from the list. */
@@ -136,7 +136,7 @@ export function EventDetailPanel({
 
   // Use mapEvent data immediately, enrich with fullEvent when available
   const event = fullEvent ?? (mapEvent as unknown as Event);
-  const eventImage = getAppStorageImageUrl(event.image);
+  const eventImage = getAppStorageImage(event.image);
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = event.slug || makeLegacyEventSlug(event.id, event.nomEvent);
 
@@ -182,9 +182,10 @@ export function EventDetailPanel({
         {eventImage ? (
           <div className="relative h-[200px] w-full">
             <Image
-              src={eventImage}
+              src={eventImage.src}
               alt={event.nomEvent || "Événement"}
               fill
+              unoptimized={eventImage.unoptimized}
               className="object-cover"
               sizes="520px"
             />

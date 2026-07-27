@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { MapEvent } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
-import { getAppStorageImageUrl } from "@/lib/storage/urls";
+import { getAppStorageImage } from "@/lib/storage/urls";
 import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 
 interface EventPopupProps {
@@ -13,7 +13,7 @@ export function EventPopup({ event }: EventPopupProps) {
   const typeColor = getEventTypeColor(event.type_event);
   const slug = event.slug || makeLegacyEventSlug(event.id, event.nomEvent);
   const name = event.nomEvent || "Événement";
-  const eventImage = getAppStorageImageUrl(event.image);
+  const eventImage = getAppStorageImage(event.image);
 
   const formattedDate = event.dateEvent
     ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
@@ -34,9 +34,10 @@ export function EventPopup({ event }: EventPopupProps) {
         {eventImage ? (
           <>
             <Image
-              src={eventImage}
+              src={eventImage.src}
               alt={name}
               fill
+              unoptimized={eventImage.unoptimized}
               className="object-cover"
               sizes="320px"
             />

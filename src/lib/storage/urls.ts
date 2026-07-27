@@ -72,3 +72,20 @@ export function getAppStorageImageUrl(
   const appPath = `${APP_STORAGE_PATH_PREFIX}/${encodeURIComponent(parsedStorageUrl.bucket)}/${encodeStorageObjectPath(parsedStorageUrl.objectPath)}`;
   return options.absolute ? `${getPublicAppUrl()}${appPath}` : appPath;
 }
+
+export function getAppStorageImage(
+  value: string | null | undefined
+): { src: string; unoptimized: boolean } | null {
+  const trimmedValue = value?.trim();
+  if (!trimmedValue) return null;
+
+  const parsedStorageUrl = parseSupabasePublicStorageUrl(trimmedValue);
+  if (!parsedStorageUrl) {
+    return { src: trimmedValue, unoptimized: true };
+  }
+
+  return {
+    src: `${APP_STORAGE_PATH_PREFIX}/${encodeURIComponent(parsedStorageUrl.bucket)}/${encodeStorageObjectPath(parsedStorageUrl.objectPath)}`,
+    unoptimized: false,
+  };
+}

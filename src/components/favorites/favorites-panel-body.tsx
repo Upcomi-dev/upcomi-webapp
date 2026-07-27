@@ -16,7 +16,7 @@ import {
   isEventPast,
 } from "@/lib/utils/event-dates";
 import { trackAnalyticsEvent } from "@/lib/analytics";
-import { getAppStorageImageUrl } from "@/lib/storage/urls";
+import { getAppStorageImage } from "@/lib/storage/urls";
 import { buildRelativeUrl, withReturnTo } from "@/lib/utils/navigation";
 import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { getPastFavoriteEvents, PAST_FAVORITES_PAGE_SIZE } from "@/lib/utils/favorites";
@@ -319,15 +319,16 @@ function EventThumb({
   event: FavoriteEvent;
   typeColor: string;
 }) {
-  const eventImage = getAppStorageImageUrl(event.image);
+  const eventImage = getAppStorageImage(event.image);
 
   return (
     <div className="relative h-[58px] w-[58px] flex-none overflow-hidden rounded-[15px]">
       {eventImage ? (
         <Image
-          src={eventImage}
+          src={eventImage.src}
           alt={event.nomEvent || "Event"}
           fill
+          unoptimized={eventImage.unoptimized}
           className="object-cover"
           sizes="58px"
         />

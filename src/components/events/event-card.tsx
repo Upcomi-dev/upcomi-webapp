@@ -7,7 +7,7 @@ import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { formatDateValue, getDateKey, isEventPast } from "@/lib/utils/event-dates";
-import { getAppStorageImageUrl } from "@/lib/storage/urls";
+import { getAppStorageImage } from "@/lib/storage/urls";
 import { FavouriteButton } from "./favourite-button";
 
 interface EventCardProps {
@@ -98,7 +98,9 @@ export function EventCard({
   const typeColor = getEventTypeColor(type_event);
   const name = nomEvent || "Événement";
   const normalizedImage = image?.trim() ?? "";
-  const displayImage = getAppStorageImageUrl(normalizedImage) ?? "";
+  const resolvedImage = getAppStorageImage(normalizedImage);
+  const displayImage = resolvedImage?.src ?? "";
+  const imageUnoptimized = resolvedImage?.unoptimized ?? true;
   const hasUsableImageValue =
     normalizedImage.length > 0 &&
     normalizedImage.toLowerCase() !== "null" &&
@@ -147,6 +149,7 @@ export function EventCard({
                 src={displayImage}
                 alt={name}
                 fill
+                unoptimized={imageUnoptimized}
                 className={`object-cover transition-all duration-500 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
                 sizes="260px"
                 onError={() => setFailedImageSrc(displayImage)}
@@ -258,6 +261,7 @@ export function EventCard({
                 src={displayImage}
                 alt={name}
                 fill
+                unoptimized={imageUnoptimized}
                 className={`object-cover transition-all duration-500 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
                 sizes="128px"
                 onError={() => setFailedImageSrc(displayImage)}
@@ -348,6 +352,7 @@ export function EventCard({
               src={displayImage}
               alt={name}
               fill
+              unoptimized={imageUnoptimized}
               className={`object-cover transition-all duration-500 group-hover:scale-108 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
               sizes="(max-width: 768px) 200px, 220px"
               onError={() => setFailedImageSrc(displayImage)}

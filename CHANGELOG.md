@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.30] - 2026-07-27
+
+### Performance
+- perf: réduit les transformations Vercel avec cinq largeurs, un format WebP et un cache de 31 jours
+- perf: contourne l’optimiseur pour les images externes tout en conservant l’optimisation des images Upcomi
+
 ## [0.3.29] - 2026-07-16
 
 ### Formulaire événement

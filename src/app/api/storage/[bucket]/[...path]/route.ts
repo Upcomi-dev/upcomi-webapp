@@ -5,7 +5,7 @@ import { buildSupabasePublicStorageUrl } from "@/lib/storage/urls";
 
 const APP_STORAGE_BUCKETS = new Set(["upcomi"]);
 const SIGNED_URL_TTL_SECONDS = 60;
-const PUBLIC_IMAGE_CACHE_CONTROL = "public, max-age=3600, s-maxage=86400";
+const PUBLIC_IMAGE_CACHE_CONTROL = "public, max-age=2678400, s-maxage=2678400";
 const PRIVATE_IMAGE_CACHE_CONTROL = "private, max-age=300";
 
 type StorageReferenceKind = "event" | "avatar";
