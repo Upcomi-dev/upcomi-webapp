@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AppFooter } from "@/components/layout/app-footer";
 import { TopNav } from "@/components/layout/top-nav";
 import { UserProfileForm } from "@/components/profile/user-profile-form";
 import { buildInitialUserProfile, type UserProfileRow } from "@/lib/profile";
@@ -26,7 +27,7 @@ export default async function ProfilePage() {
   const initialValues = buildInitialUserProfile(user, profile as UserProfileRow | null);
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <TopNav />
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
@@ -50,6 +51,7 @@ export default async function ProfilePage() {
           </div>
         </section>
       </main>
+      <AppFooter />
     </div>
   );
 }

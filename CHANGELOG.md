@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.32] - 2026-07-27
+
+### Navigation
+- feat: ajoute un footer légal pleine largeur aux pages publiques principales
+- feat: redirige le logo de la navigation principale vers le site Upcomi
+
 ## [0.3.31] - 2026-07-27
 
 ### UI

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { AppFooter } from "@/components/layout/app-footer";
 import { buildEventTypeOptions } from "@/lib/events/filter-options";
 import type { CollectionWithEvents, MapEvent } from "@/lib/types/database";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
@@ -70,15 +71,18 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
 
   if (error) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-serif text-2xl font-bold text-foreground">
-            Impossible de charger les événements
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            Réessayez dans quelques instants.
-          </p>
+      <div className="flex min-h-screen flex-col">
+        <div className="flex flex-1 items-center justify-center">
+          <div className="text-center">
+            <h1 className="font-serif text-2xl font-bold text-foreground">
+              Impossible de charger les événements
+            </h1>
+            <p className="mt-2 text-muted-foreground">
+              Réessayez dans quelques instants.
+            </p>
+          </div>
         </div>
+        <AppFooter />
       </div>
     );
   }
@@ -99,6 +103,7 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
       collections={collections}
       hasFilters={hasFilters}
       eventTypeOptions={eventTypeOptions}
+      footer={<AppFooter />}
     />
   );
 }

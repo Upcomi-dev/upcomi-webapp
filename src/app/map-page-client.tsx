@@ -9,6 +9,7 @@ import {
   useReducer,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -124,6 +125,7 @@ interface MapPageClientProps {
   collections?: CollectionWithEvents[];
   hasFilters?: boolean;
   eventTypeOptions?: string[];
+  footer?: ReactNode;
 }
 
 function MapPageContent({
@@ -131,6 +133,7 @@ function MapPageContent({
   collections = [],
   hasFilters = false,
   eventTypeOptions = [],
+  footer,
 }: MapPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -892,6 +895,7 @@ function MapPageContent({
           </main>
         </div>
       )}
+      {footer}
     </div>
   );
 }
@@ -901,6 +905,7 @@ export function MapPageClient({
   collections = [],
   hasFilters = false,
   eventTypeOptions = [],
+  footer,
 }: MapPageClientProps) {
   return (
     <Suspense
@@ -915,6 +920,7 @@ export function MapPageClient({
         collections={collections}
         hasFilters={hasFilters}
         eventTypeOptions={eventTypeOptions}
+        footer={footer}
       />
     </Suspense>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EventProposalForm } from "@/components/events/event-proposal-form";
+import { AppFooter } from "@/components/layout/app-footer";
 import { TopNav } from "@/components/layout/top-nav";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -37,9 +38,9 @@ export default async function ProposerUnEvenementPage() {
     });
 
   return (
-    <div className="min-h-screen bg-[#f5efe6]">
+    <div className="flex min-h-screen flex-col bg-[#f5efe6]">
       <TopNav />
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 md:px-6 md:py-10">
         <Link
           href="/"
           className="glass mb-5 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] text-foreground/55 transition-all hover:bg-white/80 hover:text-coral"
@@ -63,6 +64,7 @@ export default async function ProposerUnEvenementPage() {
           <EventProposalForm organizers={organizers} />
         </section>
       </main>
+      <AppFooter />
     </div>
   );
 }

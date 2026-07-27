@@ -17,6 +17,7 @@ import { ExternalRegistrationLink } from "@/components/events/external-registrat
 import { EventCard } from "@/components/events/event-card";
 import { EventViewTracker } from "@/components/events/event-view-tracker";
 import { MixiteBadge } from "@/components/events/mixite-badge";
+import { AppFooter } from "@/components/layout/app-footer";
 import { TopNav } from "@/components/layout/top-nav";
 
 interface PageProps {
@@ -190,7 +191,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   };
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
       <EventViewTracker
         eventId={event.id}
         eventType={event.type_event}
@@ -205,7 +206,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
       <TopNav />
 
       <div
-        className={`mx-auto w-full max-w-[920px] px-4 pt-8 md:px-6 ${
+        className={`mx-auto w-full max-w-[920px] flex-1 px-4 pt-8 md:px-6 ${
           event.URL ? "pb-36 lg:pb-8" : "pb-8"
         }`}
       >
@@ -467,6 +468,8 @@ export default async function EventPage({ params, searchParams }: PageProps) {
         </div>
       </div>
 
+      <AppFooter />
+
       {event.URL && (
         <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
           <div
@@ -498,7 +501,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
