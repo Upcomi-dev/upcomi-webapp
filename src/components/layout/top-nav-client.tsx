@@ -68,7 +68,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
             {eventProposalsEnabled ? (
               <Link
                 href="/proposer-un-evenement"
-                className="hidden h-10 items-center justify-center rounded-full bg-coral px-4 text-[12px] font-semibold tracking-[0.08em] text-white transition-all hover:-translate-y-0.5 hover:bg-orange-dark sm:inline-flex"
+                className="hidden h-10 items-center justify-center rounded-full border border-white/50 bg-white/58 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground/55 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-coral/30 hover:bg-white/80 hover:text-coral sm:inline-flex"
               >
                 Proposer un événement
               </Link>

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.35] - 2026-07-27
+
+### Navigation
+- style: rend plus discret le bouton de proposition d’événement dans le header
+
 ## [0.3.34] - 2026-07-27
 
 ### Propositions d’événements
