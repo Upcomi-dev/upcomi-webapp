@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.31] - 2026-07-27
+
+### UI
+- fix: conserve les actions visibles dans la modale de favoris lorsque le titre d’un événement est long
+
 ## [0.3.30] - 2026-07-27
 
 ### Performance

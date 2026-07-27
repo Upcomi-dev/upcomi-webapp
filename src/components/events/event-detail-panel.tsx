@@ -226,11 +226,11 @@ export function EventDetailPanel({
 
       {/* Title + meta + Actions */}
       <div>
-        <div className="mb-2 flex items-start justify-between gap-3">
-          <h1 className="font-serif text-[26px] leading-tight text-foreground">
+        <div className="mb-2 flex min-w-0 items-start gap-3">
+          <h1 className="line-clamp-2 min-w-0 flex-1 break-words font-serif text-[22px] leading-[1.15] text-foreground md:text-[26px]">
             {event.nomEvent || "Événement"}
           </h1>
-          <div className="flex flex-shrink-0 gap-2 pt-0.5">
+          <div className="flex flex-none gap-2 pt-0.5">
             <FavouriteButton eventId={event.id} />
             <ShareButton
               title={event.nomEvent || "Événement"}
