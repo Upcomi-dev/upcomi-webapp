@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AppFooter } from "@/components/layout/app-footer";
 import { buildEventTypeOptions } from "@/lib/events/filter-options";
+import { isEventProposalFeatureEnabled } from "@/lib/features";
 import type { CollectionWithEvents, MapEvent } from "@/lib/types/database";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
 import { MapPageClient } from "./map-page-client";
@@ -55,9 +56,11 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
   const [
     eventsResult,
     { data: eventTypeRows },
+    eventProposalsEnabled,
   ] = await Promise.all([
     buildEventsQuery(supabase, params, today, includePastEvents, Boolean(searchQuery)),
     eventTypeQuery,
+    isEventProposalFeatureEnabled(),
   ]);
 
   let events = eventsResult.data;
@@ -103,6 +106,7 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
       collections={collections}
       hasFilters={hasFilters}
       eventTypeOptions={eventTypeOptions}
+      eventProposalsEnabled={eventProposalsEnabled}
       footer={<AppFooter />}
     />
   );

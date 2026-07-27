@@ -8,12 +8,26 @@ import {
   getUniqueEventSlug,
   isDuplicateEventSlugError,
 } from "@/lib/events/slugs";
+import { EVENT_PROPOSALS_FEATURE_KEY } from "@/lib/features";
 
 function revalidateAdminViews() {
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/event/[slug]", "page");
   revalidatePath("/sitemap.xml");
+}
+
+export async function setEventProposalFeatureEnabled(enabled: boolean) {
+  const { supabase } = await assertAdmin();
+  const { error } = await supabase
+    .from("app_features")
+    .update({ enabled })
+    .eq("key", EVENT_PROPOSALS_FEATURE_KEY);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath("/proposer-un-evenement");
 }
 
 function getText(formData: FormData, name: string) {

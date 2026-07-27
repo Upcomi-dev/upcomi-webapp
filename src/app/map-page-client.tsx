@@ -25,7 +25,7 @@ import { EventCard } from "@/components/events/event-card";
 import { EventDetailPanel } from "@/components/events/event-detail-panel";
 import { PastEventsToggle } from "@/components/events/past-events-toggle";
 import { SortControl } from "@/components/events/sort-control";
-import { TopNav } from "@/components/layout/top-nav";
+import { TopNavClient } from "@/components/layout/top-nav-client";
 import { CollectionsView } from "@/components/collections/collections-view";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trackAnalyticsEvent } from "@/lib/analytics";
@@ -125,6 +125,7 @@ interface MapPageClientProps {
   collections?: CollectionWithEvents[];
   hasFilters?: boolean;
   eventTypeOptions?: string[];
+  eventProposalsEnabled?: boolean;
   footer?: ReactNode;
 }
 
@@ -133,6 +134,7 @@ function MapPageContent({
   collections = [],
   hasFilters = false,
   eventTypeOptions = [],
+  eventProposalsEnabled = false,
   footer,
 }: MapPageClientProps) {
   const router = useRouter();
@@ -867,7 +869,7 @@ function MapPageContent({
 
   return (
     <div className="flex h-full min-h-0 flex-col md:h-screen">
-      <TopNav />
+      <TopNavClient eventProposalsEnabled={eventProposalsEnabled} />
 
       {isMobile ? (
         <div className="flex-1 overflow-y-auto">{renderMobileContent()}</div>
@@ -905,6 +907,7 @@ export function MapPageClient({
   collections = [],
   hasFilters = false,
   eventTypeOptions = [],
+  eventProposalsEnabled = false,
   footer,
 }: MapPageClientProps) {
   return (
@@ -920,6 +923,7 @@ export function MapPageClient({
         collections={collections}
         hasFilters={hasFilters}
         eventTypeOptions={eventTypeOptions}
+        eventProposalsEnabled={eventProposalsEnabled}
         footer={footer}
       />
     </Suspense>

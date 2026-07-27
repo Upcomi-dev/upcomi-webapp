@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.33] - 2026-07-27
+
+### Propositions d’événements
+- feat: ajoute un bouton de proposition d’événement dans le header public
+- feat: permet d’activer ou désactiver ce bouton depuis l’onglet Propositions du back-office
+
 ## [0.3.32] - 2026-07-27
 
 ### Navigation

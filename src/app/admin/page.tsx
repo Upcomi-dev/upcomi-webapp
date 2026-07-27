@@ -4,6 +4,8 @@ import { AdminCollectionsClient } from "@/components/admin/admin-collections-cli
 import { AdminFeedbackClient } from "@/components/admin/admin-feedback-client";
 import { AdminUsersClient } from "@/components/admin/admin-users-client";
 import { AdminProposalsClient, type AdminProposal } from "@/components/admin/admin-proposals-client";
+import { AdminProposalFeatureToggle } from "@/components/admin/admin-proposal-feature-toggle";
+import { EVENT_PROPOSALS_FEATURE_KEY } from "@/lib/features";
 import { requireAdmin } from "@/lib/auth/assert-admin";
 import { parseSupabasePublicStorageUrl } from "@/lib/storage/urls";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -186,6 +188,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const popularEventsPromise = supabase.rpc("get_popular_events", {
     p_limit: POPULAR_COLLECTION_LIMIT,
   });
+  const eventProposalFeaturePromise = supabase
+    .from("app_features")
+    .select("enabled")
+    .eq("key", EVENT_PROPOSALS_FEATURE_KEY)
+    .maybeSingle();
 
   const [
     collectionsResult,
@@ -200,6 +207,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     eventSubmissionContactsResult,
     proposalRoutesResult,
     popularEventsResult,
+    eventProposalFeatureResult,
   ] = await Promise.all([
     collectionsPromise,
     allEventsPromise,
@@ -213,6 +221,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     eventSubmissionContactsPromise,
     proposalRoutesPromise,
     popularEventsPromise,
+    eventProposalFeaturePromise,
   ]);
 
   const collections = collectionsResult.data ?? [];
@@ -624,6 +633,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             { label: "Refusées", value: proposals.filter(({ contact }) => contact.review_status === "rejected").length.toString() },
           ]}
         >
+          <AdminProposalFeatureToggle enabled={eventProposalFeatureResult.data?.enabled === true} />
           <AdminProposalsClient proposals={proposals} organizers={organisateurs} />
         </AdminSectionShell>
       )}
