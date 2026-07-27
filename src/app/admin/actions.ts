@@ -18,8 +18,9 @@ function revalidateAdminViews() {
 }
 
 export async function setEventProposalFeatureEnabled(enabled: boolean) {
-  const { supabase } = await assertAdmin();
-  const { error } = await supabase
+  await assertAdmin();
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("app_features")
     .update({ enabled })
     .eq("key", EVENT_PROPOSALS_FEATURE_KEY);

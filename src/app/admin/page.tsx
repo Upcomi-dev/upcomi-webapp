@@ -140,6 +140,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const activeTabMeta = ADMIN_TABS.find((tab) => tab.id === activeTab) ?? ADMIN_TABS[0];
 
   const { supabase, user } = await requireAdmin("/admin");
+  const adminStorage = createAdminClient();
   const today = new Date().toISOString().split("T")[0];
 
   const collectionsPromise = supabase
@@ -188,7 +189,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const popularEventsPromise = supabase.rpc("get_popular_events", {
     p_limit: POPULAR_COLLECTION_LIMIT,
   });
-  const eventProposalFeaturePromise = supabase
+  const eventProposalFeaturePromise = adminStorage
     .from("app_features")
     .select("enabled")
     .eq("key", EVENT_PROPOSALS_FEATURE_KEY)
@@ -272,7 +273,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const eventSubmissionContacts =
     (eventSubmissionContactsResult.data ?? []) as EventSubmissionContact[];
   const proposalRoutes = (proposalRoutesResult.data ?? []) as SousEvent[];
-  const adminStorage = createAdminClient();
   const proposals: AdminProposal[] = await Promise.all(eventSubmissionContacts.map(async (contact) => {
     const event = eventById.get(contact.event_id)!;
     let imagePreviewUrl: string | null = null;

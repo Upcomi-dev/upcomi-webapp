@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.34] - 2026-07-27
+
+### Propositions d’événements
+- fix: utilise le client administratif pour lire et modifier le feature flag protégé par RLS
+
 ## [0.3.33] - 2026-07-27
 
 ### Propositions d’événements
