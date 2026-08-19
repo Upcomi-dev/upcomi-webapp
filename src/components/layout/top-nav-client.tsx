@@ -147,6 +147,16 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
             )}
           </div>
         </div>
+        {eventProposalsEnabled ? (
+          <div className="px-4 pb-3 sm:hidden">
+            <Link
+              href="/proposer-un-evenement"
+              className="flex h-10 w-full items-center justify-center rounded-full border border-white/50 bg-white/58 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground/55 backdrop-blur-sm transition-all hover:border-coral/30 hover:bg-white/80 hover:text-coral"
+            >
+              Proposer un événement
+            </Link>
+          </div>
+        ) : null}
       </nav>
 
     </>
