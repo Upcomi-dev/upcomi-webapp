@@ -868,35 +868,37 @@ function MapPageContent({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col md:h-screen">
-      <TopNavClient eventProposalsEnabled={eventProposalsEnabled} />
+    <div className="flex flex-col">
+      <div className="flex min-h-[100dvh] flex-col md:h-screen md:min-h-0">
+        <TopNavClient eventProposalsEnabled={eventProposalsEnabled} />
 
-      {isMobile ? (
-        <div className="flex-1 overflow-y-auto">{renderMobileContent()}</div>
-      ) : (
-        <div className="relative flex flex-1 flex-col overflow-hidden md:min-h-0 md:grid md:grid-rows-[1fr] md:grid-cols-[minmax(380px,45vw)_minmax(0,1fr)] xl:grid-cols-[minmax(420px,45vw)_minmax(0,1fr)]">
-        {/* Desktop panel */}
-          <aside className="glass-drawer hidden overflow-y-auto border-r border-white/45 md:block">
-          <div className="space-y-5 px-4 py-4 md:px-5">
-            {renderPanelContent()}
+        {isMobile ? (
+          <div className="flex-1">{renderMobileContent()}</div>
+        ) : (
+          <div className="relative flex flex-1 flex-col overflow-hidden md:min-h-0 md:grid md:grid-rows-[1fr] md:grid-cols-[minmax(380px,45vw)_minmax(0,1fr)] xl:grid-cols-[minmax(420px,45vw)_minmax(0,1fr)]">
+            {/* Desktop panel */}
+            <aside className="glass-drawer hidden overflow-y-auto border-r border-white/45 md:block">
+              <div className="space-y-5 px-4 py-4 md:px-5">
+                {renderPanelContent()}
+              </div>
+            </aside>
+
+            {/* Map */}
+            <main className="relative h-full min-h-0 min-w-0 flex-1">
+              <EventMap
+                events={sortedEvents}
+                selectedEventId={panel.selectedEventId}
+                hoveredEventId={hoveredEventId}
+                dimOtherMarkers={panel.mode === "detail"}
+                flyToEventId={flyToEventId ?? routeEventId}
+                activeEventTypes={activeEventTypes}
+                onEventSelect={handleMapEventSelect}
+                onToggleEventType={(eventType) => toggleMultiFilter("type_event", eventType)}
+              />
+            </main>
           </div>
-          </aside>
-
-        {/* Map */}
-          <main className="relative h-full min-h-0 min-w-0 flex-1">
-            <EventMap
-              events={sortedEvents}
-              selectedEventId={panel.selectedEventId}
-              hoveredEventId={hoveredEventId}
-              dimOtherMarkers={panel.mode === "detail"}
-              flyToEventId={flyToEventId ?? routeEventId}
-              activeEventTypes={activeEventTypes}
-              onEventSelect={handleMapEventSelect}
-              onToggleEventType={(eventType) => toggleMultiFilter("type_event", eventType)}
-            />
-          </main>
-        </div>
-      )}
+        )}
+      </div>
       {footer}
     </div>
   );

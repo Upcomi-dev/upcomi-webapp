@@ -125,7 +125,7 @@ export default async function RootLayout({
             <FavoritesProvider>
               <FlyingHeartProvider>
               <AmbientOrbs />
-              <div className="relative z-10 flex h-[100dvh] flex-col md:h-auto md:min-h-screen">
+              <div className="relative z-10 flex min-h-[100dvh] flex-col md:min-h-screen">
                 {children}
               </div>
               {profile}
