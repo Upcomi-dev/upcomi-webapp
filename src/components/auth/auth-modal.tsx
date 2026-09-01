@@ -4,7 +4,7 @@ import { AppLogo } from "@/components/layout/app-logo";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ForgotPasswordForm } from "./forgot-password-form";
 import { LoginForm } from "./login-form";
-import { SignupForm } from "./signup-form";
+import { SignupWizard } from "./signup-wizard";
 import { useAuthModal } from "./auth-modal-context";
 
 export function AuthModal() {
@@ -40,6 +40,7 @@ export function AuthModalDialog({
   showCloseButton = true,
 }: AuthModalDialogProps) {
   const isForgotPassword = view === "forgot-password";
+  const isSignup = view === "signup";
   const closeOnAuthSuccess = showCloseButton ? onClose : undefined;
 
   return (
@@ -50,26 +51,26 @@ export function AuthModalDialog({
       }}
     >
       <DialogContent
-        className="gap-0 p-0 sm:max-w-[400px]"
+        className={`gap-0 p-0 ${isSignup ? "sm:max-w-[440px]" : "sm:max-w-[400px]"}`}
         showCloseButton={showCloseButton}
       >
         {/* Header with gradient mesh */}
         <div className="hero-mesh relative px-6 pt-7 pb-5">
           <AppLogo href="/" imageClassName="h-8 w-auto" />
-          <h2 className="mt-4 font-serif text-[22px] font-bold leading-tight text-foreground">
-            {view === "login"
-              ? "Connexion"
-              : isForgotPassword
-                ? "Mot de passe oublié"
-                : "Rejoins la communauté"}
-          </h2>
-          <p className="mt-1.5 text-[13px] text-foreground/52">
-            {view === "login"
-              ? "Connecte-toi pour retrouver tes événements favoris"
-              : isForgotPassword
-                ? "Reçois un lien pour choisir un nouveau mot de passe"
-                : "Crée ton compte pour sauvegarder tes événements"}
-          </p>
+          {/* Le parcours d'inscription porte son propre titre, différent à
+              chaque étape : le header ne garde que le logo. */}
+          {!isSignup && (
+            <>
+              <h2 className="mt-4 font-serif text-[22px] font-bold leading-tight text-foreground">
+                {view === "login" ? "Connexion" : "Mot de passe oublié"}
+              </h2>
+              <p className="mt-1.5 text-[13px] text-foreground/52">
+                {view === "login"
+                  ? "Connecte-toi pour retrouver tes événements favoris"
+                  : "Reçois un lien pour choisir un nouveau mot de passe"}
+              </p>
+            </>
+          )}
         </div>
 
         {/* Divider */}
@@ -87,9 +88,9 @@ export function AuthModalDialog({
           ) : isForgotPassword ? (
             <ForgotPasswordForm onSwitchToLogin={() => onViewChange("login")} />
           ) : (
-            <SignupForm
+            <SignupWizard
               redirectTo={redirectTo}
-              onSuccess={closeOnAuthSuccess}
+              onDone={closeOnAuthSuccess}
               onSwitchToLogin={() => onViewChange("login")}
             />
           )}

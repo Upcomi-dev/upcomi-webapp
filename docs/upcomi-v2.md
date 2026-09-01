@@ -295,3 +295,67 @@ Décisions prises :
 **Reporté** : le bouton « Me prévenir » (rappel mail à l'ouverture), qui exige
 une table `registration_reminders`. C'est le bénéfice central de la page selon
 le proto — à traiter dans sa propre brique juste après.
+
+---
+
+## 7. Brique `feat/onboarding-v2`
+
+Le parcours d'inscription passe du couple « formulaire de compte » + « modale
+de profil bloquante » à un parcours unique en cinq étapes, repris du prototype :
+
+```
+méthode → identité + genre → ville/niveau/pratiques → événements recommandés → confirmation
+```
+
+Fichiers : `src/components/auth/signup-wizard.tsx` (le parcours),
+`src/components/auth/recommended-events-picker.tsx` (l'étape recommandations),
+`src/lib/profile-mutations.ts` (les écritures, partagées avec la page profil).
+`src/components/auth/signup-form.tsx` est supprimé, remplacé par le parcours.
+
+### Migration
+
+`supabase/migrations/20260901103000_onboarding_v2.sql` :
+
+- `users.genre`, texte nullable, sans contrainte `check` — la liste de l'UI est
+  amenée à bouger et la contraindre coûterait une migration non additive à
+  chaque évolution.
+- `user_recommended_events` (`user_id`, `event_id`, `created_at`), avec RLS,
+  `revoke`/`grant` et les trois policies dans le même fichier.
+
+**À appliquer en base avant de merger le code** : `layout.tsx`, `/profil` et la
+modale profil sélectionnent désormais la colonne `genre`. Tant qu'elle n'existe
+pas, la requête échoue silencieusement et le profil remonte vide.
+
+### Décisions prises
+
+- **Genre facultatif**, et volontairement hors de `isUserProfileComplete()` :
+  l'exiger reviendrait à bloquer le parcours sur une donnée sensible. Ne rien
+  répondre reste distinct de « Je préfère ne pas répondre ».
+- **Table dédiée pour les recommandations**, plutôt qu'un drapeau sur
+  `favourite_events` : « je recommande à la communauté » n'est ni « favori » ni
+  « j'y participe », et les trois doivent pouvoir diverger. C'est le seul écart
+  au périmètre « nouvelles colonnes sur `users` » annoncé en 2.1.
+- **Niveaux inchangés** (`Debutant`/`Intermediaire`/`Confirme`/`Competition`) :
+  le proto propose `Expert`, l'aligner imposerait un backfill de `users.pref2`.
+- **Le nom reste obligatoire**, contrairement au proto : `isUserProfileComplete()`
+  l'exige déjà, et un nom vide laisserait la modale de reprise s'ouvrir à
+  chaque connexion.
+- **Le profil est enregistré dès l'étape 3**, le drapeau `onboarding_completed`
+  seulement à la fin : une interruption à l'étape « recommandations » ne perd
+  rien.
+
+### Google, et la reprise du parcours
+
+`Continuer avec Google` sort de l'application le temps de l'aller-retour OAuth :
+l'état du parcours est perdu. Au retour, le garde d'onboarding du layout
+(`hasCompletedOnboarding()`) rouvre le parcours **à l'étape 3**, le compte et
+l'identité étant déjà connus. C'est le même mécanisme qui rattrape une session
+interrompue en cours de route. `OnboardingModal` n'est donc plus un formulaire
+mais un hôte pour le parcours, monté avec `startStep="profil"`.
+
+Le prototype propose aussi `Continuer avec Strava` : non repris, il n'y a pas de
+provider Strava configuré côté Supabase.
+
+Si le projet Supabase venait à exiger une confirmation par email, `signUp`
+renverrait un compte sans session : le parcours affiche alors un écran « vérifie
+ta boîte mail » au lieu de continuer.

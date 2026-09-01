@@ -19,6 +19,7 @@ export type AnalyticsEventName =
   | "Login Completed"
   | "Signup Submitted"
   | "Signup Completed"
+  | "Onboarding Completed"
   | "Logout Clicked"
   | "Feedback Opened"
   | "Feedback Submitted";
