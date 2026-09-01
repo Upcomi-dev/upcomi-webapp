@@ -29,11 +29,9 @@ export function AuthGate({ title, onSignup, onLogin }: AuthGateProps) {
 
       <ul className="space-y-3">
         {GATE_BENEFITS.map((benefit) => (
-          <li key={benefit} className="flex items-start gap-2.5">
-            <span className="mt-0.5 flex size-5 flex-none items-center justify-center rounded-full bg-orange/12 text-orange-dark">
-              <Check className="size-3" strokeWidth={3} />
-            </span>
-            <span className="text-[14px] leading-5 text-foreground/72">{benefit}</span>
+          <li key={benefit} className="flex items-start gap-2.5 text-foreground/72">
+            <Check className="mt-0.5 size-4 flex-none" />
+            <span className="text-[14px] leading-5">{benefit}</span>
           </li>
         ))}
       </ul>

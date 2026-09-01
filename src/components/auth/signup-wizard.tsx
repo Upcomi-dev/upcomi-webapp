@@ -304,9 +304,7 @@ export function SignupWizard({
   if (awaitingEmailConfirmation) {
     return (
       <div className="space-y-4 text-center">
-        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-orange/12 text-orange-dark">
-          <MailCheck className="size-6" />
-        </div>
+        <MailCheck className="mx-auto size-7 text-foreground/72" />
         <h3 className="font-serif text-[20px] leading-tight text-foreground">
           Vérifie ta boîte mail
         </h3>
@@ -526,9 +524,7 @@ export function SignupWizard({
       {step === "confirmation" && (
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-3 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-orange/12 text-orange-dark">
-              <CircleCheck className="size-7" />
-            </div>
+            <CircleCheck className="size-7 text-foreground/72" />
             <p className="text-[14px] leading-6 text-foreground/68">
               Ton compte est bien créé
               {profile.firstName ? `, ${profile.firstName}` : ""} — bienvenue dans la
