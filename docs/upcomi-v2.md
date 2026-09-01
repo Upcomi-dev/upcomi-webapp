@@ -46,15 +46,64 @@ uniquement à brancher les boutons vers les nouvelles pages.
 
 ## 2. Découpage en briques
 
-Ordre de traitement. Les deux socles sont sur le chemin critique.
+### 2.1 Priorisation actuelle (arbitrage du 2026-09-01)
+
+Dépriorisé pour l'instant : refonte de la navigation (nav desktop + barre app
+mobile), recherche V2 (filtres avancés), inscription publique (voir qui est
+inscrit, statut public). **Non tranché** : le parcours « je suis inscrite → 
+partager », et l'évolution de « Mes évènements » — à confirmer avant de les
+programmer ou de les exclure.
+
+```
+feat/calendrier-inscriptions   (T1 — EN COURS, terminé côté code)
+feat/onboarding-v2             (T1 — nouvelles colonnes sur `users`, additif)
+feat/dates-cles                (T1)
+feat/mesures-inclusion         (T1)
+feat/evenements-similaires     (T3 — gratuite, casable ici ou avant)
+feat/score-adequation          (T2 — sa propre petite migration)
+   ↓ bloquant, seule :
+feat/socle-data                (profils publics consultables + entité organisateur)
+   ↓
+feat/organisateur-enrichi      (T3, suite)
+feat/social                    (T4 — suivre, profils)
+```
+
+Les cinq premières briques sont parallélisables entre elles dès maintenant.
+`feat/socle-data` reste le seul verrou du plan, mais il n'intervient qu'avant
+la suite de T3 et tout T4 — largement repoussé par rapport à l'ordonnancement
+initial (2.2), ce qui laisse plusieurs semaines de marge avant d'y toucher.
+
+Détail par lot :
+
+- **T1 — Fiche évènement (logistique) + Onboarding V2** : dates clés, mesures
+  d'inclusion (catalogue en 4 groupes + suggestion), évolution UI de la page
+  évènement au fil de l'eau (pas une refonte de nav), onboarding V2. Aucune
+  dépendance entre elles ni avec le reste du plan.
+- **T2 — Score d'adéquation** : questionnaire + calcul de compatibilité
+  niveau/utilisatrice. Migration dédiée (catalogue de questions de
+  compatibilité + réponses), indépendante de T1.
+- **T3 — Plus d'infos sur l'évènement** : évènements similaires (zéro
+  migration, `collections`/`collection_events` existent déjà) ; bloc
+  organisateur enrichi, qui **dépend de `feat/socle-data`** — `events.organisateur`
+  est du texte libre aujourd'hui, créer la vraie entité et dédupliquer est le
+  chantier le plus délicat du plan (migration de données, pas juste additive).
+- **T4 — Social** : suivre, profils publics. **Dépend de `feat/socle-data`** —
+  `users` existe mais aucune policy ne permet aujourd'hui à quelqu'un de lire
+  le profil d'une autre personne ; à ouvrir en RLS avant le reste de T4.
+
+### 2.2 Ordonnancement de fond (référence, hors urgence court terme)
+
+Ordre par dépendances techniques pures, indépendant des priorités produit du
+moment. Utile pour resituer une brique dépriorisée quand elle reviendra à
+l'ordre du jour.
 
 ```
 feat/socle-ui               nav, tokens
 feat/socle-data             profils publics + entité organisateur     ← bloquant
    ↓ puis parallélisables :
 feat/recherche
-feat/inscription-publique                                             ← prioritaire
-feat/calendrier-inscriptions                                          ← EN COURS
+feat/inscription-publique
+feat/calendrier-inscriptions
 feat/faq
 feat/dates-cles
 feat/y-aller
