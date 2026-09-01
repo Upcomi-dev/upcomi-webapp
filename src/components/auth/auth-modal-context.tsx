@@ -3,13 +3,19 @@
 import { createContext, useCallback, useContext, useState } from "react";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 
-type AuthModalView = "login" | "signup" | "forgot-password";
+export type AuthModalView = "gate" | "login" | "signup" | "forgot-password";
 
 interface AuthModalContextValue {
   isOpen: boolean;
   view: AuthModalView;
   redirectAfterAuth: string;
-  openAuthModal: (opts?: { view?: AuthModalView; redirect?: string }) => void;
+  /** Titre du gate : le geste qui a amené là. Vide = titre générique. */
+  gateTitle: string | undefined;
+  openAuthModal: (opts?: {
+    view?: AuthModalView;
+    redirect?: string;
+    title?: string;
+  }) => void;
   closeAuthModal: () => void;
   setView: (view: AuthModalView) => void;
 }
@@ -18,16 +24,21 @@ const AuthModalContext = createContext<AuthModalContextValue | null>(null);
 
 export function AuthModalProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [view, setView] = useState<AuthModalView>("login");
+  // Le gate — ce qu'on gagne à avoir un compte — est l'écran d'entrée par
+  // défaut : on n'arrive directement sur un formulaire que si l'intention est
+  // explicite (lien « Se connecter », route /login).
+  const [view, setView] = useState<AuthModalView>("gate");
   const [redirectAfterAuth, setRedirectAfterAuth] = useState("/");
+  const [gateTitle, setGateTitle] = useState<string | undefined>(undefined);
 
   const openAuthModal = useCallback(
-    (opts?: { view?: AuthModalView; redirect?: string }) => {
-      setView(opts?.view ?? "login");
+    (opts?: { view?: AuthModalView; redirect?: string; title?: string }) => {
+      setView(opts?.view ?? "gate");
       setRedirectAfterAuth(opts?.redirect ?? "/");
+      setGateTitle(opts?.title);
       setIsOpen(true);
       trackAnalyticsEvent("Auth Modal Opened", {
-        view: opts?.view ?? "login",
+        view: opts?.view ?? "gate",
         has_redirect: Boolean(opts?.redirect),
       });
     },
@@ -44,6 +55,7 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
         isOpen,
         view,
         redirectAfterAuth,
+        gateTitle,
         openAuthModal,
         closeAuthModal,
         setView,

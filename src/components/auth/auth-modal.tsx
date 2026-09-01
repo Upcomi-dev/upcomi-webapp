@@ -2,13 +2,14 @@
 
 import { AppLogo } from "@/components/layout/app-logo";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AuthGate } from "./auth-gate";
 import { ForgotPasswordForm } from "./forgot-password-form";
 import { LoginForm } from "./login-form";
 import { SignupWizard } from "./signup-wizard";
-import { useAuthModal } from "./auth-modal-context";
+import { useAuthModal, type AuthModalView } from "./auth-modal-context";
 
 export function AuthModal() {
-  const { isOpen, view, redirectAfterAuth, closeAuthModal, setView } =
+  const { isOpen, view, redirectAfterAuth, gateTitle, closeAuthModal, setView } =
     useAuthModal();
 
   return (
@@ -16,6 +17,7 @@ export function AuthModal() {
       open={isOpen}
       view={view}
       redirectTo={redirectAfterAuth}
+      gateTitle={gateTitle}
       onClose={closeAuthModal}
       onViewChange={setView}
     />
@@ -24,10 +26,11 @@ export function AuthModal() {
 
 interface AuthModalDialogProps {
   open: boolean;
-  view: "login" | "signup" | "forgot-password";
+  view: AuthModalView;
   redirectTo?: string;
+  gateTitle?: string;
   onClose?: () => void;
-  onViewChange: (view: "login" | "signup" | "forgot-password") => void;
+  onViewChange: (view: AuthModalView) => void;
   showCloseButton?: boolean;
 }
 
@@ -35,12 +38,15 @@ export function AuthModalDialog({
   open,
   view,
   redirectTo = "/",
+  gateTitle,
   onClose,
   onViewChange,
   showCloseButton = true,
 }: AuthModalDialogProps) {
-  const isForgotPassword = view === "forgot-password";
-  const isSignup = view === "signup";
+  // Le gate et le parcours d'inscription portent leur propre titre (celui du
+  // geste pour l'un, celui de l'étape en cours pour l'autre) : le header du
+  // dialogue ne garde alors que le logo.
+  const hasOwnTitle = view === "gate" || view === "signup";
   const closeOnAuthSuccess = showCloseButton ? onClose : undefined;
 
   return (
@@ -51,15 +57,13 @@ export function AuthModalDialog({
       }}
     >
       <DialogContent
-        className={`gap-0 p-0 ${isSignup ? "sm:max-w-[440px]" : "sm:max-w-[400px]"}`}
+        className={`gap-0 p-0 ${view === "signup" ? "sm:max-w-[440px]" : "sm:max-w-[400px]"}`}
         showCloseButton={showCloseButton}
       >
         {/* Header with gradient mesh */}
-        <div className="hero-mesh relative px-6 pt-7 pb-5">
+        <div className={`hero-mesh relative px-6 pt-7 ${hasOwnTitle ? "pb-4" : "pb-5"}`}>
           <AppLogo href="/" imageClassName="h-8 w-auto" />
-          {/* Le parcours d'inscription porte son propre titre, différent à
-              chaque étape : le header ne garde que le logo. */}
-          {!isSignup && (
+          {!hasOwnTitle && (
             <>
               <h2 className="mt-4 font-serif text-[22px] font-bold leading-tight text-foreground">
                 {view === "login" ? "Connexion" : "Mot de passe oublié"}
@@ -78,14 +82,20 @@ export function AuthModalDialog({
 
         {/* Form */}
         <div className="px-6 pt-5 pb-6">
-          {view === "login" ? (
+          {view === "gate" ? (
+            <AuthGate
+              title={gateTitle}
+              onSignup={() => onViewChange("signup")}
+              onLogin={() => onViewChange("login")}
+            />
+          ) : view === "login" ? (
             <LoginForm
               redirectTo={redirectTo}
               onSuccess={closeOnAuthSuccess}
               onSwitchToSignup={() => onViewChange("signup")}
               onSwitchToForgotPassword={() => onViewChange("forgot-password")}
             />
-          ) : isForgotPassword ? (
+          ) : view === "forgot-password" ? (
             <ForgotPasswordForm onSwitchToLogin={() => onViewChange("login")} />
           ) : (
             <SignupWizard

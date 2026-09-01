@@ -33,7 +33,7 @@ export function FavouriteButton({ eventId }: FavouriteButtonProps) {
           authenticated: false,
           source: "icon_button",
         });
-        openAuthModal({ view: "login" });
+        openAuthModal({ title: "Rejoins la communauté Upcomi pour enregistrer cet évènement" });
         return;
       }
 

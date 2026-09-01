@@ -312,6 +312,22 @@ Fichiers : `src/components/auth/signup-wizard.tsx` (le parcours),
 `src/lib/profile-mutations.ts` (les écritures, partagées avec la page profil).
 `src/components/auth/signup-form.tsx` est supprimé, remplacé par le parcours.
 
+### Le gate, premier écran
+
+`src/components/auth/auth-gate.tsx` reprend le gate du prototype : ce qu'on
+gagne à avoir un compte, puis « Créer un compte » / « Me connecter ». C'est une
+vue de la modale d'auth (`view: "gate"`), pas une étape du parcours — il précède
+le choix entre inscription et connexion, et n'a donc pas de pastille.
+
+C'est désormais l'écran d'entrée **par défaut** : le lien de la barre de
+navigation et les gestes réservés aux membres (mettre en favori) l'ouvrent, avec
+le geste en titre comme dans le proto. On n'arrive directement sur un formulaire
+que si l'intention est explicite : routes `/login` et `/signup`.
+
+Les trois bénéfices affichés sont réécrits par rapport au proto : « accède à
+tous les retours de la communauté » promettait une fonctionnalité qui n'existe
+pas encore ici.
+
 ### Migration
 
 `supabase/migrations/20260901103000_onboarding_v2.sql` :

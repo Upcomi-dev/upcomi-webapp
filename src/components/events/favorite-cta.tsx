@@ -46,7 +46,7 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
           authenticated: false,
           source: "detail_cta",
         });
-        openAuthModal({ view: "login" });
+        openAuthModal({ title: "Rejoins la communauté Upcomi pour enregistrer cet évènement" });
         return;
       }
       if (!favorited && flyingHeart) {
