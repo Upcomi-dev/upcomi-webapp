@@ -356,6 +356,12 @@ pas, la requête échoue silencieusement et le profil remonte vide.
 - **Le nom reste obligatoire**, contrairement au proto : `isUserProfileComplete()`
   l'exige déjà, et un nom vide laisserait la modale de reprise s'ouvrir à
   chaque connexion.
+- **L'étape « identité » est tenue courte** : prénom, nom, mot de passe et sa
+  confirmation, puis la case CGU. Pas de confirmation d'email (le champ est
+  saisi une seule fois à l'étape précédente), et le genre est passé à l'étape
+  « profil », à laquelle il appartient. Les règles de mot de passe sont un
+  rappel discret sous le champ, sans encadré ni titre — la version encadrée
+  prenait plus de place que le formulaire.
 - **Le profil est enregistré dès l'étape 3**, le drapeau `onboarding_completed`
   seulement à la fin : une interruption à l'étape « recommandations » ne perd
   rien.

@@ -89,7 +89,6 @@ export function SignupWizard({
   const [profile, setProfile] = useState<UserProfileFormValues>(() =>
     normalizeUserProfile(initialValues ?? EMPTY_PROFILE)
   );
-  const [emailConfirmation, setEmailConfirmation] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(false);
@@ -124,16 +123,7 @@ export function SignupWizard({
   const handleMethodSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
-
-    const normalizedEmail = profile.email.trim().toLowerCase();
-
-    if (normalizedEmail !== emailConfirmation.trim().toLowerCase()) {
-      setError("Les emails ne correspondent pas");
-      trackAnalyticsEvent("Signup Submitted", { success: false, reason: "email_mismatch" });
-      return;
-    }
-
-    updateProfile({ email: normalizedEmail });
+    updateProfile({ email: profile.email.trim().toLowerCase() });
     setStep("identite");
   };
 
@@ -339,10 +329,8 @@ export function SignupWizard({
       {step === "methode" && (
         <MethodStep
           email={profile.email}
-          emailConfirmation={emailConfirmation}
           redirectTo={redirectTo}
           onEmailChange={(value) => updateProfile({ email: value })}
-          onEmailConfirmationChange={setEmailConfirmation}
           onSubmit={handleMethodSubmit}
           onSwitchToLogin={onSwitchToLogin}
         />
@@ -387,12 +375,12 @@ export function SignupWizard({
               minLength={PASSWORD_MIN_LENGTH}
               disabled={pending}
               className={INPUT_CLASS}
-              placeholder="8 caractères minimum"
+              placeholder="••••••••"
             />
             <PasswordRequirements password={password} />
           </Field>
 
-          <Field label="Confirmation du mot de passe" htmlFor="signup-password-confirmation">
+          <Field label="Confirmation" htmlFor="signup-password-confirmation">
             <input
               id="signup-password-confirmation"
               type="password"
@@ -402,19 +390,13 @@ export function SignupWizard({
               minLength={PASSWORD_MIN_LENGTH}
               disabled={pending}
               className={INPUT_CLASS}
-              placeholder="Confirme ton mot de passe"
+              placeholder="••••••••"
             />
           </Field>
 
-          <GenderField
-            value={profile.gender}
-            disabled={pending}
-            onChange={(gender) => updateProfile({ gender })}
-          />
-
           <label
             htmlFor="signup-privacy-policy"
-            className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-white/55 bg-white/42 px-3.5 py-3 text-[13px] leading-5 text-foreground/72"
+            className="flex items-start gap-2.5 text-[12px] leading-5 text-foreground/60"
           >
             <input
               id="signup-privacy-policy"
@@ -423,7 +405,7 @@ export function SignupWizard({
               onChange={(event) => setAcceptedPrivacyPolicy(event.target.checked)}
               required
               disabled={pending}
-              className="mt-0.5 h-4 w-4 rounded border-white/70 text-coral focus:ring-2 focus:ring-orange/40"
+              className="mt-0.5 h-3.5 w-3.5 flex-none rounded border-white/70 text-coral focus:ring-2 focus:ring-orange/40"
             />
             <span>
               J&apos;ai lu et j&apos;accepte les{" "}
@@ -497,6 +479,12 @@ export function SignupWizard({
             />
           </Field>
 
+          <GenderField
+            value={profile.gender}
+            disabled={pending}
+            onChange={(gender) => updateProfile({ gender })}
+          />
+
           <button type="submit" disabled={pending} className={`${PRIMARY_BUTTON_CLASS} w-full`}>
             {pending ? "Enregistrement..." : "Continuer →"}
           </button>
@@ -544,20 +532,16 @@ export function SignupWizard({
 
 interface MethodStepProps {
   email: string;
-  emailConfirmation: string;
   redirectTo: string;
   onEmailChange: (value: string) => void;
-  onEmailConfirmationChange: (value: string) => void;
   onSubmit: (event: React.FormEvent) => void;
   onSwitchToLogin?: () => void;
 }
 
 function MethodStep({
   email,
-  emailConfirmation,
   redirectTo,
   onEmailChange,
-  onEmailConfirmationChange,
   onSubmit,
   onSwitchToLogin,
 }: MethodStepProps) {
@@ -586,18 +570,6 @@ function MethodStep({
             required
             className={INPUT_CLASS}
             placeholder="ton@email.com"
-          />
-        </Field>
-
-        <Field label="Confirmation de l'email" htmlFor="signup-email-confirmation">
-          <input
-            id="signup-email-confirmation"
-            type="email"
-            value={emailConfirmation}
-            onChange={(event) => onEmailConfirmationChange(event.target.value)}
-            required
-            className={INPUT_CLASS}
-            placeholder="Confirme ton email"
           />
         </Field>
 

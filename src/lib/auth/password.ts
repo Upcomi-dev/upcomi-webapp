@@ -2,6 +2,7 @@ export const PASSWORD_MIN_LENGTH = 8;
 
 export interface PasswordRequirement {
   id: "length" | "lowercase" | "uppercase" | "digit" | "symbol";
+  /** Télégraphique : la liste est un rappel discret, pas une consigne. */
   label: string;
   met: boolean;
 }
@@ -10,27 +11,27 @@ export function getPasswordRequirements(password: string): PasswordRequirement[]
   return [
     {
       id: "length",
-      label: `Au moins ${PASSWORD_MIN_LENGTH} caractères`,
+      label: `${PASSWORD_MIN_LENGTH} caractères`,
       met: password.length >= PASSWORD_MIN_LENGTH,
     },
     {
       id: "lowercase",
-      label: "Au moins une lettre minuscule",
+      label: "minuscule",
       met: /[a-z]/.test(password),
     },
     {
       id: "uppercase",
-      label: "Au moins une lettre majuscule",
+      label: "majuscule",
       met: /[A-Z]/.test(password),
     },
     {
       id: "digit",
-      label: "Au moins un chiffre",
+      label: "chiffre",
       met: /\d/.test(password),
     },
     {
       id: "symbol",
-      label: "Au moins un symbole",
+      label: "symbole",
       met: /[^A-Za-z0-9]/.test(password),
     },
   ];
