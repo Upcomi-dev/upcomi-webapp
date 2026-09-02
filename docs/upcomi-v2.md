@@ -295,3 +295,86 @@ Décisions prises :
 **Reporté** : le bouton « Me prévenir » (rappel mail à l'ouverture), qui exige
 une table `registration_reminders`. C'est le bénéfice central de la page selon
 le proto — à traiter dans sa propre brique juste après.
+
+---
+
+## 7. Brique — `feat/fiche-evenement-v2` (dates clés + mesures d'inclusion + UI)
+
+Les trois lots T1 restants de la fiche évènement (`feat/dates-cles`,
+`feat/mesures-inclusion`, et l'évolution UI « au fil de l'eau ») sont traités
+dans **une seule branche** : ils réécrivent tous les trois
+`src/app/event/[slug]/page.tsx`: les séparer garantissait des conflits sur le
+même fichier sans rien découpler.
+
+Hors périmètre, comme convenu : le bloc « qui est intéressé » (avatars,
+compteur d'intéressé·es, feuille de personnes) et le partage de récit — une
+branche plus tard. Le composant `FavoriteCTA` existant tient la place.
+
+### Ce qui est livré
+
+**Dates clés** — bloc « Pour se préparer » : timeline verticale ouverture des
+inscriptions → clôture → départ → arrivée, avec le lieu de départ et la gare la
+plus proche rattachés au point « Départ ».
+
+- `src/lib/utils/event-key-dates.ts` (construction des points, lien Google
+  Agenda), `src/components/events/event-key-dates.tsx`,
+  `src/components/events/key-date-reminder-button.tsx`.
+- **Aucune migration** : tout vient de `dateInscription`,
+  `clotureInscription`, `dateEvent`, `dateFin`, `villeDepart`, `distance`.
+- La **clôture des inscriptions** est un ajout au proto (qui ne la modélise
+  pas) : la colonne existe et c'est une date de préparation.
+- « M'envoyer un rappel » est un **habillage du favori**, comme dans le proto :
+  pas de table `registration_reminders`, pas d'envoi d'e-mail. Le vrai rappel
+  reste la brique reportée du calendrier des inscriptions.
+- Le rythme « X km par jour » n'est affiché que si `events.distance` porte
+  **une seule** valeur : « 250 / 500 / 800 km » décrit trois parcours au choix,
+  aucun ne vaut pour l'évènement.
+
+**Accès en train** — le proto porte l'information par un booléen saisi à la
+main (`trainAccess`) et un référentiel de gares. Côté webapp, ni l'un ni
+l'autre : c'est la **distance à la gare la plus proche** qui en tient lieu,
+calculée au rendu serveur depuis `events.latitude/longitude`.
+
+- `src/lib/data/gares.json` (extrait statique de data.sncf.com, dédoublonné par
+  (nom, commune), 2962 gares, ~200 ko) et `src/lib/utils/stations.ts`.
+- Rien ne s'affiche au-delà de **30 km** (`MAX_STATION_DISTANCE_KM`) : plus
+  loin, ce n'est plus une information d'accès, et le référentiel est français.
+
+**Mesures d'inclusion** — bloc « Ce que tu peux attendre, en tant que femme ou
+personne de minorité de genre », en sous-partie de « Qui organise ». Toujours
+affiché, même vide.
+
+- Migration `20260902101500_inclusion_measures.sql` : `inclusion_measures`
+  (catalogue, 20 mesures seedées depuis le guide inclusivité) et
+  `event_inclusion_measures` (liaison). La clé étrangère est portée par la
+  table enfant : `events` n'est pas modifiée.
+- **Lecture publique** (`grant select to anon, authenticated` + policy
+  `using (true)`) : la fiche est rendue avec la clé publique et consultable
+  sans compte. Écriture réservée aux admins.
+- **Le rattachement des mesures se fait en SQL** pour l'instant — pas d'écran
+  de saisie dans `/admin`. Tant que rien n'est saisi, le bloc affiche son état
+  vide, qui est une information en soi.
+- Le nom d'icône vient de la base mais est résolu par un **dictionnaire
+  explicite** côté code (`MEASURE_ICONS`) : jamais d'import dynamique par clé.
+- « Signaler une mesure » est un `mailto:` vers contact@upcomi.cc, comme dans
+  le proto — pas de formulaire.
+
+**Évolution UI de la fiche** — restructuration fidèle au proto :
+
+- Titre **dans** le hero, avec les repères (durée, distance · dénivelé, type de
+  vélo) et le badge mixité juste au-dessus, dans le flux.
+- Ligne de synthèse à icônes sous l'image : type · date · lieu · prix. Favori
+  et inscription en sont retirés (doublon avec le bloc d'intérêt juste en
+  dessous et avec le bloc d'inscription).
+- Ordre de lecture : synthèse → intérêt → description → parcours → dates clés →
+  qui organise (+ mesures + leurs autres évènements).
+- Le prix d'un parcours **mène à l'inscription** quand `events.URL` existe.
+- La carte « Détails » de la colonne de droite est supprimée : elle répétait la
+  ligne de synthèse. La colonne ne porte plus que le bloc d'inscription.
+
+### Checklist de mise en prod
+
+1. Appliquer `supabase/migrations/20260902101500_inclusion_measures.sql`.
+2. Merger le code (aucun feature flag : les blocs sont visibles au déploiement,
+   et dégradent proprement — timeline en « --/-- », mesures en état vide).
+3. Saisir les rattachements `event_inclusion_measures` évènement par évènement.
