@@ -131,7 +131,7 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
           <button
             type="button"
             onClick={() => setRoutes((current) => [...current, createRoute(nextRouteId.current++)])}
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-coral/20 bg-white px-3.5 text-[12px] font-semibold text-coral hover:bg-coral/5"
+            className="btn-secondary btn-small"
           >
             <Plus className="h-4 w-4" /> Ajouter un parcours
           </button>
@@ -178,7 +178,7 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
       {error ? <div className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">{error}</div> : null}
 
       <div className="flex justify-end">
-        <button type="submit" disabled={isPending} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-coral px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-coral-dark disabled:cursor-not-allowed disabled:opacity-70">
+        <button type="submit" disabled={isPending} className="btn-primary">
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           Envoyer la proposition
         </button>

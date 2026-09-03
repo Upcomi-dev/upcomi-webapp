@@ -73,7 +73,7 @@ export function EventKeyDates({ eventId, dates }: EventKeyDatesProps) {
                       href={date.calendarUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-outline-coral"
+                      className="btn-secondary btn-small"
                     >
                       <CalendarPlus className="h-3.5 w-3.5" strokeWidth={1.8} />
                       Ajouter à mon calendrier

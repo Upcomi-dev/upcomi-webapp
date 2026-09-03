@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { ExternalLink, Heart } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
@@ -15,7 +15,6 @@ interface EventActionsProps {
   registrationUrl: string | null;
   eventType: string | null;
   organizer: string | null;
-  initialFavCount: number;
   /**
    * `row` en mobile (haut de fiche et barre collante), `column` dans la
    * colonne de droite en desktop, où la largeur ne permet pas deux boutons
@@ -26,9 +25,6 @@ interface EventActionsProps {
   source: string;
   className?: string;
 }
-
-const BUTTON_BASE =
-  "inline-flex h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-[14px] font-semibold transition-colors";
 
 /**
  * Les deux actions de la fiche : s'inscrire, et dire que l'évènement
@@ -46,7 +42,6 @@ export function EventActions({
   registrationUrl,
   eventType,
   organizer,
-  initialFavCount,
   orientation = "row",
   source,
   className,
@@ -56,21 +51,6 @@ export function EventActions({
   const { openAuthModal } = useAuthModal();
   const flyingHeart = useFlyingHeart();
   const favorited = isFavorite(eventId);
-
-  // Le compteur rendu côté serveur inclut déjà l'utilisatrice si elle avait
-  // mis l'évènement en favori : on retient son état au premier rendu prêt
-  // pour ne pas la compter deux fois en basculant.
-  const wasInitiallyFavorited = useRef<boolean | null>(null);
-  /* eslint-disable react-hooks/refs */
-  if (ready && wasInitiallyFavorited.current === null) {
-    wasInitiallyFavorited.current = favorited;
-  }
-  const alreadyCounted = wasInitiallyFavorited.current === true;
-  /* eslint-enable react-hooks/refs */
-
-  let displayCount = initialFavCount;
-  if (favorited && !alreadyCounted) displayCount = initialFavCount + 1;
-  if (!favorited && alreadyCounted) displayCount = initialFavCount - 1;
 
   const handleInterest = useCallback(
     async (e: React.MouseEvent) => {
@@ -110,30 +90,14 @@ export function EventActions({
   );
 
   return (
-    <div className={cn("flex flex-col gap-3", className)}>
-      {displayCount > 0 && (
-        <p
-          className={cn(
-            "text-[14px] font-semibold text-foreground/60",
-            orientation === "column" && "text-center"
-          )}
-        >
-          {displayCount} personne{displayCount > 1 ? "s" : ""} intéressée
-          {displayCount > 1 ? "s" : ""}
-        </p>
-      )}
-
-      <div className={cn("flex gap-2.5", orientation === "column" && "flex-col")}>
+    <div className={cn("flex gap-2.5", orientation === "column" && "flex-col", className)}>
         {registrationUrl && (
           <ExternalRegistrationLink
             href={registrationUrl}
             eventId={eventId}
             eventType={eventType}
             organizer={organizer}
-            className={cn(
-              BUTTON_BASE,
-              "border border-coral/35 bg-white text-coral hover:bg-coral/6"
-            )}
+            className="btn-secondary flex-1 px-4"
           >
             M&apos;inscrire
             <ExternalLink className="h-4 w-4" strokeWidth={1.8} />
@@ -142,16 +106,12 @@ export function EventActions({
         <button
           type="button"
           onClick={handleInterest}
-          className={cn(
-            BUTTON_BASE,
-            "text-white shadow-[0_2px_12px_rgba(235,95,59,0.25)]",
-            favorited ? "bg-coral-dark" : "bg-coral hover:bg-coral-dark"
-          )}
+          className="btn-primary flex-1 px-4"
+          data-active={favorited}
         >
           <Heart className="h-4 w-4" strokeWidth={1.8} fill={favorited ? "currentColor" : "none"} />
           {favorited ? "Intéressé·e" : "Ça m'intéresse"}
         </button>
-      </div>
     </div>
   );
 }

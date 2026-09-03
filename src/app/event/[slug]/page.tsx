@@ -127,17 +127,14 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = event.slug;
   const canonicalUrl = getEventUrl(eventSlug);
-  const [relatedEvents, favCountResult, inclusionMeasures] = await Promise.all([
+  // Le compteur d'intéressé·es n'est plus lu ici : il fait partie du bloc
+  // « qui est intéressé », traité dans sa propre brique.
+  const [relatedEvents, inclusionMeasures] = await Promise.all([
     event.organisateur
       ? fetchOrganizerEvents(supabase, event.organisateur, event.id)
       : Promise.resolve([]),
-    supabase
-      .from("favourite_events")
-      .select("*", { count: "exact", head: true })
-      .eq("event", event.id),
     fetchEventInclusionMeasures(supabase, event.id),
   ]);
-  const favCount = favCountResult.count ?? 0;
 
   // Gare la plus proche du départ, calculée au rendu depuis le référentiel
   // embarqué : venir sans voiture est un critère de décision relevé en test.
@@ -237,7 +234,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
         {/* Back */}
         <Link
           href={returnTo}
-          className="glass mb-5 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] text-foreground/55 transition-all hover:bg-white/80 hover:text-coral"
+          className="mb-2 inline-flex items-center gap-1.5 py-1 text-[13px] text-foreground/55 transition-colors hover:text-foreground"
         >
           ← {backLabel}
         </Link>
@@ -334,7 +331,6 @@ export default async function EventPage({ params, searchParams }: PageProps) {
           registrationUrl={event.URL}
           eventType={event.type_event}
           organizer={event.organisateur}
-          initialFavCount={favCount}
           source="detail_top"
           className="mb-6 border-b border-black/8 pb-5 lg:hidden"
         />
@@ -361,7 +357,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 <h2 className="mb-3 text-[15px] font-semibold text-foreground">
                   Parcours disponibles
                 </h2>
-                <div className="space-y-2">
+                <div className="max-w-[450px] space-y-2.5">
                   {sousEvents.map((se) => (
                     <div
                       key={se.sousEventID}
@@ -435,7 +431,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                       href={event.URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-outline-coral flex-none"
+                      className="btn-secondary btn-small flex-none"
                     >
                       Voir le site
                       <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.8} />
@@ -503,7 +499,6 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                   registrationUrl={event.URL}
                   eventType={event.type_event}
                   organizer={event.organisateur}
-                  initialFavCount={favCount}
                   orientation="column"
                   source="detail_sidebar"
                 />
@@ -531,7 +526,6 @@ export default async function EventPage({ params, searchParams }: PageProps) {
               registrationUrl={event.URL}
               eventType={event.type_event}
               organizer={event.organisateur}
-              initialFavCount={favCount}
               source="detail_sticky"
             />
           </div>

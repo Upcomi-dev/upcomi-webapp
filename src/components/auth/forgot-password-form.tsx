@@ -100,7 +100,7 @@ export function ForgotPasswordForm({
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-[var(--radius-sm)] bg-coral py-3 text-sm font-semibold text-white shadow-[0_4px_20px_rgba(255,94,65,0.35)] transition-all hover:bg-coral-dark hover:shadow-[0_6px_24px_rgba(255,94,65,0.45)] disabled:opacity-50"
+          className="btn-primary w-full"
         >
           {loading ? "Envoi..." : "Envoyer le lien"}
         </button>

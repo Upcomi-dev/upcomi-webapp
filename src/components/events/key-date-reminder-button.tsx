@@ -56,7 +56,7 @@ export function KeyDateReminderButton({ eventId }: KeyDateReminderButtonProps) {
     <button
       type="button"
       onClick={handleClick}
-      className="btn-outline-coral"
+      className="btn-secondary btn-small"
       data-active={favorited}
     >
       {favorited ? (

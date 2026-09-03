@@ -189,37 +189,97 @@
     -webkit-backdrop-filter: blur(36px) saturate(190%);
     border-left: 1px solid rgba(255, 255, 255, 0.65);
   }
-  /* Bouton secondaire de la fiche évènement — « M'envoyer un rappel »,
-     « Ajouter à mon calendrier », « Voir le site ». Reprend le
-     `.btn-secondary.small` du prototype : fond blanc, texte et liseré corail,
-     graisse normale. Il ne doit jamais rivaliser avec le CTA d'inscription,
-     mais reste une action, pas un libellé gris. */
-  .btn-outline-coral {
+  /* ---------- Les trois seuls types de bouton de l'app ----------
+     Repris tels quels du prototype : un primaire plein, un secondaire à
+     liseré, un tertiaire en texte souligné. Avant, chaque écran avait sa
+     propre recette — rayons, hauteurs, tailles de texte et capitales
+     différentes d'un formulaire à l'autre.
+
+     S'écrivent en une classe (`btn-primary`), avec `btn-small` en modificateur
+     pour les actions secondaires posées dans un contenu. La largeur reste au
+     contexte : `w-full` ou `flex-1` selon le cas. */
+  .btn-primary,
+  .btn-secondary,
+  .btn-tertiary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    height: 32px;
-    padding: 0 14px;
+    gap: 8px;
+    height: 44px;
+    padding: 0 22px;
     border-radius: 999px;
-    border: 1px solid rgba(235, 95, 59, 0.35);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+  .btn-primary:disabled,
+  .btn-secondary:disabled,
+  .btn-tertiary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--coral);
+    border: 1px solid transparent;
+    color: #fff;
+  }
+  .btn-primary:not(:disabled):hover {
+    background: var(--coral-dark);
+  }
+  /* État « déjà fait » (intéressé·e) : reste plein, juste assombri — pas de
+     variante de couleur. */
+  .btn-primary[data-active="true"] {
+    background: var(--coral-dark);
+  }
+
+  .btn-secondary {
     background: #fff;
     color: var(--coral);
-    font-size: 13px;
+    border: 1px solid rgba(235, 95, 59, 0.35);
     font-weight: 400;
-    white-space: nowrap;
-    transition: background-color 150ms ease, border-color 150ms ease;
   }
-  .btn-outline-coral:hover {
+  .btn-secondary:not(:disabled):hover {
     background: rgba(235, 95, 59, 0.06);
     border-color: rgba(235, 95, 59, 0.55);
   }
-  /* État « déjà fait » (rappel armé) : léger fond corail et liseré plein —
-     l'état atteint sans passer au bouton primaire. */
-  .btn-outline-coral[data-active="true"] {
+  /* État « déjà fait » (rappel armé, suivi) : léger fond et liseré plein —
+     l'état atteint, sans passer au bouton primaire. */
+  .btn-secondary[data-active="true"] {
     background: rgba(235, 95, 59, 0.12);
     border-color: var(--coral);
   }
+
+  /* Pour les actions qui ne doivent pas rivaliser avec un bouton plein
+     (« Annuler », « Non merci »). */
+  .btn-tertiary {
+    background: none;
+    border: none;
+    color: var(--muted-foreground);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 0 6px;
+  }
+  .btn-tertiary:not(:disabled):hover {
+    color: var(--foreground);
+  }
+
+  .btn-small {
+    height: 32px;
+    padding: 0 14px;
+    font-size: 13px;
+    gap: 6px;
+  }
+  .btn-tertiary.btn-small {
+    padding: 0 4px;
+  }
+
   .text-balance {
     text-wrap: balance;
   }

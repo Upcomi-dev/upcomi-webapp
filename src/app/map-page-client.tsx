@@ -858,7 +858,7 @@ function MapPageContent({
                   <button
                     type="button"
                     onClick={() => setMobileFiltersOpen(false)}
-                    className="flex-1 rounded-full bg-coral px-5 py-3 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(235,95,59,0.28)]"
+                    className="btn-primary flex-1"
                   >
                     Afficher la sélection
                   </button>

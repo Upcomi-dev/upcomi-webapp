@@ -448,7 +448,7 @@ export function EventDetailPanel({
                   organizer: fullEvent.organisateur,
                 });
               }}
-              className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white shadow-[0_2px_12px_rgba(255,94,65,0.25)] transition-all hover:bg-coral-dark hover:shadow-[0_4px_16px_rgba(255,94,65,0.35)]"
+              className="btn-primary flex-shrink-0"
             >
               S&apos;inscrire →
             </a>

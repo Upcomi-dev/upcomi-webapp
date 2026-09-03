@@ -484,6 +484,10 @@ contre `localhost:8080`), mobile et desktop :
   vert — c'est un repère parmi les autres, pas une décoration à part. La carte
   d'évènement, dont les repères sont plus petits, passe sa propre taille.
 - Description : 14 → **15 px**.
+- Lien retour : c'était une pastille de verre, c'est un simple lien texte
+  (13 px, `--muted-foreground`), comme le proto.
+- Cartes de parcours : `max-width: 450px`, comme le proto — une ligne
+  « nom + prix » n'a pas besoin de toute la colonne.
 - Cartes : mois en toutes lettres (« 12 septembre », pas « 12 sept. »), comme
   le proto — la ligne « ville · date » est tronquée si besoin.
 
@@ -508,8 +512,30 @@ intéressé » restent hors périmètre.
 Le prix ne figure plus dans le bloc d'action : il est dans la ligne de
 synthèse, comme dans le proto.
 
+### Les trois seuls types de bouton
+
+Chaque écran avait sa propre recette de bouton : rayons, hauteurs, tailles de
+texte et capitales différentes d'un formulaire à l'autre, et le `Button`
+shadcn de `components/ui` n'était utilisé que par `dialog.tsx`.
+
+`globals.css` porte désormais les trois types du proto, sous leurs noms
+d'origine : `.btn-primary` (corail plein), `.btn-secondary` (blanc à liseré
+corail) et `.btn-tertiary` (texte souligné), plus `.btn-small` en
+modificateur. Une seule classe suffit ; la largeur reste au contexte
+(`w-full`, `flex-1`).
+
+Convertis : les actions de la fiche, les soumissions des formulaires
+d'authentification, le dialogue de feedback, « Confirmer » et « Effacer tout »
+des filtres, la proposition d'évènement, la popin de carte et le panneau de
+détail. **Pas** les pastilles de filtre, les bascules et les boutons-icônes :
+c'est une autre famille, qui a ses propres règles dans le proto (`.pill`,
+`.tag-cell`, `.round-btn`).
+
 ### Écarts assumés
 
+- **Compteur d'intéressé·es** : retiré de la fiche — il relève du bloc « qui
+  est intéressé ». La requête de comptage sur `favourite_events` a disparu avec
+  lui.
 - **Tag `bike_type` sur le hero** : le proto n'a que mixité + durée +
   distance · dénivelé. Le type de vélo est une donnée que la webapp possède et
   qui n'apparaîtrait plus nulle part sur la fiche autrement ; gardé en 3ᵉ tag.
