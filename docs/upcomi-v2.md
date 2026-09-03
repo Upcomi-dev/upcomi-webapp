@@ -459,6 +459,47 @@ il n'a pas été demandé.
 > `src/components/layout/mobile-bottom-sheet.tsx` n'est référencé nulle part.
 > Il a été mis à jour par cohérence, mais c'est du code mort à supprimer.
 
+### Écarts relevés en comparant au proto, et corrigés
+
+Comparaison faite sur les styles calculés plutôt qu'à l'œil (`localhost:3000`
+contre `localhost:8080`), mobile et desktop :
+
+- **Desktop, structure** : dans le proto le hero et la ligne de synthèse sont
+  **pleine largeur**, au-dessus des deux colonnes ; seul le contenu en dessous
+  se partage entre la colonne de lecture et le bloc d'inscription. La fiche
+  mettait le hero *dans* la colonne de gauche, qui le réduisait à 540 px.
+  Corrigé, et les largeurs sont désormais celles du proto : conteneur 1040,
+  colonnes 680 / 280, gouttière 32.
+- Titre du hero : `font-weight` 400 → **700**.
+- Titres de section (« Pour se préparer », « Qui organise ? ») : 20 → **22 px**.
+- Pastille de la timeline : ocre `--orange` → **corail**, c'est-à-dire
+  l'`--upcomi-orange` du proto (`#eb5f3b`, le `--coral` de la webapp).
+- « M'envoyer un rappel », « Ajouter à mon calendrier » et « Voir le site »
+  étaient gris : ce sont des **actions**, pas des libellés. Elles reprennent le
+  `.btn-secondary.small` du proto, factorisé dans l'utilitaire
+  `.btn-outline-coral` (`globals.css`).
+- Liseré du bloc mesures : `#315643` → **`#4e9c6b`**, le vert inclusion du proto.
+- Description : 14 → **15 px**.
+- Cartes : mois en toutes lettres (« 12 septembre », pas « 12 sept. »), comme
+  le proto — la ligne « ville · date » est tronquée si besoin.
+
+### Écarts assumés
+
+- **Badge mixité** : le proto le veut vert vif plein, en capitales, 11 px/700.
+  Le composant `MixiteBadge` existant est vert foncé translucide en casse
+  normale. La consigne est de garder le composant existant quand la maquette le
+  contredit — donc inchangé, mais c'est un écart visible.
+- **Tag `bike_type` sur le hero** : le proto n'a que mixité + durée +
+  distance · dénivelé. Le type de vélo est une donnée que la webapp possède et
+  qui n'apparaîtrait plus nulle part sur la fiche autrement ; gardé en 3ᵉ tag.
+- **Colonne de droite** : le proto y met les avatars, le compteur
+  d'intéressé·es et deux boutons (« M'inscrire » secondaire, « Ça m'intéresse »
+  primaire). La webapp n'a que le prix et « S'inscrire », le reste relevant du
+  bloc « qui est intéressé » hors périmètre. À reprendre avec lui.
+- **Organisateur** : le proto affiche une description, Instagram et Strava.
+  `events` ne porte aucun de ces champs — ils viendront avec
+  `feat/organisateur-enrichi`, qui dépend de `feat/socle-data`.
+
 ### Checklist de mise en prod
 
 1. Appliquer `supabase/migrations/20260902101500_inclusion_measures.sql`.

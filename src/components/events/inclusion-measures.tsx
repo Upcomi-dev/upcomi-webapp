@@ -91,7 +91,7 @@ export function InclusionMeasures({ eventName, measures }: InclusionMeasuresProp
   const collapsible = measures.length > INCLUSION_MEASURES_COLLAPSE_AT;
 
   return (
-    <section className="mt-7 border-l-4 border-[#315643] pl-4">
+    <section className="mt-7 border-l-4 border-[#4e9c6b] pl-4">
       <h3 className="mb-3.5 font-serif text-[20px] leading-tight text-foreground">
         Ce que tu peux attendre, en tant que femme ou personne de minorité de genre
       </h3>
@@ -178,7 +178,7 @@ function MeasureDetail({ measure }: { measure: InclusionMeasure }) {
   const Icon = MEASURE_ICONS[measure.icon] ?? ShieldCheck;
   return (
     <>
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#315643]/12 text-[#315643]">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#4e9c6b]/15 text-[#3d7a53]">
         <Icon className="h-5 w-5" strokeWidth={1.8} />
       </div>
       <DialogTitle className="mt-3 mb-2 font-serif text-[19px] leading-tight text-foreground">

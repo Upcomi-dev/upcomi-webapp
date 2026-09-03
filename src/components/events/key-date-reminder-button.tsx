@@ -56,20 +56,17 @@ export function KeyDateReminderButton({ eventId }: KeyDateReminderButtonProps) {
     <button
       type="button"
       onClick={handleClick}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-        favorited
-          ? "border-coral/40 bg-coral/10 text-coral"
-          : "border-foreground/12 bg-white/58 text-foreground/60 hover:border-coral/40 hover:text-coral"
-      }`}
+      className="btn-outline-coral"
+      data-active={favorited}
     >
       {favorited ? (
         <>
-          <Check className="h-3 w-3" strokeWidth={2} />
+          <Check className="h-3.5 w-3.5" strokeWidth={2} />
           Tu seras prévenu·e
         </>
       ) : (
         <>
-          <Mail className="h-3 w-3" strokeWidth={1.8} />
+          <Mail className="h-3.5 w-3.5" strokeWidth={1.8} />
           M&apos;envoyer un rappel
         </>
       )}

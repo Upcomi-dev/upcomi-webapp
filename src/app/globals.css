@@ -189,6 +189,37 @@
     -webkit-backdrop-filter: blur(36px) saturate(190%);
     border-left: 1px solid rgba(255, 255, 255, 0.65);
   }
+  /* Bouton secondaire de la fiche évènement — « M'envoyer un rappel »,
+     « Ajouter à mon calendrier », « Voir le site ». Reprend le
+     `.btn-secondary.small` du prototype : fond blanc, texte et liseré corail,
+     graisse normale. Il ne doit jamais rivaliser avec le CTA d'inscription,
+     mais reste une action, pas un libellé gris. */
+  .btn-outline-coral {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(235, 95, 59, 0.35);
+    background: #fff;
+    color: var(--coral);
+    font-size: 13px;
+    font-weight: 400;
+    white-space: nowrap;
+    transition: background-color 150ms ease, border-color 150ms ease;
+  }
+  .btn-outline-coral:hover {
+    background: rgba(235, 95, 59, 0.06);
+    border-color: rgba(235, 95, 59, 0.55);
+  }
+  /* État « déjà fait » (rappel armé) : léger fond corail et liseré plein —
+     l'état atteint sans passer au bouton primaire. */
+  .btn-outline-coral[data-active="true"] {
+    background: rgba(235, 95, 59, 0.12);
+    border-color: var(--coral);
+  }
   .text-balance {
     text-wrap: balance;
   }

@@ -24,7 +24,7 @@ export function EventKeyDates({ eventId, dates }: EventKeyDatesProps) {
       className="glass mb-6 rounded-[var(--radius)] p-5"
       style={{ boxShadow: "var(--shadow-md)" }}
     >
-      <h2 className="mb-4 font-serif text-[20px] leading-tight text-foreground">
+      <h2 className="mb-4 font-serif text-[22px] leading-tight text-foreground">
         Pour se préparer
       </h2>
       <ol className="flex flex-col">
@@ -45,7 +45,7 @@ export function EventKeyDates({ eventId, dates }: EventKeyDatesProps) {
             <span
               aria-hidden
               className={`relative z-[1] mt-0.5 h-3.5 w-3.5 flex-none rounded-full border-[3px] border-[var(--background)] shadow-[0_0_0_1px_rgba(36,23,15,0.12)] ${
-                date.dateKey ? "bg-orange" : "bg-foreground/20"
+                date.dateKey ? "bg-coral" : "bg-foreground/20"
               }`}
             />
             <div className="min-w-0 flex-1">
@@ -73,9 +73,9 @@ export function EventKeyDates({ eventId, dates }: EventKeyDatesProps) {
                       href={date.calendarUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-foreground/12 bg-white/58 px-3 py-1.5 text-[12px] font-semibold text-foreground/60 transition-colors hover:border-coral/40 hover:text-coral"
+                      className="btn-outline-coral"
                     >
-                      <CalendarPlus className="h-3 w-3" strokeWidth={1.8} />
+                      <CalendarPlus className="h-3.5 w-3.5" strokeWidth={1.8} />
                       Ajouter à mon calendrier
                     </a>
                   )}

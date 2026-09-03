@@ -230,7 +230,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
       <TopNav />
 
       <div
-        className={`mx-auto w-full max-w-[920px] flex-1 px-4 pt-8 md:px-6 ${
+        className={`mx-auto w-full max-w-[1040px] flex-1 px-4 pt-8 md:px-6 ${
           event.URL ? "pb-36 lg:pb-8" : "pb-8"
         }`}
       >
@@ -242,104 +242,106 @@ export default async function EventPage({ params, searchParams }: PageProps) {
           ← {backLabel}
         </Link>
 
-        <div className="flex flex-col gap-8 lg:flex-row">
-          {/* Left column */}
-          <div className="min-w-0 flex-1">
-            {/* Hero — le titre est dans l'image, les repères (durée, distance,
-                dénivelé) juste au-dessus, dans le flux : posés à un offset
-                fixe, ils finissaient par chevaucher un titre sur deux lignes. */}
+        {/* Hero — le titre est dans l'image, les repères (durée, distance,
+            dénivelé) juste au-dessus, dans le flux : posés à un offset
+            fixe, ils finissaient par chevaucher un titre sur deux lignes. */}
+        <div
+          className="relative mb-5 flex h-[320px] flex-col justify-end overflow-hidden rounded-[var(--radius)]"
+          style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.14)" }}
+        >
+          {eventImage ? (
+            <Image
+              src={eventImage.src}
+              alt={event.nomEvent || "Événement"}
+              fill
+              unoptimized={eventImage.unoptimized}
+              className="object-cover"
+              priority
+              sizes="(max-width: 768px) 100vw, 600px"
+            />
+          ) : (
             <div
-              className="relative mb-5 flex h-[320px] flex-col justify-end overflow-hidden rounded-[var(--radius)]"
-              style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.14)" }}
-            >
-              {eventImage ? (
-                <Image
-                  src={eventImage.src}
-                  alt={event.nomEvent || "Événement"}
-                  fill
-                  unoptimized={eventImage.unoptimized}
-                  className="object-cover"
-                  priority
-                  sizes="(max-width: 768px) 100vw, 600px"
-                />
-              ) : (
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background: `linear-gradient(150deg, ${typeColor} 0%, ${typeColor}aa 45%, var(--violet) 100%)`,
-                  }}
-                />
-              )}
-              <div className="absolute inset-0 z-[1] bg-[linear-gradient(to_bottom,rgba(0,0,0,0)_40%,rgba(0,0,0,0.75)_100%)]" />
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(150deg, ${typeColor} 0%, ${typeColor}aa 45%, var(--violet) 100%)`,
+              }}
+            />
+          )}
+          <div className="absolute inset-0 z-[1] bg-[linear-gradient(to_bottom,rgba(0,0,0,0)_40%,rgba(0,0,0,0.75)_100%)]" />
 
-              <div className="relative z-[2] flex flex-wrap items-center gap-2 px-5 pb-2.5">
-                {event.mint && <MixiteBadge />}
-                {heroFacts.map((fact) => (
-                  <span
-                    key={fact}
-                    className="rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-foreground"
-                  >
-                    {fact}
-                  </span>
-                ))}
-              </div>
-              <h1 className="relative z-[2] px-5 pb-5 font-serif text-[clamp(24px,5vw,40px)] leading-[1.15] text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.25)]">
-                {event.nomEvent || "Événement"}
-              </h1>
-            </div>
+          <div className="relative z-[2] flex flex-wrap items-center gap-2 px-5 pb-2.5">
+            {event.mint && <MixiteBadge />}
+            {heroFacts.map((fact) => (
+              <span
+                key={fact}
+                className="rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-foreground"
+              >
+                {fact}
+              </span>
+            ))}
+          </div>
+          <h1 className="relative z-[2] px-5 pb-5 font-serif text-[clamp(24px,5vw,40px)] font-bold leading-[1.15] text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.25)]">
+            {event.nomEvent || "Événement"}
+          </h1>
+        </div>
 
-            {/* Synthèse : type · date · lieu · prix. Le favori et l'inscription
-                ne figurent pas dans cette ligne — ils font doublon avec le bloc
-                d'intérêt juste en dessous et avec le bloc d'inscription
-                (barre collante en mobile, colonne de droite en desktop). */}
-            <div className="mb-3.5 flex flex-nowrap items-center justify-between gap-4">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-[18px] gap-y-1 text-sm font-bold text-foreground">
-                {event.type_event && (
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <Flag className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
-                    {event.type_event}
-                  </span>
-                )}
-                {formattedDate && (
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <Calendar className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
-                    {formattedDate}
-                    {formattedDateFin && ` — ${formattedDateFin}`}
-                  </span>
-                )}
-                {location && (
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <MapPin className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
-                    {location}
-                  </span>
-                )}
-                {minPriceLabel && (
-                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <Euro className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
-                    {minPriceLabel}
-                  </span>
-                )}
-              </div>
-              <div className="flex-none">
-                <ShareButton
-                  title={event.nomEvent || "Événement"}
-                  url={`/event/${eventSlug}`}
-                  eventId={event.id}
-                />
-              </div>
-            </div>
+        {/* Synthèse : type · date · lieu · prix. Le favori et l'inscription
+            ne figurent pas dans cette ligne — ils font doublon avec le bloc
+            d'intérêt juste en dessous et avec le bloc d'inscription
+            (barre collante en mobile, colonne de droite en desktop). */}
+        <div className="mb-3.5 flex flex-nowrap items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-[18px] gap-y-1 text-sm font-bold text-foreground">
+            {event.type_event && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <Flag className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
+                {event.type_event}
+              </span>
+            )}
+            {formattedDate && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <Calendar className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
+                {formattedDate}
+                {formattedDateFin && ` — ${formattedDateFin}`}
+              </span>
+            )}
+            {location && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <MapPin className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
+                {location}
+              </span>
+            )}
+            {minPriceLabel && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <Euro className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
+                {minPriceLabel}
+              </span>
+            )}
+          </div>
+          <div className="flex-none">
+            <ShareButton
+              title={event.nomEvent || "Événement"}
+              url={`/event/${eventSlug}`}
+              eventId={event.id}
+            />
+          </div>
+        </div>
 
-            {/* Intérêt porté à l'évènement, remonté en haut de fiche : le
-                rendre visible tout de suite plutôt que le cacher sous les
-                détails. */}
-            <div className="mb-6 border-b border-black/8 pb-4">
-              <FavoriteCTA eventId={event.id} initialCount={favCount} />
-            </div>
+        {/* Intérêt porté à l'évènement, remonté en haut de fiche : le
+            rendre visible tout de suite plutôt que le cacher sous les
+            détails. */}
+        <div className="mb-6 border-b border-black/8 pb-4">
+          <FavoriteCTA eventId={event.id} initialCount={favCount} />
+        </div>
 
+        {/* Le contenu suit un ordre de lecture linéaire ; seul le bloc
+            d'inscription en sort à partir du desktop, où il devient une
+            colonne de droite plutôt que la barre collante du mobile. */}
+        <div className="flex flex-col gap-8 lg:flex-row">
+          <div className="min-w-0 flex-1">
             {/* Description */}
             {event.description && (
               <div className="mb-6">
-                <p className="whitespace-pre-line text-sm leading-[1.75] text-foreground/55">
+                <p className="whitespace-pre-line text-[15px] leading-[1.75] text-foreground/55">
                   {event.description}
                 </p>
               </div>
@@ -408,7 +410,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 évènements de l'organisation sont des sous-parties de ce bloc,
                 pas des sections à part. */}
             <div className="glass mb-6 rounded-[var(--radius)] p-5">
-              <h2 className="mb-4 font-serif text-[20px] leading-tight text-foreground">
+              <h2 className="mb-4 font-serif text-[22px] leading-tight text-foreground">
                 Qui organise&nbsp;?
               </h2>
 
@@ -427,10 +429,10 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                       href={event.URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex flex-none items-center gap-1.5 rounded-full border border-foreground/10 px-3 py-1.5 text-xs font-medium text-foreground/55 transition-colors hover:border-coral/40 hover:text-coral"
+                      className="btn-outline-coral flex-none"
                     >
                       Voir le site
-                      <ExternalLink className="h-3 w-3" strokeWidth={1.8} />
+                      <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.8} />
                     </a>
                   )}
                 </div>
@@ -485,7 +487,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
               synthèse type/date/lieu/prix n'y est plus répétée : elle est déjà
               sous le titre. */}
           {event.URL && (
-            <div className="w-full flex-shrink-0 lg:w-[300px]">
+            <div className="w-full flex-shrink-0 lg:w-[280px]">
               <div className="lg:sticky lg:top-24">
                 <div className="hidden lg:block">
                   <div
@@ -522,7 +524,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
       {event.URL && (
         <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
           <div
-            className="mx-auto w-full max-w-[920px] px-4 pt-3 md:px-6"
+            className="mx-auto w-full max-w-[1040px] px-4 pt-3 md:px-6"
             style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
           >
             <div

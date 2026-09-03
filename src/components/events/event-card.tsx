@@ -86,13 +86,15 @@ export function EventCard({
   const hasImage = hasUsableImageValue && failedImageSrc !== displayImage;
   const imageLoaded = loadedImageSrc === displayImage;
 
+  // Mois en toutes lettres, comme sur la carte du prototype : la ligne
+  // « ville · date » est tronquée si besoin, mais elle se lit d'abord.
   const formattedStartDate = formatDateValue(dateEvent, "fr-FR", {
     day: "numeric",
-    month: "short",
+    month: "long",
   });
   const formattedEndDate = formatDateValue(dateFin, "fr-FR", {
     day: "numeric",
-    month: "short",
+    month: "long",
   });
   const formattedDate =
     formattedStartDate && formattedEndDate && getDateKey(dateEvent) !== getDateKey(dateFin)
