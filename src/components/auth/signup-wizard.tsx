@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
-import { CircleCheck, MailCheck } from "lucide-react";
+import { CircleCheck, Eye, EyeOff, MailCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/auth-context";
 import { trackAnalyticsEvent } from "@/lib/analytics";
@@ -113,7 +113,7 @@ export function SignupWizard({
     normalizeUserProfile(initialValues ?? EMPTY_PROFILE)
   );
   const [password, setPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(false);
   const [recommended, setRecommended] = useState<RecommendableEvent[]>([]);
   // Un seul récit est demandé, comme dans le proto : le premier événement
@@ -171,12 +171,6 @@ export function SignupWizard({
 
     if (!profile.firstName.trim() || !profile.lastName.trim()) {
       setError("Merci d'indiquer ton prénom et ton nom.");
-      return;
-    }
-
-    if (password !== passwordConfirmation) {
-      setError("Les mots de passe ne correspondent pas");
-      trackAnalyticsEvent("Signup Submitted", { success: false, reason: "password_mismatch" });
       return;
     }
 
@@ -457,32 +451,30 @@ export function SignupWizard({
           />
 
           <Field label="Mot de passe" htmlFor="signup-password">
-            <input
-              id="signup-password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              minLength={PASSWORD_MIN_LENGTH}
-              disabled={pending}
-              className={FIELD_INPUT_CLASS}
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                id="signup-password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                minLength={PASSWORD_MIN_LENGTH}
+                disabled={pending}
+                className={`${FIELD_INPUT_CLASS} pr-10`}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                disabled={pending}
+                aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                aria-pressed={showPassword}
+                className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center justify-center text-foreground/40 transition-colors hover:text-foreground disabled:opacity-50"
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
             <PasswordRequirements password={password} />
-          </Field>
-
-          <Field label="Confirmation" htmlFor="signup-password-confirmation">
-            <input
-              id="signup-password-confirmation"
-              type="password"
-              value={passwordConfirmation}
-              onChange={(event) => setPasswordConfirmation(event.target.value)}
-              required
-              minLength={PASSWORD_MIN_LENGTH}
-              disabled={pending}
-              className={FIELD_INPUT_CLASS}
-              placeholder="••••••••"
-            />
           </Field>
 
           <label
@@ -643,15 +635,14 @@ export function SignupWizard({
       {step === "confirmation" && (
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-3 text-center">
-            <CircleCheck className="size-7 text-foreground/72" />
+            <CircleCheck className="size-16 text-foreground/72" />
             <Muted>
-              Ton compte est bien créé
-              {profile.firstName ? `, ${profile.firstName}` : ""} — bienvenue dans la
-              communauté Upcomi !
+              Bienvenue dans la communauté Upcomi
+              {profile.firstName ? `, ${profile.firstName}` : ""} !
             </Muted>
           </div>
           <button type="button" onClick={handleDone} className={`${PRIMARY_BUTTON_CLASS} w-full`}>
-            C&apos;est parti →
+            Continuer →
           </button>
         </div>
       )}

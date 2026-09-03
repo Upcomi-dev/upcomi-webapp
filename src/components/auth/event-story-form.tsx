@@ -35,7 +35,7 @@ export function EventStoryForm({
         </span>
       </div>
 
-      <Field label="Lien vers ton récit" htmlFor="signup-story-url">
+      <Field label="Lien vers ton récit (facultatif)" htmlFor="signup-story-url">
         <input
           id="signup-story-url"
           type="url"

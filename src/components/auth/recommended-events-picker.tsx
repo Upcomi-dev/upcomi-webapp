@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Search, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -41,10 +42,38 @@ export function RecommendedEventsPicker({
   const selectedIds = useMemo(() => new Set(selected.map((event) => event.id)), [selected]);
   const requestIdRef = useRef(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [menuRect, setMenuRect] = useState<{ left: number; top: number; width: number } | null>(
+    null,
+  );
 
   useEffect(() => () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
   }, []);
+
+  const showMenu = query.trim().length >= MIN_QUERY_LENGTH;
+
+  // La popin ferme la liste avec `overflow-y-auto` : un dropdown positionné
+  // en `absolute` y serait rogné. On le "téléporte" dans le body et on le
+  // repositionne en `fixed` sur les coordonnées réelles du champ.
+  useLayoutEffect(() => {
+    if (!showMenu) return;
+
+    const updateRect = () => {
+      const anchor = anchorRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      setMenuRect({ left: rect.left, top: rect.bottom + 6, width: rect.width });
+    };
+
+    updateRect();
+    window.addEventListener("resize", updateRect);
+    window.addEventListener("scroll", updateRect, true);
+    return () => {
+      window.removeEventListener("resize", updateRect);
+      window.removeEventListener("scroll", updateRect, true);
+    };
+  }, [showMenu]);
 
   // La recherche est déclenchée par la frappe plutôt que par un effet : elle
   // réagit à une action, pas à un état à synchroniser.
@@ -128,7 +157,7 @@ export function RecommendedEventsPicker({
         </ul>
       )}
 
-      <div className="relative">
+      <div ref={anchorRef} className="relative">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-foreground/35" />
         <input
           type="text"
@@ -139,9 +168,21 @@ export function RecommendedEventsPicker({
           placeholder="Rechercher un événement…"
           className="w-full rounded-[var(--radius-sm)] border border-foreground/14 bg-white/80 py-2.5 pl-10 pr-3.5 text-sm text-foreground placeholder:text-foreground/35 transition-colors focus:border-orange/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/25 disabled:opacity-50"
         />
+      </div>
 
-        {query.trim().length >= MIN_QUERY_LENGTH && (
-          <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 max-h-[220px] overflow-y-auto rounded-[var(--radius-sm)] border border-white/60 bg-white/95 p-1 shadow-[0_12px_40px_rgba(40,24,11,0.14)] backdrop-blur-sm">
+      {showMenu &&
+        menuRect &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              left: menuRect.left,
+              top: menuRect.top,
+              width: menuRect.width,
+            }}
+            className="z-50 max-h-[220px] overflow-y-auto rounded-[var(--radius-sm)] border border-white/60 bg-white/95 p-1 shadow-[0_12px_40px_rgba(40,24,11,0.14)] backdrop-blur-sm"
+          >
             {visibleResults.length > 0 ? (
               visibleResults.map((event) => (
                 <button
@@ -161,9 +202,9 @@ export function RecommendedEventsPicker({
                 {searching ? "Recherche…" : "Aucun événement trouvé."}
               </p>
             )}
-          </div>
+          </div>,
+          document.body,
         )}
-      </div>
     </div>
   );
 }
