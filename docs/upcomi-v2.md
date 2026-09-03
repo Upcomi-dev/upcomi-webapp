@@ -327,8 +327,11 @@ webhooks :
 ~/Sites/upcomi-db-baseline/schema_prod_2026-09-01.sql
 ```
 
-Pour repartir d'une base neuve, l'appliquer à la main sur le stack local avant
-de jouer les migrations V2 :
+Le seed (`supabase/seed.sql`) n'est pas versionné non plus : il ne sert qu'au
+développement local et reste propre à chaque poste.
+
+Pour repartir d'une base neuve, appliquer la photo à la main sur le stack local
+avant de jouer les migrations V2 :
 
 ```bash
 psql postgresql://postgres:postgres@127.0.0.1:54322/postgres \
