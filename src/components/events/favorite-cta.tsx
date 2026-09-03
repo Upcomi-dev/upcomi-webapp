@@ -78,7 +78,7 @@ export function FavoriteCTA({ eventId, eventTitle, initialCount }: FavoriteCTAPr
   return (
     <div className="flex items-center gap-2.5">
       {displayCount > 0 && (
-        <p className="flex items-center gap-1.5 text-[12px] text-foreground/45">
+        <p className="flex items-center gap-1.5 text-[13px] text-foreground/45">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
           </svg>
@@ -87,7 +87,7 @@ export function FavoriteCTA({ eventId, eventTitle, initialCount }: FavoriteCTAPr
       )}
       <button
         onClick={handleClick}
-        className="ml-auto flex items-center gap-1.5 rounded-full border border-foreground/12 px-3 py-1.5 text-[12px] font-medium text-foreground/55 transition-all hover:border-[#d4caff] hover:bg-[#d4caff]/10 hover:text-foreground/80"
+        className="ml-auto flex items-center gap-1.5 rounded-full border border-foreground/12 px-3 py-1.5 text-[13px] font-medium text-foreground/55 transition-all hover:border-[#d4caff] hover:bg-[#d4caff]/10 hover:text-foreground/80"
         style={favorited ? { backgroundColor: "#d4caff", borderColor: "#d4caff", color: "#5b4a9e" } : undefined}
       >
         <svg

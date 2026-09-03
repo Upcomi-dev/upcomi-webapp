@@ -103,14 +103,14 @@ export function LoginForm({
               <button
                 type="button"
                 onClick={onSwitchToForgotPassword}
-                className="text-[11px] font-medium text-coral hover:text-coral-dark"
+                className="text-[13px] font-medium text-coral hover:text-coral-dark"
               >
                 Oublié ?
               </button>
             ) : (
               <Link
                 href="/forgot-password"
-                className="text-[11px] font-medium text-coral hover:text-coral-dark"
+                className="text-[13px] font-medium text-coral hover:text-coral-dark"
               >
                 Oublié ?
               </Link>
@@ -121,7 +121,7 @@ export function LoginForm({
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-[var(--radius-sm)] bg-coral py-3 text-sm font-semibold text-white shadow-[0_4px_20px_rgba(255,94,65,0.35)] transition-all hover:bg-coral-dark hover:shadow-[0_6px_24px_rgba(255,94,65,0.45)] disabled:opacity-50"
+          className="btn-primary w-full"
         >
           {loading ? "Connexion..." : "Se connecter"}
         </button>

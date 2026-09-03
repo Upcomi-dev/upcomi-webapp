@@ -394,7 +394,7 @@ export function InlineFilters({
                 {hasFilters && (
                   <button
                     onClick={clearAll}
-                    className="rounded-full border border-coral/20 bg-coral/8 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-coral transition-all hover:bg-coral/14"
+                    className="btn-secondary btn-small"
                   >
                     Effacer tout
                   </button>
@@ -464,7 +464,7 @@ export function InlineFilters({
                   onClick={() => setSingle("mint", "true")}
                 />
                 {isDrawerVariant ? (
-                  <p className="flex basis-full items-start gap-1.5 text-xs leading-snug text-foreground/48">
+                  <p className="flex basis-full items-start gap-1.5 text-[13px] leading-snug text-foreground/48">
                     <Info className="mt-0.5 h-3.5 w-3.5 flex-none text-coral" />
                     {MINT_FILTER_DESCRIPTION}
                   </p>
@@ -598,7 +598,7 @@ function ActionButton({
       {tooltip && (
         <>
           <Info className={cn("h-3.5 w-3.5", active ? "text-white/60" : "text-foreground/30")} />
-          <span className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 rounded-xl bg-foreground/90 px-3 py-2 text-xs font-normal normal-case tracking-normal leading-snug text-white opacity-0 shadow-lg transition-opacity group-hover/btn:opacity-100">
+          <span className="pointer-events-none absolute bottom-full right-0 mb-2 w-56 rounded-xl bg-foreground/90 px-3 py-2 text-[13px] font-normal normal-case tracking-normal leading-snug text-white opacity-0 shadow-lg transition-opacity group-hover/btn:opacity-100">
             {tooltip}
           </span>
         </>
@@ -606,7 +606,7 @@ function ActionButton({
       {badge ? (
         <span
           className={cn(
-            "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px]",
+            "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[13px]",
             active ? "bg-white/18 text-white" : "bg-coral/10 text-coral"
           )}
         >
@@ -663,7 +663,7 @@ function FilterPill({
     <button
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3.5 py-2 text-[11px] font-semibold transition-all",
+        "rounded-full border px-3.5 py-2 text-[13px] font-semibold transition-all",
         variant === "drawer"
           ? active
             ? "border-coral bg-coral text-white"
@@ -781,7 +781,7 @@ function DateFilterDialog({
             type="button"
             onClick={handleConfirm}
             disabled={!canConfirm}
-            className="flex-1 rounded-full bg-coral px-5 py-3 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(235,95,59,0.28)] transition-all hover:bg-coral/92 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral/45 disabled:cursor-not-allowed disabled:bg-foreground/18 disabled:text-foreground/38 disabled:shadow-none disabled:hover:bg-foreground/18"
+            className="btn-primary flex-1"
           >
             Confirmer
           </button>

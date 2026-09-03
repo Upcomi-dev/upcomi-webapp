@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { AppLogo } from "@/components/layout/app-logo";
 import { requireAdmin } from "@/lib/auth/assert-admin";
 import { getPrivatePageMetadata } from "@/lib/seo";
@@ -23,9 +24,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
           <Link
             href="/"
-            className="text-[13px] text-foreground/50 transition-colors hover:text-foreground"
+            className="inline-flex items-center gap-1 text-[13px] text-foreground/50 transition-colors hover:text-foreground"
           >
-            ← Retour à l&apos;app
+            <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            Retour à l&apos;app
           </Link>
         </div>
       </header>

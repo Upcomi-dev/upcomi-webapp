@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Event, SousEvent, MapEvent } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
 import { FavouriteButton } from "./favourite-button";
@@ -171,7 +172,8 @@ export function EventDetailPanel({
         onClick={onBack}
         className="glass inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] text-foreground/55 transition-all hover:bg-white/80 hover:text-coral"
       >
-        ← Retour
+        <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+        Retour
       </button>
 
       {/* Hero image */}
@@ -207,7 +209,7 @@ export function EventDetailPanel({
         <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-wrap gap-2">
           {event.type_event && (
             <span
-              className="rounded-full bg-white/88 px-3 py-1 text-xs font-semibold"
+              className="rounded-full bg-white/88 px-3 py-1 text-[13px] font-semibold"
               style={{ color: typeColor }}
             >
               {event.type_event}
@@ -215,7 +217,7 @@ export function EventDetailPanel({
           )}
           {event.bike_type && (
             <span
-              className="rounded-full px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm"
+              className="rounded-full px-3 py-1 text-[13px] font-semibold text-white backdrop-blur-sm"
               style={{ backgroundColor: `${typeColor}dd` }}
             >
               {event.bike_type}
@@ -280,9 +282,7 @@ export function EventDetailPanel({
       {/* Sous-events / Parcours */}
       {sousEvents.length > 0 && (
         <div>
-          <h2 className="mb-3 text-[14px] font-semibold text-foreground">
-            Parcours disponibles
-          </h2>
+
           <div className="space-y-2">
             {sousEvents.map((se) => (
               <div
@@ -293,7 +293,7 @@ export function EventDetailPanel({
                   <div className="text-[13px] font-semibold text-foreground">
                     {se.nom || "Parcours"}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[13px] text-foreground/55 md:text-[11px]">
+                  <div className="mt-0.5 flex items-center gap-2 text-[13px] text-foreground/55 md:text-[13px]">
                     {se.distance && <span>{se.distance} km</span>}
                     {se.elevation && (
                       <>
@@ -339,7 +339,7 @@ export function EventDetailPanel({
             Organisateur
           </h2>
           <div className="glass flex items-center gap-3 rounded-[var(--radius-sm)] p-3.5">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-orange/30 bg-orange/20 text-[12px] font-bold text-orange-dark">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-orange/30 bg-orange/20 text-[13px] font-bold text-orange-dark">
               {fullEvent!.organisateur!.substring(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1 text-[13px] font-semibold text-foreground">
@@ -350,7 +350,7 @@ export function EventDetailPanel({
                 href={fullEvent.URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-full border border-foreground/10 px-2.5 py-1 text-[11px] font-medium text-foreground/55 transition-colors hover:border-coral/40 hover:text-coral"
+                className="flex items-center gap-1.5 rounded-full border border-foreground/10 px-2.5 py-1 text-[13px] font-medium text-foreground/55 transition-colors hover:border-coral/40 hover:text-coral"
               >
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -386,7 +386,7 @@ export function EventDetailPanel({
                 className="flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-white/70 text-foreground/50 transition-all hover:bg-white hover:text-foreground disabled:cursor-default disabled:opacity-30"
                 aria-label="Précédent"
               >
-                ←
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -395,7 +395,7 @@ export function EventDetailPanel({
                 className="flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-white/70 text-foreground/50 transition-all hover:bg-white hover:text-foreground disabled:cursor-default disabled:opacity-30"
                 aria-label="Suivant"
               >
-                →
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -404,24 +404,27 @@ export function EventDetailPanel({
             ref={relatedScrollRef}
             className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
+            {/* Lignes compactes, comme sur la fiche évènement : ces
+                évènements ne doivent pas concurrencer celui qu'on consulte. */}
             {relatedEvents.map((relatedEvent) => (
-              <EventCard
-                key={relatedEvent.id}
-                id={relatedEvent.id}
-                slug={relatedEvent.slug}
-                nomEvent={relatedEvent.nomEvent}
-                dateEvent={relatedEvent.dateEvent}
-                dateFin={relatedEvent.dateFin}
-                image={relatedEvent.image}
-                bike_type={relatedEvent.bike_type}
-                type_event={relatedEvent.type_event}
-                villeDepart={relatedEvent.villeDepart}
-                paysDepart={relatedEvent.paysDepart}
-                distance={relatedEvent.distance}
-                mint={relatedEvent.mint}
-                variant="carousel"
-                onEventClick={(eventId) => onEventSelect?.(eventId, "related")}
-              />
+              <div key={relatedEvent.id} className="w-[240px] flex-none snap-start">
+                <EventCard
+                  id={relatedEvent.id}
+                  slug={relatedEvent.slug}
+                  nomEvent={relatedEvent.nomEvent}
+                  dateEvent={relatedEvent.dateEvent}
+                  dateFin={relatedEvent.dateFin}
+                  image={relatedEvent.image}
+                  bike_type={relatedEvent.bike_type}
+                  type_event={relatedEvent.type_event}
+                  villeDepart={relatedEvent.villeDepart}
+                  paysDepart={relatedEvent.paysDepart}
+                  distance={relatedEvent.distance}
+                  mint={relatedEvent.mint}
+                  variant="compact"
+                  onEventClick={(eventId) => onEventSelect?.(eventId, "related")}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -449,9 +452,10 @@ export function EventDetailPanel({
                   organizer: fullEvent.organisateur,
                 });
               }}
-              className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white shadow-[0_2px_12px_rgba(255,94,65,0.25)] transition-all hover:bg-coral-dark hover:shadow-[0_4px_16px_rgba(255,94,65,0.35)]"
+              className="btn-primary flex-shrink-0 inline-flex items-center gap-1"
             >
-              S&apos;inscrire →
+              S&apos;inscrire
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
             </a>
           </div>
         </div>
@@ -462,7 +466,7 @@ export function EventDetailPanel({
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between text-[12px]">
+    <div className="flex justify-between text-[13px]">
       <span className="text-foreground/55">{label}</span>
       <span className="font-semibold text-foreground">{value}</span>
     </div>

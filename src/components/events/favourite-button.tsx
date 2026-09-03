@@ -67,10 +67,8 @@ export function FavouriteButton({ eventId, eventTitle }: FavouriteButtonProps) {
   return (
     <button
       onClick={handleClick}
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
-        favorited
-          ? "border-coral/40 bg-coral/10 text-coral"
-          : "border-white/45 bg-white/58 text-foreground/35 hover:border-coral/40 hover:text-coral"
+      className={`soft-ring flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white/70 backdrop-blur-sm transition-all active:scale-90 ${
+        favorited ? "text-coral" : "text-foreground/45 hover:bg-white/90 hover:text-coral"
       }`}
       aria-label={favorited ? "Retirer des favoris" : "Ajouter aux favoris"}
     >

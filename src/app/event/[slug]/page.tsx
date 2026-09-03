@@ -2,20 +2,27 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { Calendar, ChevronLeft, Euro, ExternalLink, Flag, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
+import { getEventKeyDates } from "@/lib/utils/event-key-dates";
+import { findNearestStation } from "@/lib/utils/stations";
+import { fetchEventInclusionMeasures } from "@/lib/events/inclusion-measures";
+import { getEventFactTags } from "@/lib/events/facts";
 import { getEventPath, getEventUrl, serializeJsonLd, SITE_NAME } from "@/lib/seo";
 import { parseLegacyEventId } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 import { getAppStorageImage, getAppStorageImageUrl } from "@/lib/storage/urls";
 import type { Event, SousEvent } from "@/lib/types/database";
-import { FavouriteButton } from "@/components/events/favourite-button";
 import { ShareButton } from "@/components/events/share-button";
-import { FavoriteCTA } from "@/components/events/favorite-cta";
 import { ExternalRegistrationLink } from "@/components/events/external-registration-link";
+import { EventActions } from "@/components/events/event-actions";
 import { EventCard } from "@/components/events/event-card";
+import { StickyActionBar } from "@/components/events/sticky-action-bar";
+import { EventKeyDates } from "@/components/events/event-key-dates";
 import { EventViewTracker } from "@/components/events/event-view-tracker";
+import { InclusionMeasures } from "@/components/events/inclusion-measures";
 import { MixiteBadge } from "@/components/events/mixite-badge";
 import { AppFooter } from "@/components/layout/app-footer";
 import { TopNav } from "@/components/layout/top-nav";
@@ -120,16 +127,19 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = event.slug;
   const canonicalUrl = getEventUrl(eventSlug);
-  const [relatedEvents, favCountResult] = await Promise.all([
+  // Le compteur d'intéressé·es n'est plus lu ici : il fait partie du bloc
+  // « qui est intéressé », traité dans sa propre brique.
+  const [relatedEvents, inclusionMeasures] = await Promise.all([
     event.organisateur
       ? fetchOrganizerEvents(supabase, event.organisateur, event.id)
       : Promise.resolve([]),
-    supabase
-      .from("favourite_events")
-      .select("*", { count: "exact", head: true })
-      .eq("event", event.id),
+    fetchEventInclusionMeasures(supabase, event.id),
   ]);
-  const favCount = favCountResult.count ?? 0;
+
+  // Gare la plus proche du départ, calculée au rendu depuis le référentiel
+  // embarqué : venir sans voiture est un critère de décision relevé en test.
+  const nearestStation = findNearestStation(event.latitude, event.longitude);
+  const keyDates = getEventKeyDates(event, { station: nearestStation });
 
   const formattedDate = event.dateEvent
     ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
@@ -151,6 +161,18 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   const prices = sousEvents.filter((se) => se.prix != null).map((se) => se.prix!);
   const minPrice = prices.length > 0 ? Math.min(...prices) : null;
   const minPriceLabel = minPrice == null ? null : minPrice === 0 ? "Gratuit" : `À partir de ${minPrice}€`;
+
+  // Repères affichés sur l'image : les mêmes que sur la carte d'évènement, pour
+  // retrouver en haut de fiche ce sur quoi on vient de filtrer.
+  const heroFacts = [
+    ...getEventFactTags({
+      dateEvent: event.dateEvent,
+      dateFin: event.dateFin,
+      distance: event.distance,
+      maxElevation: maxElevation(sousEvents),
+    }),
+    event.bike_type,
+  ].filter((fact): fact is string => Boolean(fact));
 
   // JSON-LD structured data
   const jsonLd = {
@@ -205,108 +227,142 @@ export default async function EventPage({ params, searchParams }: PageProps) {
 
       <TopNav />
 
-      <div
-        className={`mx-auto w-full max-w-[920px] flex-1 px-4 pt-8 md:px-6 ${
-          event.URL ? "pb-36 lg:pb-8" : "pb-8"
-        }`}
-      >
+      {/* La barre collante en mobile est là quelle que soit la présence d'un
+          lien d'inscription — « Ça m'intéresse » y figure toujours : la page
+          lui réserve sa place en bas à toutes les fiches. */}
+      <div className="mx-auto w-full max-w-[1040px] flex-1 px-4 pt-8 pb-40 md:px-6 lg:pb-8">
         {/* Back */}
         <Link
           href={returnTo}
-          className="glass mb-5 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] text-foreground/55 transition-all hover:bg-white/80 hover:text-coral"
+          className="mb-2 inline-flex items-center gap-1.5 py-1 text-[13px] text-foreground/55 transition-colors hover:text-foreground"
         >
-          ← {backLabel}
+          <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+          {backLabel}
         </Link>
 
-        <div className="flex flex-col gap-8 lg:flex-row">
-          {/* Left column */}
-          <div className="min-w-0 flex-1">
-            {/* Hero */}
+        {/* Hero — le titre est dans l'image, les repères (durée, distance,
+            dénivelé) juste au-dessus, dans le flux : posés à un offset
+            fixe, ils finissaient par chevaucher un titre sur deux lignes. */}
+        <div
+          className="relative mb-5 flex h-[320px] flex-col justify-end overflow-hidden rounded-[var(--radius)]"
+          style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.14)" }}
+        >
+          {eventImage ? (
+            <Image
+              src={eventImage.src}
+              alt={event.nomEvent || "Événement"}
+              fill
+              unoptimized={eventImage.unoptimized}
+              className="object-cover"
+              priority
+              sizes="(max-width: 768px) 100vw, 600px"
+            />
+          ) : (
             <div
-              className="relative mb-6 overflow-hidden rounded-[var(--radius)]"
-              style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.14)" }}
-            >
-              {eventImage ? (
-                <div className="relative h-[260px] w-full">
-                  <Image
-                    src={eventImage.src}
-                    alt={event.nomEvent || "Événement"}
-                    fill
-                    unoptimized={eventImage.unoptimized}
-                    className="object-cover"
-                    priority
-                    sizes="(max-width: 768px) 100vw, 600px"
-                  />
-                </div>
-              ) : (
-                <div
-                  className="flex h-[260px] w-full items-center justify-center"
-                  style={{
-                    background: `linear-gradient(150deg, ${typeColor} 0%, ${typeColor}aa 45%, var(--violet) 100%)`,
-                  }}
-                />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
-              {event.mint && (
-                <div className="absolute left-5 top-5 z-10 max-w-[calc(100%-2.5rem)]">
-                  <MixiteBadge />
-                </div>
-              )}
-              <div className="absolute bottom-5 left-5 right-5 z-10 flex flex-wrap gap-2">
-                {event.type_event && (
-                  <span className="rounded-full bg-white/88 px-3 py-1 text-xs font-semibold" style={{ color: typeColor }}>
-                    {event.type_event}
-                  </span>
-                )}
-                {event.bike_type && (
-                  <span className="rounded-full px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm" style={{ backgroundColor: `${typeColor}dd` }}>
-                    {event.bike_type}
-                  </span>
-                )}
-              </div>
-            </div>
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(150deg, ${typeColor} 0%, ${typeColor}aa 45%, var(--violet) 100%)`,
+              }}
+            />
+          )}
+          <div className="absolute inset-0 z-[1] bg-[linear-gradient(to_bottom,rgba(0,0,0,0)_40%,rgba(0,0,0,0.75)_100%)]" />
 
-            {/* Title + Actions */}
-            <div className="mb-2.5 flex items-start justify-between gap-3">
-              <h1 className="font-serif text-[32px] leading-tight text-foreground">
-                {event.nomEvent || "Événement"}
-              </h1>
-              <div className="flex flex-shrink-0 gap-2 pt-1">
-                <FavouriteButton eventId={event.id} eventTitle={event.nomEvent || "Événement"} />
-                <ShareButton
-                  title={event.nomEvent || "Événement"}
-                  url={`/event/${eventSlug}`}
-                  eventId={event.id}
-                />
-              </div>
-            </div>
-            <div className="mb-6 flex flex-wrap gap-3.5 border-b border-black/8 pb-4">
-              {formattedDate && (
-                <span className="text-sm text-foreground/55">
-                  {formattedDate}
-                  {formattedDateFin && ` — ${formattedDateFin}`}
-                </span>
-              )}
-              {location && <span className="text-sm text-foreground/55">{location}</span>}
-            </div>
+          <div className="relative z-[2] flex flex-wrap items-center gap-2 px-5 pb-2.5">
+            {event.mint && <MixiteBadge />}
+            {heroFacts.map((fact) => (
+              <span
+                key={fact}
+                className="rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-foreground"
+              >
+                {fact}
+              </span>
+            ))}
+          </div>
+          <h1 className="relative z-[2] px-5 pb-5 font-serif text-[clamp(24px,5vw,40px)] font-bold leading-[1.15] text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.25)]">
+            {event.nomEvent || "Événement"}
+          </h1>
+        </div>
 
-            {/* Sous-events / Parcours */}
+        {/* Synthèse : type · date · lieu · prix. Le favori et l'inscription
+            ne figurent pas dans cette ligne — ils font doublon avec le bloc
+            d'intérêt juste en dessous et avec le bloc d'inscription
+            (barre collante en mobile, colonne de droite en desktop). */}
+        <div className="mb-3.5 flex flex-nowrap items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-[18px] gap-y-1 text-sm font-bold text-foreground">
+            {event.type_event && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <Flag className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
+                {event.type_event}
+              </span>
+            )}
+            {formattedDate && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <Calendar className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
+                {formattedDate}
+                {formattedDateFin && ` — ${formattedDateFin}`}
+              </span>
+            )}
+            {location && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <MapPin className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
+                {location}
+              </span>
+            )}
+            {minPriceLabel && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <Euro className="h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
+                {minPriceLabel}
+              </span>
+            )}
+          </div>
+          <div className="flex-none">
+            <ShareButton
+              title={event.nomEvent || "Événement"}
+              url={`/event/${eventSlug}`}
+              eventId={event.id}
+            />
+          </div>
+        </div>
+
+        {/* Actions principales, visibles dès l'arrivée sur la fiche. Masquées
+            en desktop : la colonne de droite les porte en permanence, les
+            répéter ici leur donnerait deux fois la même place. */}
+        <EventActions
+          eventId={event.id}
+          registrationUrl={event.URL}
+          eventType={event.type_event}
+          organizer={event.organisateur}
+          source="detail_top"
+          className="mb-6 border-b border-black/8 pb-5 lg:hidden"
+        />
+
+        {/* Le contenu suit un ordre de lecture linéaire ; seul le bloc
+            d'inscription en sort à partir du desktop, où il devient une
+            colonne de droite plutôt que la barre collante du mobile. */}
+        <div className="flex flex-col gap-8 lg:flex-row">
+          <div className="min-w-0 flex-1">
+            {/* Description */}
+            {event.description && (
+              <div className="mb-6">
+                <p className="whitespace-pre-line text-[15px] leading-[1.75] text-foreground/55">
+                  {event.description}
+                </p>
+              </div>
+            )}
+
             {sousEvents.length > 0 && (
               <div className="mb-6">
-                <h2 className="mb-3 text-[15px] font-semibold text-foreground">
-                  Parcours disponibles
-                </h2>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {sousEvents.map((se) => (
                     <div
                       key={se.sousEventID}
-                      className="glass flex items-center justify-between rounded-[var(--radius-sm)] p-3.5"
+                      className="glass flex items-center justify-between gap-3 rounded-[var(--radius-sm)] p-3.5"
                     >
-                      <div>
+                      <div className="min-w-0">
                         <div className="text-sm font-semibold text-foreground">
                           {se.nom || "Parcours"}
                         </div>
-                        <div className="mt-0.5 flex items-center gap-2 text-xs text-foreground/55">
+                        <div className="mt-0.5 flex items-center gap-2 text-[13px] text-foreground/55">
                           {se.distance && <span>{se.distance} km</span>}
                           {se.elevation && (
                             <>
@@ -322,150 +378,121 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                           )}
                         </div>
                       </div>
-                      {se.prix != null && (
-                        <span className="text-sm font-semibold text-foreground">
-                          {se.prix} €
-                        </span>
-                      )}
+                      {se.prix != null &&
+                        (event.URL ? (
+                          <ExternalRegistrationLink
+                            href={event.URL}
+                            eventId={event.id}
+                            eventType={event.type_event}
+                            organizer={event.organisateur}
+                            className="inline-flex flex-none items-center gap-1.5 text-sm font-semibold text-foreground transition-colors hover:text-foreground/70"
+                          >
+                            {se.prix} €
+                          </ExternalRegistrationLink>
+                        ) : (
+                          <span className="flex-none text-sm font-semibold text-foreground">
+                            {se.prix} €
+                          </span>
+                        ))}
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Description */}
-            {event.description && (
-              <div className="mb-6">
-                <h2 className="mb-3 text-[15px] font-semibold text-foreground">
-                  Description
-                </h2>
-                <p className="whitespace-pre-line text-sm leading-[1.75] text-foreground/55">
-                  {event.description}
-                </p>
-              </div>
-            )}
+            <EventKeyDates eventId={event.id} dates={keyDates} />
 
-            {/* Organizer */}
-            {event.organisateur && (
-              <div className="mb-6">
-                <h2 className="mb-3 text-[15px] font-semibold text-foreground">
-                  Organisateur
-                </h2>
-                <div className="glass flex items-center gap-3 rounded-[var(--radius-sm)] p-3.5 transition-all hover:bg-white/80">
-                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-orange/20 border border-orange/30 text-sm font-bold text-orange-dark">
+            <div className="glass mb-6 rounded-[var(--radius)] p-5">
+              <h2 className="mb-4 font-serif text-[22px] leading-tight text-foreground">
+                Qui organise&nbsp;?
+              </h2>
+
+              {event.organisateur ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-orange/30 bg-orange/20 text-sm font-bold text-orange-dark">
                     {event.organisateur.substring(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-foreground">{event.organisateur}</div>
+                    <div className="text-sm font-semibold text-foreground">
+                      {event.organisateur}
+                    </div>
                   </div>
                   {event.URL && (
                     <a
                       href={event.URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 rounded-full border border-foreground/10 px-3 py-1.5 text-xs font-medium text-foreground/55 transition-colors hover:border-coral/40 hover:text-coral"
+                      className="btn-secondary btn-small flex-none"
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                        <polyline points="15 3 21 3 21 9" />
-                        <line x1="10" y1="14" x2="21" y2="3" />
-                      </svg>
                       Voir le site
+                      <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.8} />
                     </a>
                   )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-foreground/55">
+                  L&apos;organisation de cet évènement n&apos;est pas encore renseignée.
+                </p>
+              )}
 
-            {/* Favorite CTA */}
-            <div className="mb-6">
-              <FavoriteCTA
-                eventId={event.id}
-                eventTitle={event.nomEvent || "Événement"}
-                initialCount={favCount}
+              <InclusionMeasures
+                eventName={event.nomEvent || "cet évènement"}
+                measures={inclusionMeasures}
               />
-            </div>
 
-            {relatedEvents.length > 0 && (
-              <div className="mb-6">
-                <h2 className="mb-3 text-[15px] font-semibold text-foreground">
-                  Autres événements de cette organisation
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {relatedEvents.map((relatedEvent) => (
-                    <EventCard
-                      key={relatedEvent.id}
-                      id={relatedEvent.id}
-                      slug={relatedEvent.slug}
-                      nomEvent={relatedEvent.nomEvent}
-                      dateEvent={relatedEvent.dateEvent}
-                      dateFin={relatedEvent.dateFin}
-                      image={relatedEvent.image}
-                      bike_type={relatedEvent.bike_type}
-                      type_event={relatedEvent.type_event}
-                      villeDepart={relatedEvent.villeDepart}
-                      paysDepart={relatedEvent.paysDepart}
-                      distance={relatedEvent.distance}
-                      mint={relatedEvent.mint}
-                    />
-                  ))}
+              {/* Slider horizontal de lignes compactes (miniature + nom +
+                  date/lieu) plutôt que de grandes cartes photo : ces
+                  évènements sont une sortie possible depuis la fiche, ils ne
+                  doivent pas concurrencer celui qu'on est en train de lire. */}
+              {relatedEvents.length > 0 && (
+                <div className="mt-7">
+                  <h3 className="mb-2.5 text-[16px] font-semibold text-foreground/55">
+                    Leurs autres évènements
+                  </h3>
+                  <div className="scrollbar-hide -mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-5">
+                    {relatedEvents.map((relatedEvent) => (
+                      <div key={relatedEvent.id} className="w-[240px] flex-none snap-start">
+                        <EventCard
+                          id={relatedEvent.id}
+                          slug={relatedEvent.slug}
+                          nomEvent={relatedEvent.nomEvent}
+                          dateEvent={relatedEvent.dateEvent}
+                          dateFin={relatedEvent.dateFin}
+                          image={relatedEvent.image}
+                          bike_type={relatedEvent.bike_type}
+                          type_event={relatedEvent.type_event}
+                          villeDepart={relatedEvent.villeDepart}
+                          paysDepart={relatedEvent.paysDepart}
+                          distance={relatedEvent.distance}
+                          mint={relatedEvent.mint}
+                          variant="compact"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Right column — CTA card */}
-          <div className="w-full flex-shrink-0 lg:w-[300px]">
+          {/* Colonne de droite — le bloc d'action quitte la barre collante du
+              mobile pour devenir une sidebar visible en permanence pendant la
+              lecture. La synthèse type/date/lieu/prix n'y est pas répétée :
+              elle est déjà sous le titre. */}
+          <div className="hidden flex-shrink-0 lg:block lg:w-[280px]">
             <div className="lg:sticky lg:top-24">
-              <div className="hidden space-y-4 lg:block">
-                {event.URL && (
-                  <div
-                    className="glass flex items-center justify-between gap-4 rounded-[var(--radius)] p-4"
-                    style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
-                  >
-                    <div className="min-w-0">
-                      {minPriceLabel && (
-                        <div className="text-[16px] font-semibold text-foreground">
-                          {minPriceLabel}
-                        </div>
-                      )}
-                    </div>
-                    <ExternalRegistrationLink
-                      href={event.URL}
-                      eventId={event.id}
-                      eventType={event.type_event}
-                      organizer={event.organisateur}
-                      className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white transition-all hover:bg-coral-dark"
-                      style={{ boxShadow: "0 2px 12px rgba(255,94,65,0.25)" }}
-                    >
-                      S&apos;inscrire →
-                    </ExternalRegistrationLink>
-                  </div>
-                )}
-
-                <div
-                  className="glass rounded-[var(--radius)] p-5"
-                  style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
-                >
-                  {/* Details summary */}
-                  <div className="space-y-1.5">
-                    {formattedDate && (
-                      <SummaryRow label="Dates" value={`${formattedDate}${formattedDateFin ? ` — ${formattedDateFin}` : ""}`} />
-                    )}
-                    {event.villeDepart && (
-                      <SummaryRow label="Lieu" value={event.villeDepart} />
-                    )}
-                    {event.paysDepart && (
-                      <SummaryRow label="Pays" value={event.paysDepart} />
-                    )}
-                    {event.type_event && (
-                      <SummaryRow label="Type" value={event.type_event} />
-                    )}
-                  {event.bike_type && (
-                    <SummaryRow label="Vélo" value={event.bike_type} />
-                  )}
-                </div>
-                </div>
+              <div
+                className="glass rounded-[var(--radius)] p-4"
+                style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
+              >
+                <EventActions
+                  eventId={event.id}
+                  registrationUrl={event.URL}
+                  eventType={event.type_event}
+                  organizer={event.organisateur}
+                  orientation="column"
+                  source="detail_sidebar"
+                />
               </div>
             </div>
           </div>
@@ -474,48 +501,37 @@ export default async function EventPage({ params, searchParams }: PageProps) {
 
       <AppFooter />
 
-      {event.URL && (
-        <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+      {/* Barre collante en mobile : les mêmes actions qu'en haut de fiche,
+          à portée quel que soit l'endroit où on est dans la lecture. */}
+      <StickyActionBar>
+        <div
+          className="mx-auto w-full max-w-[1040px] px-4 pt-3 md:px-6"
+          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
           <div
-            className="mx-auto w-full max-w-[920px] px-4 pt-3 md:px-6"
-            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+            className="glass rounded-[var(--radius)] p-4"
+            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
           >
-            <div
-              className="glass flex items-center justify-between gap-4 rounded-[var(--radius)] p-4"
-              style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
-            >
-              <div className="min-w-0">
-                {minPriceLabel && (
-                  <div className="text-[16px] font-semibold text-foreground">
-                    {minPriceLabel}
-                  </div>
-                )}
-              </div>
-              <ExternalRegistrationLink
-                href={event.URL}
-                eventId={event.id}
-                eventType={event.type_event}
-                organizer={event.organisateur}
-                className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white transition-all hover:bg-coral-dark"
-                style={{ boxShadow: "0 2px 12px rgba(255,94,65,0.25)" }}
-              >
-                S&apos;inscrire →
-              </ExternalRegistrationLink>
-            </div>
+            <EventActions
+              eventId={event.id}
+              registrationUrl={event.URL}
+              eventType={event.type_event}
+              organizer={event.organisateur}
+              source="detail_sticky"
+            />
           </div>
         </div>
-      )}
+      </StickyActionBar>
     </div>
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between text-xs">
-      <span className="text-foreground/55">{label}</span>
-      <span className="font-semibold text-foreground">{value}</span>
-    </div>
-  );
+/** Dénivelé le plus élevé, tous parcours confondus. */
+function maxElevation(sousEvents: SousEvent[]): number | null {
+  const values = sousEvents
+    .map((se) => se.elevation)
+    .filter((value): value is number => typeof value === "number" && value > 0);
+  return values.length > 0 ? Math.max(...values) : null;
 }
 
 async function fetchOrganizerEvents(

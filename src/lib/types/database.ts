@@ -72,6 +72,13 @@ export interface MapEvent {
   paysDepart: string | null;
   organisateur: string | null;
   mint: boolean;
+  /**
+   * Dénivelé le plus élevé des parcours de l'évènement. Ne vient pas de la
+   * table `events` : il est remonté à part depuis `sous_events` (voir
+   * `fetchEventMaxElevations`), et reste absent partout où il n'a pas été
+   * demandé.
+   */
+  maxElevation?: number | null;
 }
 
 export interface SousEvent {

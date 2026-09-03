@@ -45,7 +45,7 @@ export function AdminProposalsClient({ proposals, organizers }: { proposals: Adm
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2">
           {(["pending", "rejected", "approved", "all"] as const).map((value) => (
-            <button key={value} type="button" onClick={() => setStatus(value)} className={`rounded-full px-4 py-2 text-[12px] font-semibold ${status === value ? "bg-coral text-white" : "border border-foreground/10 bg-white/65 text-foreground/60"}`}>
+            <button key={value} type="button" onClick={() => setStatus(value)} className={`rounded-full px-4 py-2 text-[13px] font-semibold ${status === value ? "bg-coral text-white" : "border border-foreground/10 bg-white/65 text-foreground/60"}`}>
               {{ pending: "En attente", rejected: "Refusées", approved: "Validées", all: "Toutes" }[value]}
               {value !== "all" ? ` (${proposals.filter(({ contact }) => contact.review_status === value).length})` : ""}
             </button>
@@ -93,12 +93,12 @@ function ProposalEditor({ proposal, organizers }: { proposal: AdminProposal; org
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-serif text-[24px] text-foreground">{event.nomEvent || `Événement #${event.id}`}</h3>
-            <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyle}`}>{{ pending: "En attente", approved: "Validé", rejected: "Refusé" }[contact.review_status]}</span>
+            <span className={`rounded-full px-2.5 py-1 text-[13px] font-semibold ${statusStyle}`}>{{ pending: "En attente", approved: "Validé", rejected: "Refusé" }[contact.review_status]}</span>
           </div>
           <p className="mt-1 text-[13px] text-foreground/50">{event.dateEvent} · {event.villeDepart} · {event.organisateur}</p>
-          <p className="mt-1 text-[11px] text-foreground/38">Proposé le {new Date(contact.submitted_at).toLocaleString("fr-FR")}</p>
+          <p className="mt-1 text-[13px] text-foreground/38">Proposé le {new Date(contact.submitted_at).toLocaleString("fr-FR")}</p>
         </div>
-        <span className="text-[12px] font-semibold text-coral">{expanded ? "Fermer" : "Examiner"}</span>
+        <span className="text-[13px] font-semibold text-coral">{expanded ? "Fermer" : "Examiner"}</span>
       </button>
 
       {expanded ? (
@@ -124,14 +124,14 @@ function ProposalEditor({ proposal, organizers }: { proposal: AdminProposal; org
           <label><span className={labelClass}>Description *</span><textarea name="description" required defaultValue={event.description ?? ""} rows={7} className="w-full rounded-[18px] border border-foreground/10 bg-white p-4 text-[14px] outline-none focus:border-coral/45" /></label>
 
           <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-            <div>{proposal.imagePreviewUrl ? <Image src={proposal.imagePreviewUrl} alt="Image proposée" width={440} height={280} unoptimized className="aspect-[4/3] w-full rounded-[18px] object-cover" /> : <div className="flex aspect-[4/3] items-center justify-center rounded-[18px] bg-foreground/5 text-[12px] text-foreground/40">Aucune image</div>}</div>
-            <label><span className={labelClass}>Remplacer l’image</span><input name="image" type="file" accept="image/jpeg,image/png,image/webp" className={`${inputClass} py-2 file:mr-3 file:rounded-full file:border-0 file:bg-coral/10 file:px-3 file:py-1 file:text-coral`} /><span className="mt-2 block text-[11px] text-foreground/40">JPEG, PNG ou WebP · 6 Mo maximum</span></label>
+            <div>{proposal.imagePreviewUrl ? <Image src={proposal.imagePreviewUrl} alt="Image proposée" width={440} height={280} unoptimized className="aspect-[4/3] w-full rounded-[18px] object-cover" /> : <div className="flex aspect-[4/3] items-center justify-center rounded-[18px] bg-foreground/5 text-[13px] text-foreground/40">Aucune image</div>}</div>
+            <label><span className={labelClass}>Remplacer l’image</span><input name="image" type="file" accept="image/jpeg,image/png,image/webp" className={`${inputClass} py-2 file:mr-3 file:rounded-full file:border-0 file:bg-coral/10 file:px-3 file:py-1 file:text-coral`} /><span className="mt-2 block text-[13px] text-foreground/40">JPEG, PNG ou WebP · 6 Mo maximum</span></label>
           </div>
 
           <label className="flex items-center gap-2 rounded-[16px] border border-foreground/10 bg-white/70 px-4 py-3 text-[13px]"><input type="checkbox" name="mint" defaultChecked={event.mint} /> Mixité choisie</label>
 
           <div className="space-y-3 rounded-[22px] border border-foreground/10 bg-foreground/[0.025] p-4">
-            <div><h4 className="font-serif text-[21px]">Parcours</h4><p className="text-[12px] text-foreground/45">Les résumés de l’événement seront recalculés automatiquement.</p></div>
+            <div><h4 className="font-serif text-[21px]">Parcours</h4><p className="text-[13px] text-foreground/45">Les résumés de l’événement seront recalculés automatiquement.</p></div>
             {routes.map((route, index) => (
               <div key={route.clientId} className="space-y-3 rounded-[18px] border border-foreground/10 bg-white/80 p-4">
                 <input type="hidden" name="route_id" value={route.clientId} />
@@ -148,16 +148,16 @@ function ProposalEditor({ proposal, organizers }: { proposal: AdminProposal; org
                 </div>
               </div>
             ))}
-            <button type="button" onClick={() => { setRoutes((current) => [...current, { clientId: nextId.current++, sousEventID: 0, event_id: event.id, event_name: event.nomEvent, nom: "", bikeType: "Route", distance: 1, prix: 0, elevation: null, delai: null, typeEvent: "Course", trace_fixe: false }]); setDirty(true); }} className="inline-flex items-center gap-2 rounded-full border border-coral/20 bg-white px-4 py-2 text-[12px] font-semibold text-coral"><Plus className="h-4 w-4" /> Ajouter un parcours</button>
+            <button type="button" onClick={() => { setRoutes((current) => [...current, { clientId: nextId.current++, sousEventID: 0, event_id: event.id, event_name: event.nomEvent, nom: "", bikeType: "Route", distance: 1, prix: 0, elevation: null, delai: null, typeEvent: "Course", trace_fixe: false }]); setDirty(true); }} className="inline-flex items-center gap-2 rounded-full border border-coral/20 bg-white px-4 py-2 text-[13px] font-semibold text-coral"><Plus className="h-4 w-4" /> Ajouter un parcours</button>
           </div>
 
           <div className="rounded-[18px] border border-coral/12 bg-coral/5 p-4 text-[13px]"><strong>Contact privé</strong><p className="mt-1">{contact.contact_name || "Nom non renseigné"} · <a href={`mailto:${contact.contact_email}`} className="text-coral">{contact.contact_email}</a></p></div>
 
-          {contact.review_status === "rejected" && contact.review_reason ? <p className="rounded-[16px] bg-red-50 p-3 text-[12px] text-red-700">Motif actuel : {contact.review_reason}</p> : null}
+          {contact.review_status === "rejected" && contact.review_reason ? <p className="rounded-[16px] bg-red-50 p-3 text-[13px] text-red-700">Motif actuel : {contact.review_reason}</p> : null}
           <label><span className={labelClass}>Motif de refus</span><textarea name="review_reason" rows={3} placeholder="Obligatoire pour refuser" className="w-full rounded-[16px] border border-foreground/10 bg-white p-3 text-[13px] outline-none focus:border-coral/45" /></label>
 
-          {dirty ? <p className="text-[12px] font-medium text-amber-700">Des modifications doivent être enregistrées avant la décision.</p> : null}
-          {result ? <p className={`text-[12px] font-medium ${result.ok ? "text-green-700" : "text-red-700"}`}>{result.message}</p> : null}
+          {dirty ? <p className="text-[13px] font-medium text-amber-700">Des modifications doivent être enregistrées avant la décision.</p> : null}
+          {result ? <p className={`text-[13px] font-medium ${result.ok ? "text-green-700" : "text-red-700"}`}>{result.message}</p> : null}
           <div className="flex flex-wrap justify-end gap-2">
             <ActionButton pending={pending} onClick={(buttonEvent) => submit(buttonEvent.currentTarget.form!, "save")} icon={<Save className="h-4 w-4" />}>Enregistrer</ActionButton>
             {contact.review_status === "rejected" ? <ActionButton pending={pending || dirty} onClick={(buttonEvent) => submit(buttonEvent.currentTarget.form!, "reopen")} icon={<RotateCcw className="h-4 w-4" />}>Remettre en attente</ActionButton> : null}
@@ -180,5 +180,5 @@ function SelectField({ label, name, defaultValue, options }: { label: string; na
 
 function ActionButton({ children, icon, onClick, pending, danger, success }: { children: React.ReactNode; icon: React.ReactNode; onClick: React.MouseEventHandler<HTMLButtonElement>; pending: boolean; danger?: boolean; success?: boolean }) {
   const color = danger ? "bg-red-600 text-white" : success ? "bg-green-600 text-white" : "border border-foreground/12 bg-white text-foreground/65";
-  return <button type="button" disabled={pending} onClick={onClick} className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[12px] font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${color}`}>{icon}{children}</button>;
+  return <button type="button" disabled={pending} onClick={onClick} className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${color}`}>{icon}{children}</button>;
 }

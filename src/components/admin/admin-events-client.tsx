@@ -159,7 +159,7 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
           <button
             type="button"
             onClick={() => setShowOnlyPending((current) => !current)}
-            className={`rounded-full border px-4 py-2 text-[12px] font-semibold transition-colors ${
+            className={`rounded-full border px-4 py-2 text-[13px] font-semibold transition-colors ${
               showOnlyPending
                 ? "border-amber-200 bg-amber-100 text-amber-800"
                 : "border-foreground/12 bg-white/60 text-foreground/58 hover:bg-foreground/5"
@@ -178,7 +178,7 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
       </div>
 
       {isPending && (
-        <div className="text-[12px] text-foreground/50">Mise à jour des événements...</div>
+        <div className="text-[13px] text-foreground/50">Mise à jour des événements...</div>
       )}
 
       {showCreateForm && (
@@ -195,7 +195,7 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
             <button
               type="button"
               onClick={() => setShowCreateForm(false)}
-              className="rounded-full border border-foreground/12 px-4 py-2 text-[12px] text-foreground/60"
+              className="rounded-full border border-foreground/12 px-4 py-2 text-[13px] text-foreground/60"
             >
               Fermer
             </button>
@@ -223,11 +223,11 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-serif text-[24px] text-foreground">{label}</h3>
-                    <span className="rounded-full bg-foreground/6 px-2.5 py-1 text-[11px] font-semibold text-foreground/52">
+                    <span className="rounded-full bg-foreground/6 px-2.5 py-1 text-[13px] font-semibold text-foreground/52">
                       #{event.id}
                     </span>
                     <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      className={`rounded-full px-2.5 py-1 text-[13px] font-semibold ${
                         event.verifie
                           ? "bg-green-100 text-green-700"
                           : "bg-amber-100 text-amber-700"
@@ -236,7 +236,7 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
                       {event.verifie ? "Vérifié" : "À vérifier"}
                     </span>
                     {!event.verifie && submissionContact ? (
-                      <span className="rounded-full bg-coral/10 px-2.5 py-1 text-[11px] font-semibold text-coral">
+                      <span className="rounded-full bg-coral/10 px-2.5 py-1 text-[13px] font-semibold text-coral">
                         Proposition
                       </span>
                     ) : null}
@@ -245,7 +245,7 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
                     {[event.dateEvent, event.villeDepart, event.paysDepart].filter(Boolean).join(" · ") ||
                       "Aucune information principale"}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[12px] text-foreground/45">
+                  <div className="mt-3 flex flex-wrap gap-2 text-[13px] text-foreground/45">
                     {event.type_event && <span>Type: {event.type_event}</span>}
                     {event.organisateur && <span>Organisateur: {event.organisateur}</span>}
                     {event.AlaUne !== null && <span>À la une: {event.AlaUne}</span>}
@@ -261,10 +261,10 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
                       >
                         {submissionContact.contact_email}
                       </a>
-                      <p className="mt-2 text-[12px] leading-5 text-foreground/58">
+                      <p className="mt-2 text-[13px] leading-5 text-foreground/58">
                         Départ: {formatDepartureAddress(submissionContact)}
                       </p>
-                      <p className="mt-1 text-[12px] text-foreground/45">
+                      <p className="mt-1 text-[13px] text-foreground/45">
                         Proposé le {formatSubmittedAt(submissionContact.submitted_at)}
                       </p>
                     </div>
@@ -276,7 +276,7 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
                     <button
                       type="button"
                       onClick={() => handleValidate(event.id)}
-                      className="rounded-full bg-green-600 px-4 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-green-700"
+                      className="rounded-full bg-green-600 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-green-700"
                     >
                       Valider
                     </button>
@@ -284,14 +284,14 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
                   <button
                     type="button"
                     onClick={() => setEditingId((current) => (current === event.id ? null : event.id))}
-                    className="rounded-full border border-foreground/12 px-4 py-2 text-[12px] font-semibold text-foreground/60 transition-colors hover:bg-foreground/5"
+                    className="rounded-full border border-foreground/12 px-4 py-2 text-[13px] font-semibold text-foreground/60 transition-colors hover:bg-foreground/5"
                   >
                     {isEditing ? "Fermer" : "Éditer"}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDelete(event.id, label)}
-                    className="rounded-full border border-red-200 px-4 py-2 text-[12px] font-semibold text-red-500 transition-colors hover:bg-red-50"
+                    className="rounded-full border border-red-200 px-4 py-2 text-[13px] font-semibold text-red-500 transition-colors hover:bg-red-50"
                   >
                     Supprimer
                   </button>
@@ -316,7 +316,7 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
       {filteredEvents.length === 0 && (
         <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/36 px-6 py-12 text-center">
           <p className="text-sm font-semibold text-foreground">Aucun événement trouvé</p>
-          <p className="mt-1 text-xs text-foreground/45">
+          <p className="mt-1 text-[13px] text-foreground/45">
             Ajustez votre recherche ou créez un nouvel événement.
           </p>
         </div>

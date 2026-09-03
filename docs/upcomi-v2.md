@@ -241,30 +241,80 @@ session avant chaque requête.
 
 ## 5. Environnement local
 
-`.env.local` (gitignoré) pointe sur la base de **prod**. Le garde-fou principal :
+`.env.local` (gitignoré) pointe sur un stack Supabase **local**, pas sur la
+prod. Le stack tourne dans Docker via Colima ; l'ancien contenu, qui visait la
+base de production, est conservé dans `.env.local.backup`.
 
-> **Ne pas mettre la vraie clé `service_role` en local.** Une valeur factice
-> non vide suffit. Avec la seule clé publique, le code local est enfermé dans
-> les mêmes RLS que n'importe quelle utilisatrice — le pire qu'il puisse faire
-> est ce qu'elle ferait depuis son navigateur.
-
-Vérifié : avec une clé secrète factice, l'app répond 200 et s'affiche
-normalement. C'est la variable *absente* qui provoque une 500
-(`createAdminClient()` lève à la construction) ; une valeur fausse échoue à
-l'appel et `isEventProposalFeatureEnabled()` l'attrape pour retourner `false`.
-
-Ce qu'on perd avec la clé factice, et c'est tout : les flags lisent `false`
-(lien « Proposer un événement » masqué), `/admin` et `/proposer-un-evenement`
-ne fonctionnent pas, le proxy d'images ne sert plus les images — laisser
-`NEXT_PUBLIC_SITE_URL` vide fait alors résoudre les images vers `app.upcomi.cc`.
-
-Autres garde-fous : utiliser un compte de test plutôt qu'un compte réel ; ne
-jamais coller de SQL « pour voir » dans le SQL Editor de la prod (les `select`
-sont sans danger, tout le reste mérite un backup préalable).
+### Démarrer
 
 ```bash
+colima start
+supabase start      # depuis la racine du dépôt
 npm run dev
 ```
+
+`supabase start` lit `supabase/config.toml` et applique les migrations de
+`supabase/migrations/` au premier démarrage. `supabase stop` arrête le stack
+(les données survivent) ; `supabase status` réaffiche les URLs et les clés.
+
+| Service | URL |
+|---|---|
+| API (REST, Auth, Storage) | http://127.0.0.1:54321 |
+| Postgres | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
+| Studio (SQL Editor, table editor) | http://127.0.0.1:54323 |
+| Mailpit (tous les mails sortants) | http://127.0.0.1:54324 |
+
+Les mails d'authentification ne partent nulle part : ils atterrissent dans
+Mailpit, où l'on récupère les liens de confirmation et de connexion.
+
+### La clé secrète locale est sans danger
+
+`SUPABASE_SECRET_KEY` contient la vraie `service_role` **du stack local**.
+C'est une clé de démo, identique sur toutes les installations Supabase CLI, et
+elle n'ouvre que la base Postgres qui tourne dans Docker. Elle n'a aucune
+valeur en dehors de la machine.
+
+Conséquence : plus rien n'est bridé en local. Les feature flags se lisent
+vraiment, `/admin` et `/proposer-un-evenement` fonctionnent, le proxy d'images
+sert les images. Les limitations décrites dans les versions précédentes de ce
+document (clé factice, flags à `false`) n'ont plus cours.
+
+### Contenu de la base locale
+
+Environ 93 évènements seedés, et **0 `sous_events`** — de quoi parcourir les
+listes et les fiches, mais les écrans qui dépendent des sous-évènements
+apparaissent vides. Les créer à la main dans Studio ou par un seed est le seul
+moyen de les tester.
+
+### Appliquer une migration en local
+
+Écrire le fichier dans `supabase/migrations/`, en respectant le format
+`AAAAMMJJHHMMSS_description.sql`, puis :
+
+```bash
+supabase migration up
+```
+
+Pour repartir d'une base propre et rejouer toute l'historique des migrations
+(les données locales sont perdues) :
+
+```bash
+supabase db reset
+```
+
+Une migration n'est poussée en prod qu'après avoir été jouée ici. Les règles de
+la section 3 restent la référence pour ce qu'une migration a le droit de faire.
+
+### Ce qui reste vrai vis-à-vis de la prod
+
+La prod n'a plus de raison d'être touchée depuis le poste de dev. Si l'on y
+retourne malgré tout — `.env.local.backup`, Studio distant, `supabase link` —
+les garde-fous d'origine tiennent toujours :
+
+- ne pas mettre la vraie clé `service_role` de prod dans un `.env` local ;
+- utiliser un compte de test plutôt qu'un compte réel ;
+- ne jamais coller de SQL « pour voir » dans le SQL Editor de la prod (les
+  `select` sont sans danger, tout le reste mérite un backup préalable).
 
 > `pnpm` n'est pas installé sur la machine de dev alors que le dépôt a un
 > `pnpm-lock.yaml`. Les dépendances ont été installées avec `npm` via
@@ -423,3 +473,219 @@ provider Strava configuré côté Supabase.
 Si le projet Supabase venait à exiger une confirmation par email, `signUp`
 renverrait un compte sans session : le parcours affiche alors un écran « vérifie
 ta boîte mail » au lieu de continuer.
+
+---
+
+## 8. Brique — `feat/fiche-evenement-v2` (dates clés + mesures d'inclusion + UI)
+
+Les trois lots T1 restants de la fiche évènement (`feat/dates-cles`,
+`feat/mesures-inclusion`, et l'évolution UI « au fil de l'eau ») sont traités
+dans **une seule branche** : ils réécrivent tous les trois
+`src/app/event/[slug]/page.tsx`: les séparer garantissait des conflits sur le
+même fichier sans rien découpler.
+
+Hors périmètre, comme convenu : le bloc « qui est intéressé » (avatars,
+compteur d'intéressé·es, feuille de personnes) et le partage de récit — une
+branche plus tard. Le composant `FavoriteCTA` existant tient la place.
+
+### Ce qui est livré
+
+**Dates clés** — bloc « Pour se préparer » : timeline verticale ouverture des
+inscriptions → clôture → départ → arrivée, avec le lieu de départ et la gare la
+plus proche rattachés au point « Départ ».
+
+- `src/lib/utils/event-key-dates.ts` (construction des points, lien Google
+  Agenda), `src/components/events/event-key-dates.tsx`,
+  `src/components/events/key-date-reminder-button.tsx`.
+- **Aucune migration** : tout vient de `dateInscription`,
+  `clotureInscription`, `dateEvent`, `dateFin`, `villeDepart`, `distance`.
+- La **clôture des inscriptions** est un ajout au proto (qui ne la modélise
+  pas) : la colonne existe et c'est une date de préparation.
+- « M'envoyer un rappel » est un **habillage du favori**, comme dans le proto :
+  pas de table `registration_reminders`, pas d'envoi d'e-mail. Le vrai rappel
+  reste la brique reportée du calendrier des inscriptions.
+- Le rythme « X km par jour » n'est affiché que si `events.distance` porte
+  **une seule** valeur : « 250 / 500 / 800 km » décrit trois parcours au choix,
+  aucun ne vaut pour l'évènement.
+
+**Accès en train** — le proto porte l'information par un booléen saisi à la
+main (`trainAccess`) et un référentiel de gares. Côté webapp, ni l'un ni
+l'autre : c'est la **distance à la gare la plus proche** qui en tient lieu,
+calculée au rendu serveur depuis `events.latitude/longitude`.
+
+- `src/lib/data/gares.json` (extrait statique de data.sncf.com, dédoublonné par
+  (nom, commune), 2962 gares, ~200 ko) et `src/lib/utils/stations.ts`.
+- Rien ne s'affiche au-delà de **30 km** (`MAX_STATION_DISTANCE_KM`) : plus
+  loin, ce n'est plus une information d'accès, et le référentiel est français.
+
+**Mesures d'inclusion** — bloc « Ce que tu peux attendre, en tant que femme ou
+personne de minorité de genre », en sous-partie de « Qui organise ». Toujours
+affiché, même vide.
+
+- Migration `20260902101500_inclusion_measures.sql` : `inclusion_measures`
+  (catalogue, 20 mesures seedées depuis le guide inclusivité) et
+  `event_inclusion_measures` (liaison). La clé étrangère est portée par la
+  table enfant : `events` n'est pas modifiée.
+- **Lecture publique** (`grant select to anon, authenticated` + policy
+  `using (true)`) : la fiche est rendue avec la clé publique et consultable
+  sans compte. Écriture réservée aux admins.
+- **Le rattachement des mesures se fait en SQL** pour l'instant — pas d'écran
+  de saisie dans `/admin`. Tant que rien n'est saisi, le bloc affiche son état
+  vide, qui est une information en soi.
+- Le nom d'icône vient de la base mais est résolu par un **dictionnaire
+  explicite** côté code (`MEASURE_ICONS`) : jamais d'import dynamique par clé.
+- « Signaler une mesure » est un `mailto:` vers contact@upcomi.cc, comme dans
+  le proto — pas de formulaire.
+
+**Évolution UI de la fiche** — restructuration fidèle au proto :
+
+- Titre **dans** le hero, avec les repères (durée, distance · dénivelé, type de
+  vélo) et le badge mixité juste au-dessus, dans le flux.
+- Ligne de synthèse à icônes sous l'image : type · date · lieu · prix. Favori
+  et inscription en sont retirés (doublon avec le bloc d'intérêt juste en
+  dessous et avec le bloc d'inscription).
+- Ordre de lecture : synthèse → intérêt → description → parcours → dates clés →
+  qui organise (+ mesures + leurs autres évènements).
+- Le prix d'un parcours **mène à l'inscription** quand `events.URL` existe.
+- La carte « Détails » de la colonne de droite est supprimée : elle répétait la
+  ligne de synthèse. La colonne ne porte plus que le bloc d'inscription.
+
+### Cartes d'évènement (même branche)
+
+La charte de la carte a suivi celle de la fiche : le proto n'a **qu'une seule**
+carte, une tuile photo pleine, déclinée en deux tailles. `EventCard` avait trois
+variantes divergentes, dont deux répétaient le titre (une fois sur l'image, une
+fois dans un panneau blanc en dessous).
+
+- `carousel` (accueil, aperçu carte, panneau de détail) et `list` (résultats de
+  recherche) sont désormais **la même tuile** : photo en fond, dégradé, cœur en
+  haut à droite, repères (mixité, durée, distance · dénivelé) puis titre serif
+  blanc et « ville · date ». Seules les dimensions changent.
+- `grid` a disparu. « Leurs autres évènements » passe à une nouvelle variante
+  **`compact`** (miniature + nom + date/lieu, en slider horizontal), reprise du
+  `.agenda-row` du proto : ces évènements sont une sortie possible depuis la
+  fiche, ils ne doivent pas concurrencer celui qu'on lit. Même traitement dans
+  le panneau de détail de la carte.
+- Le badge **mixité choisie** apparaît enfin sur les cartes : la prop `mint`
+  était passée partout mais n'était pas lue.
+- Les repères sont calculés par `src/lib/events/facts.ts`, partagé entre la
+  carte et le visuel de la fiche — c'est ce qui garantit qu'on retrouve en haut
+  de fiche ce sur quoi on vient de filtrer.
+
+**Dénivelé** : il vit sur `sous_events`, pas sur `events`. `fetchEventMaxElevations`
+(`src/lib/events/elevations.ts`) le remonte en une requête à deux colonnes sur
+les seuls évènements listés, découpée par paquets de 200 identifiants. Pas de
+fonction SQL ni de migration : à ce volume elle n'apporterait rien. Le champ
+voyage dans `MapEvent.maxElevation`, **optionnel** — il reste absent partout où
+il n'a pas été demandé.
+
+> Les collections manuelles font leur propre requête d'évènements (elles peuvent
+> porter un évènement hors filtres ou sans coordonnées) : elles ont donc leur
+> propre lecture du dénivelé. Oublier ce second appel laisse les carrousels de
+> l'accueil sans dénivelé alors que la carte l'affiche.
+
+> `src/components/layout/mobile-bottom-sheet.tsx` n'est référencé nulle part.
+> Il a été mis à jour par cohérence, mais c'est du code mort à supprimer.
+
+### Écarts relevés en comparant au proto, et corrigés
+
+Comparaison faite sur les styles calculés plutôt qu'à l'œil (`localhost:3000`
+contre `localhost:8080`), mobile et desktop :
+
+- **Desktop, structure** : dans le proto le hero et la ligne de synthèse sont
+  **pleine largeur**, au-dessus des deux colonnes ; seul le contenu en dessous
+  se partage entre la colonne de lecture et le bloc d'inscription. La fiche
+  mettait le hero *dans* la colonne de gauche, qui le réduisait à 540 px.
+  Corrigé, et les largeurs sont désormais celles du proto : conteneur 1040,
+  colonnes 680 / 280, gouttière 32.
+- Titre du hero : `font-weight` 400 → **700**.
+- Titres de section (« Pour se préparer », « Qui organise ? ») : 20 → **22 px**.
+- Pastille de la timeline : ocre `--orange` → **corail**, c'est-à-dire
+  l'`--upcomi-orange` du proto (`#eb5f3b`, le `--coral` de la webapp).
+- « M'envoyer un rappel », « Ajouter à mon calendrier » et « Voir le site »
+  étaient gris : ce sont des **actions**, pas des libellés. Elles reprennent le
+  `.btn-secondary.small` du proto, factorisé dans l'utilitaire
+  `.btn-outline-coral` (`globals.css`).
+- Liseré du bloc mesures : `#315643` → **`#4e9c6b`**, le vert inclusion du proto.
+- **Badge mixité** : `MixiteBadge` prend la forme et la typographie des repères
+  posés à côté de lui (capitales, 11 px/700, même pastille), en gardant le
+  vert — c'est un repère parmi les autres, pas une décoration à part. La carte
+  d'évènement, dont les repères sont plus petits, passe sa propre taille.
+- Description : 14 → **15 px**.
+- Lien retour : c'était une pastille de verre, c'est un simple lien texte
+  (13 px, `--muted-foreground`), comme le proto.
+- Cartes de parcours : `max-width: 450px`, comme le proto — une ligne
+  « nom + prix » n'a pas besoin de toute la colonne.
+- Cartes : mois en toutes lettres (« 12 septembre », pas « 12 sept. »), comme
+  le proto — la ligne « ville · date » est tronquée si besoin.
+
+### Actions de la fiche
+
+`EventActions` porte la paire du proto : **« M'inscrire » secondaire** et
+**« Ça m'intéresse » primaire**. L'inscription part sur le site de
+l'organisation — elle ne peut pas être l'engagement demandé en premier.
+
+La paire est répétée aux trois endroits du proto : en haut de fiche (masquée en
+desktop, où la colonne de droite fait doublon), dans la colonne de droite en
+desktop (boutons empilés, compteur centré), et dans la barre collante en
+mobile. Cette dernière reste escamotée tant qu'on n'a pas commencé à lire
+(`StickyActionBar`, seuil à 24 px comme le proto) : visible d'emblée, elle
+afficherait deux fois la même chose à l'écran.
+
+Le compteur « X personnes intéressées » remplace le `FavoriteCTA` sur la fiche,
+qui faisait doublon avec le bouton d'intérêt. `FavoriteCTA` reste utilisé par
+le panneau de détail de la carte. Les avatars et la feuille « qui est
+intéressé » restent hors périmètre.
+
+Le prix ne figure plus dans le bloc d'action : il est dans la ligne de
+synthèse, comme dans le proto.
+
+### Les trois seuls types de bouton
+
+Chaque écran avait sa propre recette de bouton : rayons, hauteurs, tailles de
+texte et capitales différentes d'un formulaire à l'autre, et le `Button`
+shadcn de `components/ui` n'était utilisé que par `dialog.tsx`.
+
+`globals.css` porte désormais les trois types du proto, sous leurs noms
+d'origine : `.btn-primary` (corail plein), `.btn-secondary` (blanc à liseré
+corail) et `.btn-tertiary` (texte souligné), plus `.btn-small` en
+modificateur. Une seule classe suffit ; la largeur reste au contexte
+(`w-full`, `flex-1`).
+
+> **La hauteur est posée en `min-height`, pas en `height`** — deux pièges
+> imbriqués, rencontrés sur la colonne de droite de la fiche, où les boutons
+> se sont retrouvés à 23 px de haut :
+>
+> 1. dans une **colonne** flex, `flex-1` pose `flex-basis: 0%` sur la hauteur
+>    et écrase le `height` du bouton. `flex-1` n'a de sens qu'en rangée ;
+>    `EventActions` bascule sur `w-full` en orientation colonne ;
+> 2. un `min-height` posé **à côté** d'un `height` est supprimé par le
+>    minifieur, qui le juge redondant : le filet de sécurité disparaissait à
+>    la compilation sans rien signaler. Il faut donc l'un *ou* l'autre — et
+>    c'est `min-height` qui protège.
+
+Convertis : les actions de la fiche, les soumissions des formulaires
+d'authentification, le dialogue de feedback, « Confirmer » et « Effacer tout »
+des filtres, la proposition d'évènement, la popin de carte et le panneau de
+détail. **Pas** les pastilles de filtre, les bascules et les boutons-icônes :
+c'est une autre famille, qui a ses propres règles dans le proto (`.pill`,
+`.tag-cell`, `.round-btn`).
+
+### Écarts assumés
+
+- **Compteur d'intéressé·es** : retiré de la fiche — il relève du bloc « qui
+  est intéressé ». La requête de comptage sur `favourite_events` a disparu avec
+  lui.
+- **Tag `bike_type` sur le hero** : le proto n'a que mixité + durée +
+  distance · dénivelé. Le type de vélo est une donnée que la webapp possède et
+  qui n'apparaîtrait plus nulle part sur la fiche autrement ; gardé en 3ᵉ tag.
+- **Organisateur** : le proto affiche une description, Instagram et Strava.
+  `events` ne porte aucun de ces champs — ils viendront avec
+  `feat/organisateur-enrichi`, qui dépend de `feat/socle-data`.
+
+### Checklist de mise en prod
+
+1. Appliquer `supabase/migrations/20260902101500_inclusion_measures.sql`.
+2. Merger le code (aucun feature flag : les blocs sont visibles au déploiement,
+   et dégradent proprement — timeline en « --/-- », mesures en état vide).
+3. Saisir les rattachements `event_inclusion_measures` évènement par évènement.

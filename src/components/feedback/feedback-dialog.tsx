@@ -236,14 +236,14 @@ export function FeedbackDialog({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-full border border-foreground/12 px-4 py-2.5 text-[12px] font-semibold text-foreground/60 transition-colors hover:bg-foreground/5"
+                  className="btn-tertiary btn-small"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="rounded-full bg-coral px-5 py-2.5 text-[12px] font-semibold tracking-[0.12em] text-white uppercase transition-colors hover:bg-coral-dark disabled:cursor-not-allowed disabled:opacity-60"
+                  className="btn-primary btn-small"
                 >
                   {isPending ? "Envoi..." : "Envoyer"}
                 </button>

@@ -6,9 +6,11 @@ import Image from "next/image";
 import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
 import { trackAnalyticsEvent } from "@/lib/analytics";
+import { getEventFactTags } from "@/lib/events/facts";
 import { formatDateValue, getDateKey, isEventPast } from "@/lib/utils/event-dates";
 import { getAppStorageImage } from "@/lib/storage/urls";
 import { FavouriteButton } from "./favourite-button";
+import { MixiteBadge } from "./mixite-badge";
 
 interface EventCardProps {
   id: number;
@@ -22,8 +24,15 @@ interface EventCardProps {
   paysDepart: string | null;
   dateFin?: string | null;
   distance?: string | null;
+  /** Dénivelé le plus élevé des parcours — voir `fetchEventMaxElevations`. */
+  maxElevation?: number | null;
   mint?: boolean | null;
-  variant?: "grid" | "list" | "carousel";
+  /**
+   * `carousel` et `list` sont la même tuile photo, à deux tailles ; `compact`
+   * est la ligne miniature + titre utilisée quand la carte ne doit pas
+   * concurrencer le contenu principal (« Leurs autres évènements »).
+   */
+  variant?: "carousel" | "list" | "compact";
   carouselLayout?: "default" | "map-preview";
   isSelected?: boolean;
   onEventClick?: (id: number) => void;
@@ -40,42 +49,6 @@ function isPlaceholderImageSrc(src: string) {
   return PLACEHOLDER_IMAGE_SIGNATURES.some((signature) => src.includes(signature));
 }
 
-function formatDistanceBadge(distance: string | null | undefined) {
-  const value = distance?.trim();
-  if (!value) return null;
-  return /\bkm\b/i.test(value) ? value : `${value} km`;
-}
-
-function EventCardFallbackArt({
-  name,
-  typeColor,
-  variant,
-}: {
-  name: string;
-  typeColor: string;
-  variant: "list" | "carousel" | "grid";
-}) {
-  const titleClassName =
-    variant === "list"
-      ? "max-w-[9ch] font-serif text-[14px] font-bold leading-[1.05] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.2)]"
-      : variant === "carousel"
-        ? "max-w-[9ch] font-serif text-[20px] font-bold leading-[1.04] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.24)]"
-        : "max-w-[11ch] font-serif text-[18px] font-bold leading-[1.05] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.24)]";
-
-  return (
-    <div
-      className="flex h-full items-end justify-start p-3"
-      style={{
-        backgroundImage: `radial-gradient(circle at top left, ${typeColor}55, transparent 35%), linear-gradient(140deg, ${typeColor}, ${typeColor}bb)`,
-      }}
-    >
-      <div className={titleClassName}>
-        {name}
-      </div>
-    </div>
-  );
-}
-
 export function EventCard({
   id,
   slug,
@@ -88,7 +61,9 @@ export function EventCard({
   paysDepart,
   dateFin,
   distance,
-  variant = "grid",
+  maxElevation,
+  mint,
+  variant = "carousel",
   carouselLayout = "default",
   isSelected = false,
   onEventClick,
@@ -111,13 +86,15 @@ export function EventCard({
   const hasImage = hasUsableImageValue && failedImageSrc !== displayImage;
   const imageLoaded = loadedImageSrc === displayImage;
 
+  // Mois en toutes lettres, comme sur la carte du prototype : la ligne
+  // « ville · date » est tronquée si besoin, mais elle se lit d'abord.
   const formattedStartDate = formatDateValue(dateEvent, "fr-FR", {
     day: "numeric",
-    month: "short",
+    month: "long",
   });
   const formattedEndDate = formatDateValue(dateFin, "fr-FR", {
     day: "numeric",
-    month: "short",
+    month: "long",
   });
   const formattedDate =
     formattedStartDate && formattedEndDate && getDateKey(dateEvent) !== getDateKey(dateFin)
@@ -126,7 +103,8 @@ export function EventCard({
   const past = isEventPast({ dateEvent, dateFin });
 
   const location = [villeDepart, paysDepart].filter(Boolean).join(", ");
-  const distanceBadge = formatDistanceBadge(distance);
+  const factTags = getEventFactTags({ dateEvent, dateFin, distance, maxElevation });
+
   const trackLinkOpen = () => {
     trackAnalyticsEvent("Event Opened", {
       event_id: id,
@@ -136,274 +114,156 @@ export function EventCard({
     });
   };
 
-  if (variant === "carousel") {
+  // Dégradé de repli, affiché tant que la photo n'est pas chargée et quand il
+  // n'y en a pas : la couleur porte le type d'évènement. Le nom n'y est pas
+  // répété — il est déjà posé sur la tuile, en blanc.
+  const fallbackBackground = {
+    backgroundImage: `radial-gradient(circle at top left, ${typeColor}55, transparent 35%), linear-gradient(140deg, ${typeColor}, ${typeColor}bb)`,
+  };
+
+  if (variant === "compact") {
     const content = (
       <>
-        <div className="relative h-[160px] w-full flex-none overflow-hidden">
-          {!imageLoaded ? (
-            <EventCardFallbackArt name={name} typeColor={typeColor} variant="carousel" />
-          ) : null}
-          {hasImage ? (
-            <>
-              <Image
-                src={displayImage}
-                alt={name}
-                fill
-                unoptimized={imageUnoptimized}
-                className={`object-cover transition-all duration-500 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-                sizes="260px"
-                onError={() => setFailedImageSrc(displayImage)}
-                onLoad={() => setLoadedImageSrc(displayImage)}
-              />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,10,0.04),rgba(20,14,10,0.34))]" />
-            </>
-          ) : null}
-          <div className="absolute right-2.5 top-2.5 z-10">
-            <FavouriteButton eventId={id} eventTitle={name} />
-          </div>
-          {past && (
-            <div className="absolute left-2.5 top-2.5 z-10 flex max-w-[calc(100%-4rem)] flex-col items-start gap-1.5">
-              <span className="rounded-full border border-white/35 bg-foreground/62 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm">
-                Terminé
-              </span>
-            </div>
-          )}
-          {type_event && (
-            <div className="absolute bottom-2.5 right-2.5 z-10">
-              <span
-                className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm"
-                style={{ backgroundColor: `${typeColor}de` }}
-              >
-                {type_event}
-              </span>
-            </div>
-          )}
-          {distanceBadge && (
-            <div className="absolute bottom-2.5 left-2.5 z-10">
-              <span
-                className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white shadow-[var(--shadow-sm)] backdrop-blur-sm"
-                style={{ backgroundColor: `${typeColor}de` }}
-              >
-                {distanceBadge}
-              </span>
-            </div>
+        <div
+          className="relative h-14 w-[76px] flex-none overflow-hidden rounded-[var(--radius-sm)] sm:h-[56px]"
+          style={fallbackBackground}
+        >
+          {hasImage && (
+            <Image
+              src={displayImage}
+              alt={name}
+              fill
+              unoptimized={imageUnoptimized}
+              className={`object-cover transition-opacity duration-500 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+              sizes="76px"
+              onError={() => setFailedImageSrc(displayImage)}
+              onLoad={() => setLoadedImageSrc(displayImage)}
+            />
           )}
         </div>
-        <div className="panel-divider flex flex-1 flex-col px-3.5 py-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-            <span className="min-w-0 truncate text-foreground/45">{formattedDate || "À venir"}</span>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[15px] font-bold leading-snug text-foreground">
+            {name}
           </div>
-          <div className="flex min-h-0 flex-1 items-center py-1.5">
-            <h3 className="line-clamp-2 font-serif text-[16px] leading-[1.18] text-foreground">
-              {name}
-            </h3>
-          </div>
-          <div className="flex min-w-0 items-center text-[14px] leading-snug text-foreground/55 md:text-[12px]">
-            <span className="truncate">{location || "Lieu à confirmer"}</span>
+          <div className="mt-0.5 truncate text-[13px] text-foreground/55">
+            {[formattedDate || "À venir", location].filter(Boolean).join(" · ")}
           </div>
         </div>
       </>
     );
 
-    const carouselSizeClassName =
-      carouselLayout === "map-preview"
-        ? "h-[280px] w-[calc(100vw-4.75rem)] max-w-[520px] md:w-[260px]"
-        : "h-[280px] w-[260px]";
     const className =
-      `group flex ${carouselSizeClassName} flex-none snap-start flex-col overflow-hidden rounded-[22px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.92),rgba(248,240,230,0.82))] shadow-[var(--shadow-sm)] transition-all duration-300 hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-[var(--shadow-md)] ${past ? "opacity-[0.78] hover:opacity-100" : ""}`;
+      "flex items-center gap-3.5 rounded-[var(--radius-md)] border border-white/50 bg-white/50 p-3 transition-colors hover:bg-white/85";
 
     if (onEventClick) {
       return (
-        <div
-          role="button"
-          tabIndex={0}
-          className={`${className} cursor-pointer`}
-          onClick={() => onEventClick?.(id)}
-          onKeyDown={(e) => { if (e.key === "Enter") onEventClick?.(id); }}
-          onMouseEnter={() => onEventHover?.(id)}
-          onMouseLeave={() => onEventHover?.(null)}
-        >
+        <button type="button" className={`${className} text-left`} onClick={() => onEventClick(id)}>
           {content}
-        </div>
+        </button>
       );
     }
 
     return (
-      <Link
-        href={`/event/${eventSlug}`}
-        className={className}
-        onClick={trackLinkOpen}
-        onMouseEnter={() => onEventHover?.(id)}
-        onMouseLeave={() => onEventHover?.(null)}
-      >
+      <Link href={`/event/${eventSlug}`} className={className} onClick={trackLinkOpen}>
         {content}
       </Link>
     );
   }
 
-  if (variant === "list") {
-    const cardClassName = `group block overflow-hidden rounded-[28px] border p-2 md:p-2.5 transition-all duration-300 hover:-translate-y-0.5 hover:border-orange/40 hover:shadow-[var(--shadow-md)] ${
-      isSelected
-        ? "border-coral/50 bg-[linear-gradient(180deg,rgba(255,245,240,0.95),rgba(255,240,232,0.88))] shadow-[var(--shadow-md),0_0_0_1px_rgba(235,95,59,0.12)]"
-        : "border-white/55 bg-[linear-gradient(180deg,rgba(255,251,246,0.92),rgba(248,240,230,0.82))] shadow-[var(--shadow-sm)]"
-    }`;
-    const content = (
-      <div
-        className="flex gap-3"
-      >
-        <div className="relative h-28 w-28 flex-none overflow-hidden rounded-[22px] sm:h-32 sm:w-32 md:h-36 md:w-36">
-          {!imageLoaded ? (
-            <EventCardFallbackArt name={name} typeColor={typeColor} variant="list" />
-          ) : null}
-          {hasImage ? (
-            <>
-              <Image
-                src={displayImage}
-                alt={name}
-                fill
-                unoptimized={imageUnoptimized}
-                className={`object-cover transition-all duration-500 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-                sizes="128px"
-                onError={() => setFailedImageSrc(displayImage)}
-                onLoad={() => setLoadedImageSrc(displayImage)}
-              />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,10,0.04),rgba(20,14,10,0.34))]" />
-            </>
-          ) : null}
-        </div>
+  // ---- Tuile photo (carousel + list) ---------------------------------------
+  // Une seule information dominante : le titre, en blanc sur la photo. Les
+  // repères (mixité, durée, distance · dénivelé) sont posés au-dessus, la
+  // ville et la date en dessous.
+  const tile = (
+    <>
+      <div className="absolute inset-0" style={fallbackBackground} />
+      {hasImage && (
+        <Image
+          src={displayImage}
+          alt={name}
+          fill
+          unoptimized={imageUnoptimized}
+          className={`object-cover transition-all duration-500 group-hover:scale-105 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+          sizes={variant === "list" ? "(max-width: 1024px) 100vw, 420px" : "320px"}
+          onError={() => setFailedImageSrc(displayImage)}
+          onLoad={() => setLoadedImageSrc(displayImage)}
+        />
+      )}
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0)_20%,rgba(0,0,0,0.5)_55%,rgba(0,0,0,0.88)_100%)]" />
 
-        <div className="flex min-w-0 flex-1 flex-col justify-between py-1">
-          <div>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]">
-                {type_event && (
-                  <span className="rounded-full border border-white/45 bg-white/84 px-2.5 py-1 text-foreground/72">
-                    {type_event}
-                  </span>
-                )}
-                {past ? (
-                  <span className="rounded-full border border-foreground/8 bg-foreground/62 px-2.5 py-1 text-white">
-                    Terminé
-                  </span>
-                ) : null}
-                {bike_type && (
-                  <span
-                    className="rounded-full px-2.5 py-1 text-white"
-                    style={{ backgroundColor: `${typeColor}de` }}
-                  >
-                    {bike_type}
-                  </span>
-                )}
-              </div>
-              <FavouriteButton eventId={id} eventTitle={name} />
-            </div>
+      <div className="absolute right-2.5 top-2.5 z-20">
+        <FavouriteButton eventId={id} eventTitle={name} />
+      </div>
 
-            <h3 className="max-w-[24ch] font-serif text-[21px] leading-[1.02] text-foreground text-balance md:text-[23px]">
-              {name}
-            </h3>
-
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-[14px] text-foreground/58 md:mt-2.5 md:text-[12px]">
-              <span>{formattedDate || "À venir"}</span>
-              <span className="text-coral/55">•</span>
-              <span className="truncate">{location || "Lieu à confirmer"}</span>
-            </div>
+      <div className="relative z-10 mt-auto p-3.5">
+        {(mint || past || factTags.length > 0) && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            {mint && (
+              <MixiteBadge className="px-2 py-[3px] text-[13px] font-normal tracking-[0.04em]" />
+            )}
+            {past && (
+              <span className="rounded-full border border-white/35 bg-foreground/62 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.1em] text-white backdrop-blur-sm">
+                Terminé
+              </span>
+            )}
+            {factTags.map((fact) => (
+              <span
+                key={fact}
+                className="rounded-full bg-white/90 px-2 py-[3px] text-[10px] uppercase tracking-[0.04em] text-foreground"
+              >
+                {fact}
+              </span>
+            ))}
           </div>
-
+        )}
+        <h3 className="line-clamp-2 font-serif text-[24px] font-bold leading-[1.05] text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.28)]">
+          {name}
+        </h3>
+        <div className="mt-1 truncate text-[13px] text-white/85">
+          {[location || "Lieu à confirmer", formattedDate].filter(Boolean).join(" · ")}
         </div>
       </div>
-    );
+    </>
+  );
 
-    if (onEventClick) {
-      return (
-        <div
-          role="button"
-          tabIndex={0}
-          className={`${cardClassName} cursor-pointer`}
-          onClick={() => onEventClick(id)}
-          onKeyDown={(e) => { if (e.key === "Enter") onEventClick(id); }}
-          onMouseEnter={() => onEventHover?.(id)}
-          onMouseLeave={() => onEventHover?.(null)}
-        >
-          {content}
-        </div>
-      );
-    }
+  const sizeClassName =
+    variant === "list"
+      ? "h-[220px] w-full"
+      : carouselLayout === "map-preview"
+        ? "h-[280px] w-[calc(100vw-4.75rem)] max-w-[520px] flex-none snap-start md:w-[260px]"
+        : "h-[280px] w-[260px] flex-none snap-start";
 
+  const className = `group relative flex flex-col justify-end overflow-hidden rounded-[var(--radius-md)] text-white shadow-[var(--shadow-sm)] transition-all duration-300 hover:shadow-[var(--shadow-md)] ${sizeClassName} ${
+    isSelected ? "ring-2 ring-coral/55 ring-offset-2 ring-offset-transparent" : ""
+  } ${past ? "opacity-[0.78] hover:opacity-100" : ""}`;
+
+  if (onEventClick) {
     return (
-      <Link href={`/event/${eventSlug}`} className={cardClassName} onClick={trackLinkOpen}>
-        {content}
-      </Link>
+      <div
+        role="button"
+        tabIndex={0}
+        className={`${className} cursor-pointer`}
+        onClick={() => onEventClick(id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onEventClick(id);
+        }}
+        onMouseEnter={() => onEventHover?.(id)}
+        onMouseLeave={() => onEventHover?.(null)}
+      >
+        {tile}
+      </div>
     );
   }
 
   return (
     <Link
       href={`/event/${eventSlug}`}
-      className={`glass grain-overlay group block overflow-hidden border border-white/55 transition-all duration-300 hover:-translate-y-1.5 hover:border-orange/45 ${past ? "opacity-[0.78] hover:opacity-100" : ""}`}
+      className={className}
       onClick={trackLinkOpen}
+      onMouseEnter={() => onEventHover?.(id)}
+      onMouseLeave={() => onEventHover?.(null)}
     >
-      <div className="relative h-40 overflow-hidden rounded-t-[calc(var(--radius)-1px)]">
-        {!imageLoaded ? (
-          <EventCardFallbackArt name={name} typeColor={typeColor} variant="grid" />
-        ) : null}
-        {hasImage ? (
-          <>
-            <Image
-              src={displayImage}
-              alt={name}
-              fill
-              unoptimized={imageUnoptimized}
-              className={`object-cover transition-all duration-500 group-hover:scale-108 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-              sizes="(max-width: 768px) 200px, 220px"
-              onError={() => setFailedImageSrc(displayImage)}
-              onLoad={() => setLoadedImageSrc(displayImage)}
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,10,0.05),rgba(20,14,10,0.58))]" />
-          </>
-        ) : null}
-
-        <div className="absolute inset-x-3 top-3 z-10 flex items-start justify-between gap-2">
-          <div className="flex flex-wrap gap-1.5">
-            {type_event && (
-              <span className="rounded-full border border-white/35 bg-white/86 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-foreground shadow-[var(--shadow-sm)] backdrop-blur-sm">
-                {type_event}
-              </span>
-            )}
-            {past ? (
-              <span className="rounded-full border border-white/20 bg-foreground/62 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white shadow-[var(--shadow-sm)] backdrop-blur-sm">
-                Terminé
-              </span>
-            ) : null}
-          </div>
-          {bike_type && (
-            <span
-              className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white shadow-[var(--shadow-sm)] backdrop-blur-sm"
-              style={{ backgroundColor: `${typeColor}e0` }}
-            >
-              {bike_type}
-            </span>
-          )}
-        </div>
-
-        {hasImage ? (
-          <div className="absolute inset-x-4 bottom-4 z-10">
-            <div className="max-w-[90%] font-serif text-[18px] font-bold leading-[1.05] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.32)] text-balance">
-              {name}
-            </div>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="panel-divider p-3.5">
-        <div className="mb-2 flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/45">
-          <span>{formattedDate || "À venir"}</span>
-          <span className="text-coral/70">Explorer</span>
-        </div>
-        <div className="mb-2 text-sm font-semibold text-foreground truncate">{name}</div>
-        <div className="flex items-center gap-1.5 text-[14px] text-foreground/55 md:text-[12px]">
-          <span className="truncate">{location || "Lieu à confirmer"}</span>
-        </div>
-      </div>
+      {tile}
     </Link>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, X } from "lucide-react";
 import {
   createCollection,
   updateCollection,
@@ -136,7 +136,7 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
       </div>
 
       {isPending && (
-        <div className="text-[12px] text-foreground/50">Mise à jour...</div>
+        <div className="text-[13px] text-foreground/50">Mise à jour...</div>
       )}
 
       {/* Create form */}
@@ -199,11 +199,11 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
                   <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${col.is_active ? "bg-green-100 text-green-700" : "bg-foreground/8 text-foreground/40"}`}>
                     {col.is_active ? "Active" : "Inactive"}
                   </span>
-                  <span className="text-[12px] text-foreground/40">
+                  <span className="text-[13px] text-foreground/40">
                     {col.eventCount} événement{col.eventCount !== 1 ? "s" : ""}
                   </span>
                 </span>
-                <span className="flex shrink-0 items-center gap-2 rounded-full border border-coral/18 bg-coral/8 px-3 py-1.5 text-[11px] font-semibold text-coral transition-colors group-hover:border-coral/28 group-hover:bg-coral/12">
+                <span className="flex shrink-0 items-center gap-2 rounded-full border border-coral/18 bg-coral/8 px-3 py-1.5 text-[13px] font-semibold text-coral transition-colors group-hover:border-coral/28 group-hover:bg-coral/12">
                   {expandedId === col.id ? "Masquer" : "Voir"}
                   <ChevronDown
                     aria-hidden="true"
@@ -216,7 +216,7 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
                 <button
                   type="button"
                   onClick={() => handleToggleActive(col.id, col.is_active)}
-                  className={`h-8 rounded-full border px-3 text-[11px] font-semibold transition-colors ${
+                  className={`h-8 rounded-full border px-3 text-[13px] font-semibold transition-colors ${
                     col.is_active
                       ? "border-green-200 text-green-600 hover:bg-green-50"
                       : "border-foreground/10 text-foreground/40 hover:bg-foreground/5"
@@ -230,31 +230,31 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
                       type="button"
                       onClick={() => handleMoveUp(index)}
                       disabled={index === 0}
-                      className="h-8 w-8 rounded-full border border-foreground/10 text-[13px] text-foreground/40 transition-colors hover:bg-foreground/5 disabled:opacity-30"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-foreground/10 text-foreground/40 transition-colors hover:bg-foreground/5 disabled:opacity-30"
                     >
-                      ↑
+                      <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleMoveDown(index)}
                       disabled={index >= collections.length - 1}
-                      className="h-8 w-8 rounded-full border border-foreground/10 text-[13px] text-foreground/40 transition-colors hover:bg-foreground/5 disabled:opacity-30"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-foreground/10 text-foreground/40 transition-colors hover:bg-foreground/5 disabled:opacity-30"
                     >
-                      ↓
+                      <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingId(editingId === col.id ? null : col.id)}
-                      className="h-8 w-8 rounded-full border border-foreground/10 text-[13px] text-foreground/40 transition-colors hover:bg-foreground/5"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-foreground/10 text-foreground/40 transition-colors hover:bg-foreground/5"
                     >
-                      ✎
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDelete(col.id)}
-                      className="h-8 w-8 rounded-full border border-red-200 text-[13px] text-red-400 transition-colors hover:bg-red-50"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-red-200 text-red-400 transition-colors hover:bg-red-50"
                     >
-                      ×
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   </>
                 )}
@@ -309,17 +309,17 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
                                 type="button"
                                 onClick={() => handleMoveEventUp(col.id, col.eventIds, eventIndex)}
                                 disabled={eventIndex === 0}
-                                className="h-5 w-5 rounded text-[10px] text-foreground/40 hover:bg-foreground/5 disabled:opacity-20"
+                                className="flex h-5 w-5 items-center justify-center rounded text-foreground/40 hover:bg-foreground/5 disabled:opacity-20"
                               >
-                                ↑
+                                <ChevronUp className="h-3 w-3" aria-hidden="true" />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleMoveEventDown(col.id, col.eventIds, eventIndex)}
                                 disabled={eventIndex >= col.eventIds.length - 1}
-                                className="h-5 w-5 rounded text-[10px] text-foreground/40 hover:bg-foreground/5 disabled:opacity-20"
+                                className="flex h-5 w-5 items-center justify-center rounded text-foreground/40 hover:bg-foreground/5 disabled:opacity-20"
                               >
-                                ↓
+                                <ChevronDown className="h-3 w-3" aria-hidden="true" />
                               </button>
                             </div>
                           )}
@@ -328,23 +328,23 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
                               {event.name}
                             </span>
                             {event.city && (
-                              <span className="ml-2 text-[11px] text-foreground/40">
+                              <span className="ml-2 text-[13px] text-foreground/40">
                                 {event.city}
                               </span>
                             )}
-                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-foreground/38">
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-foreground/38">
                               {event.date && <span>{formatCollectionEventDate(event.date)}</span>}
                               {event.type && <span>{event.type}</span>}
                             </div>
                           </div>
-                          <span className="shrink-0 rounded-full bg-coral/10 px-2.5 py-1 text-[11px] font-semibold text-coral">
+                          <span className="shrink-0 rounded-full bg-coral/10 px-2.5 py-1 text-[13px] font-semibold text-coral">
                             {formatFavouriteCount(event.favouriteCount)}
                           </span>
                           {!col.is_auto && (
                             <button
                               type="button"
                               onClick={() => handleRemoveEvent(col.id, event.id)}
-                              className="text-[12px] text-red-400 hover:text-red-600"
+                              className="text-[13px] text-red-400 hover:text-red-600"
                             >
                               Retirer
                             </button>
@@ -394,7 +394,7 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
                                 <span className="ml-2 text-foreground/40">{event.city}</span>
                               )}
                             </div>
-                            <span className="text-[11px] text-coral">+ Ajouter</span>
+                            <span className="text-[13px] text-coral">+ Ajouter</span>
                           </button>
                         ))}
                     </div>
@@ -403,7 +403,7 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
                 )}
 
                 {col.is_auto && (
-                  <p className="text-[12px] leading-5 text-foreground/45">
+                  <p className="text-[13px] leading-5 text-foreground/45">
                     Collection automatique limitée aux 10 événements à venir les plus ajoutés en favoris.
                   </p>
                 )}
@@ -416,7 +416,7 @@ export function AdminCollectionsClient({ collections, events }: AdminCollections
       {collections.length === 0 && !showCreateForm && (
         <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/36 px-6 py-12 text-center">
           <p className="text-sm font-semibold text-foreground">Aucune collection</p>
-          <p className="mt-1 text-xs text-foreground/45">
+          <p className="mt-1 text-[13px] text-foreground/45">
             Créez votre première collection pour commencer
           </p>
         </div>

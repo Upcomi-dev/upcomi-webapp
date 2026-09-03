@@ -105,7 +105,7 @@ export function FavoritesPanelBody({
           <p className="text-[14px] font-medium text-foreground">
             Connecte-toi pour voir tes favoris
           </p>
-          <p className="mt-1 text-[12px] text-foreground/42">
+          <p className="mt-1 text-[13px] text-foreground/42">
             Sauvegarde les événements qui te plaisent
           </p>
         </div>
@@ -290,7 +290,7 @@ function TabButton({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "inline-flex min-w-0 items-center justify-center gap-2 rounded-full px-2 text-[12px] font-semibold transition-all md:text-[13px]",
+        "inline-flex min-w-0 items-center justify-center gap-2 rounded-full px-2 text-[13px] font-semibold transition-all md:text-[13px]",
         active
           ? "bg-white text-coral shadow-[0_9px_24px_rgba(36,23,15,0.08)]"
           : "text-foreground/42 hover:text-foreground/62"
@@ -300,7 +300,7 @@ function TabButton({
       <span className="truncate">{label}</span>
       <span
         className={cn(
-          "flex h-5 min-w-5 flex-none items-center justify-center rounded-full px-1.5 text-[11px] font-bold leading-none",
+          "flex h-5 min-w-5 flex-none items-center justify-center rounded-full px-1.5 text-[13px] font-bold leading-none",
           active
             ? "bg-coral/10 text-coral"
             : "bg-foreground/[0.075] text-foreground/42"
@@ -389,7 +389,7 @@ function DatePill({ event }: { event: FavoriteEvent }) {
   return (
     <span
       className={cn(
-        "flex h-8 min-w-12 items-center justify-center rounded-full px-2.5 text-[12px] font-semibold",
+        "flex h-8 min-w-12 items-center justify-center rounded-full px-2.5 text-[13px] font-semibold",
         isEventPast(event)
           ? "bg-foreground/8 text-foreground/45"
           : "bg-[#c8df9c] text-[#536b28]"
@@ -421,7 +421,7 @@ function EmptyState({
           ? "Tu n'as pas d'autres participations"
           : "Aucun favori à venir"}
       </p>
-      <p className="mt-1 text-[12px] text-foreground/42">
+      <p className="mt-1 text-[13px] text-foreground/42">
         {isParticipationTab
           ? "Coche J'y participe depuis tes favoris"
           : "Sauvegarde les événements qui te plaisent"}
