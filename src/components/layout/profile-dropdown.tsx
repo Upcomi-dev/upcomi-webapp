@@ -7,10 +7,12 @@ import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface ProfileDropdownProps {
   onClose: () => void;
+  variant?: "dropdown" | "inline";
 }
 
 export function ProfileDropdown({
   onClose,
+  variant = "dropdown",
 }: ProfileDropdownProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { user, ready, isAdmin, signOut } = useAuth();
@@ -19,7 +21,7 @@ export function ProfileDropdown({
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (confirming) return;
+    if (confirming || variant === "inline") return;
 
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -29,7 +31,7 @@ export function ProfileDropdown({
 
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [onClose, confirming]);
+  }, [onClose, confirming, variant]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -50,7 +52,11 @@ export function ProfileDropdown({
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-12 z-50 w-[260px] overflow-hidden rounded-[20px] border border-white/50 bg-white/90 shadow-[var(--shadow-md)] backdrop-blur-xl"
+      className={
+        variant === "inline"
+          ? "w-full overflow-hidden rounded-[20px] border border-white/50 bg-white/58 shadow-[var(--shadow-sm)] backdrop-blur-xl"
+          : "absolute right-0 top-12 z-50 w-[260px] overflow-hidden rounded-[20px] border border-white/50 bg-white/90 shadow-[var(--shadow-md)] backdrop-blur-xl"
+      }
     >
       {/* Account header with email */}
       <div className="border-b border-foreground/8 bg-white/60 px-4 py-3">

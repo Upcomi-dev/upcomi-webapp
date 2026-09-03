@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { User } from "lucide-react";
+import { CalendarPlus, Heart, Menu, User, X } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
@@ -11,7 +11,9 @@ import { AppLogo } from "@/components/layout/app-logo";
 import { FavoritesDropdown } from "@/components/favorites/favorites-dropdown";
 import { FavoritesSheet } from "@/components/favorites/favorites-sheet";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
+import { AppLegalInfo } from "@/components/layout/app-footer";
 import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled: boolean }) {
   const { openAuthModal } = useAuthModal();
@@ -23,10 +25,16 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
   const [isMobile, setIsMobile] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
-    const syncViewport = () => setIsMobile(mediaQuery.matches);
+    const syncViewport = () => {
+      setIsMobile(mediaQuery.matches);
+      if (!mediaQuery.matches) {
+        setShowMobileMenu(false);
+      }
+    };
 
     syncViewport();
     mediaQuery.addEventListener("change", syncViewport);
@@ -52,6 +60,27 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
     setShowProfile(false);
   }, []);
 
+  const handleMobileMenuChange = useCallback((open: boolean) => {
+    setShowMobileMenu(open);
+    if (!open) {
+      setShowProfile(false);
+    }
+  }, []);
+
+  const closeMobileMenu = useCallback(() => {
+    handleMobileMenuChange(false);
+  }, [handleMobileMenuChange]);
+
+  const openMobileFavorites = useCallback(() => {
+    closeMobileMenu();
+    setShowFavorites(true);
+  }, [closeMobileMenu]);
+
+  const openMobileAuth = useCallback(() => {
+    closeMobileMenu();
+    openAuthModal();
+  }, [closeMobileMenu, openAuthModal]);
+
   return (
     <>
       <nav className="glass-nav sticky top-0 z-50 border-b border-white/45">
@@ -64,11 +93,11 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
             imageClassName="h-12 md:h-14 w-auto"
             ariaLabel="Accéder au site Upcomi"
           />
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto hidden items-center gap-2.5 md:flex">
             {eventProposalsEnabled ? (
               <Link
                 href="/proposer-un-evenement"
-                className="hidden h-10 items-center justify-center rounded-full border border-white/50 bg-white/58 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground/55 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-coral/30 hover:bg-white/80 hover:text-coral sm:inline-flex"
+                className="inline-flex h-10 items-center justify-center rounded-full border border-white/50 bg-white/58 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground/55 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-coral/30 hover:bg-white/80 hover:text-coral"
               >
                 Proposer un événement
               </Link>
@@ -94,15 +123,10 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                 </span>
               </button>
               {showFavorites && !isMobile ? (
-                <div className="hidden md:block">
-                  <FavoritesDropdown
-                    anchorRef={favoritesButtonRef}
-                    onClose={closeFavorites}
-                  />
-                </div>
-              ) : null}
-              {isMobile ? (
-                <FavoritesSheet open={showFavorites} onOpenChange={setShowFavorites} />
+                <FavoritesDropdown
+                  anchorRef={favoritesButtonRef}
+                  onClose={closeFavorites}
+                />
               ) : null}
             </div>
 
@@ -127,38 +151,132 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                 )}
               </div>
             ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => openAuthModal()}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/50 bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] text-orange-dark transition-all hover:-translate-y-0.5 hover:border-orange/55 hover:text-coral md:hidden"
-                  aria-label="Ouvrir la connexion"
-                >
-                  <User className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openAuthModal()}
-                  className="hidden h-10 items-center justify-center rounded-full border border-white/50 bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] px-4 text-[12px] font-semibold tracking-[0.18em] text-orange-dark uppercase transition-all hover:-translate-y-0.5 hover:border-orange/55 hover:text-coral md:inline-flex"
-                >
-                  Connexion
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => openAuthModal()}
+                className="inline-flex h-10 items-center justify-center rounded-full border border-white/50 bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] px-4 text-[12px] font-semibold tracking-[0.18em] text-orange-dark uppercase transition-all hover:-translate-y-0.5 hover:border-orange/55 hover:text-coral"
+              >
+                Connexion
+              </button>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => handleMobileMenuChange(true)}
+            className="soft-ring ml-auto inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/58 text-foreground/68 transition-colors hover:bg-white/80 hover:text-coral md:hidden"
+            aria-label="Ouvrir le menu"
+            aria-expanded={showMobileMenu}
+            aria-controls="mobile-header-menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
         </div>
-        {eventProposalsEnabled ? (
-          <div className="px-4 pb-3 sm:hidden">
-            <Link
-              href="/proposer-un-evenement"
-              className="flex h-10 w-full items-center justify-center rounded-full border border-white/50 bg-white/58 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground/55 backdrop-blur-sm transition-all hover:border-coral/30 hover:bg-white/80 hover:text-coral"
-            >
-              Proposer un événement
-            </Link>
-          </div>
-        ) : null}
       </nav>
 
+      <Dialog open={showMobileMenu} onOpenChange={handleMobileMenuChange}>
+        <DialogContent
+          id="mobile-header-menu"
+          showCloseButton={false}
+          className="top-0 right-0 bottom-0 left-auto flex h-dvh max-h-dvh w-[min(88vw,380px)] max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-y-0 border-r-0 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(243,235,223,0.97))] p-0 data-open:slide-in-from-right data-closed:slide-out-to-right md:hidden"
+        >
+          <div className="flex h-[75px] shrink-0 items-center justify-end border-b border-foreground/8 px-5">
+            <DialogTitle className="sr-only">
+              Menu
+            </DialogTitle>
+            <button
+              type="button"
+              onClick={closeMobileMenu}
+              className="soft-ring flex h-10 w-10 items-center justify-center rounded-full bg-white/62 text-foreground/60 transition-colors hover:bg-white/85 hover:text-coral"
+              aria-label="Fermer le menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+            <div className="space-y-1">
+              {!ready ? (
+                <div className="h-14 animate-pulse rounded-[18px] bg-white/45" aria-hidden="true" />
+              ) : isAuthenticated ? (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowProfile((previous) => !previous)}
+                    className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-3 text-left text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
+                    aria-expanded={showProfile}
+                  >
+                    <span className="soft-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] text-orange-dark">
+                      <User className="h-4 w-4" />
+                    </span>
+                    Mon compte
+                  </button>
+                  {showProfile ? (
+                    <ProfileDropdown variant="inline" onClose={closeMobileMenu} />
+                  ) : null}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={openMobileAuth}
+                  className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-3 text-left text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
+                >
+                  <span className="soft-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] text-orange-dark">
+                    <User className="h-4 w-4" />
+                  </span>
+                  Connexion
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={openMobileFavorites}
+                className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-3 text-left text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
+              >
+                <span className="soft-ring relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/58 text-coral">
+                  <Heart className="h-4 w-4" />
+                  {count > 0 ? (
+                    <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white">
+                      {count}
+                    </span>
+                  ) : null}
+                </span>
+                Mes favoris
+              </button>
+            </div>
+
+            <div className="my-4 h-px bg-foreground/8" />
+
+            <div className="space-y-1">
+              <FeedbackDialog variant="menu" />
+
+              {eventProposalsEnabled ? (
+                <Link
+                  href="/proposer-un-evenement"
+                  onClick={closeMobileMenu}
+                  className="flex min-h-14 items-center gap-3 rounded-[18px] px-3 text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
+                >
+                  <span className="soft-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/58 text-coral">
+                    <CalendarPlus className="h-4 w-4" />
+                  </span>
+                  Proposer un événement
+                </Link>
+              ) : null}
+            </div>
+          </div>
+
+          <div
+            className="shrink-0 border-t border-foreground/8 px-5 pt-4"
+            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+          >
+            <AppLegalInfo variant="mobile-menu" />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {isMobile ? (
+        <FavoritesSheet open={showFavorites} onOpenChange={setShowFavorites} />
+      ) : null}
     </>
   );
 }

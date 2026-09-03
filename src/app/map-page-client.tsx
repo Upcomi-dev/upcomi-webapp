@@ -705,7 +705,7 @@ function MapPageContent({
 
   const renderMobileMapContent = () => {
     return (
-      <section className="relative min-h-[calc(100dvh-4.5rem)] overflow-hidden bg-white/40">
+      <section className="relative h-full min-h-0 overflow-hidden bg-white/40">
         <div className="absolute inset-0">
           <EventMap
             events={sortedEvents}
@@ -782,10 +782,10 @@ function MapPageContent({
     }
 
     return (
-      <div className="relative px-4 py-4 md:hidden">
+      <div className="relative h-full md:hidden">
         <div
           className={cn(
-            "relative -mx-4 -mt-4 min-h-[calc(100dvh-4.5rem)]",
+            "relative h-full min-h-0",
             mobileView === "map" ? "block" : "hidden"
           )}
           aria-hidden={mobileView !== "map"}
@@ -796,7 +796,7 @@ function MapPageContent({
 
         <div
           className={cn(
-            "relative -mx-4 -mt-4 pt-[5.5rem]",
+            "relative pb-4 pt-[5.5rem]",
             mobileView === "list" ? "block" : "hidden"
           )}
           aria-hidden={mobileView !== "list"}
@@ -811,7 +811,8 @@ function MapPageContent({
           <button
             type="button"
             onClick={() => setMobileView(mobileView === "list" ? "map" : "list")}
-            className="fixed bottom-5 left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-coral px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white shadow-[0_12px_30px_rgba(235,95,59,0.32)]"
+            className="fixed left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-coral px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white shadow-[0_12px_30px_rgba(235,95,59,0.32)]"
+            style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
           >
             {mobileView === "list" ? <MapIcon className="h-4 w-4" /> : <List className="h-4 w-4" />}
             <span>{mobileView === "list" ? "Carte" : "Liste"}</span>
@@ -869,11 +870,25 @@ function MapPageContent({
 
   return (
     <div className="flex flex-col">
-      <div className="flex min-h-[100dvh] flex-col md:h-screen md:min-h-0">
+      <div
+        className={cn(
+          "flex flex-col md:h-screen md:min-h-0",
+          mobileView === "map" && !detailEvent
+            ? "h-[100dvh] min-h-0 overflow-hidden"
+            : "min-h-[100dvh]"
+        )}
+      >
         <TopNavClient eventProposalsEnabled={eventProposalsEnabled} />
 
         {isMobile ? (
-          <div className="flex-1">{renderMobileContent()}</div>
+          <div
+            className={cn(
+              "flex-1",
+              mobileView === "map" && !detailEvent ? "min-h-0 overflow-hidden" : ""
+            )}
+          >
+            {renderMobileContent()}
+          </div>
         ) : (
           <div className="relative flex flex-1 flex-col overflow-hidden md:min-h-0 md:grid md:grid-rows-[1fr] md:grid-cols-[minmax(380px,45vw)_minmax(0,1fr)] xl:grid-cols-[minmax(420px,45vw)_minmax(0,1fr)]">
             {/* Desktop panel */}

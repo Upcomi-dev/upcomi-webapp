@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.38] - 2026-09-01
+
+### Navigation
+- feat: regroupe les actions du header dans un menu latéral accessible sur mobile
+- style: place le profil ou la connexion et les favoris avant les actions de feedback et de proposition
+
+### Carte
+- fix: maintient la carte d’événement au-dessus du bouton Carte/Liste sur mobile
+
 ## [0.3.37] - 2026-07-27
 
 ### UI
