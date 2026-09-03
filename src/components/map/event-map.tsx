@@ -31,6 +31,8 @@ const FRANCE_VIEW = {
 
 /** Bottom sheet peek height on mobile — keep markers above the sheet. */
 const MOBILE_BOTTOM_INSET = 148;
+/** Keep event previews clear of the fixed mobile map/list toggle. */
+const MOBILE_EVENT_CARD_BOTTOM_INSET = 88;
 const MOBILE_MARKER_TOUCH_RADIUS = 22;
 const DESKTOP_MARKER_TOUCH_RADIUS = 10;
 
@@ -403,7 +405,11 @@ export function EventMap({
       {activeGroup ? (
         <div
           className="pointer-events-none absolute inset-x-0 z-10"
-          style={{ bottom: isMobile ? 88 : 24 }}
+          style={{
+            bottom: isMobile
+              ? `calc(${MOBILE_EVENT_CARD_BOTTOM_INSET}px + env(safe-area-inset-bottom, 0px))`
+              : 24,
+          }}
         >
           <div
             className={`pointer-events-auto mx-auto flex w-full max-w-[min(100%,960px)] flex-col gap-3 ${

@@ -25,7 +25,13 @@ const kindIcons = {
   feedback: MessageSquarePlus,
 } as const;
 
-export function FeedbackDialog() {
+interface FeedbackDialogProps {
+  variant?: "header" | "menu";
+}
+
+export function FeedbackDialog({
+  variant = "header",
+}: FeedbackDialogProps = {}) {
   const { user } = useAuth();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -82,23 +88,27 @@ export function FeedbackDialog() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => handleOpenChange(true)}
-        className="soft-ring flex h-9 w-9 items-center justify-center rounded-full border border-white/38 bg-white/42 text-foreground/54 transition-all hover:border-coral/22 hover:bg-white/58 hover:text-foreground/72 md:hidden"
-        aria-label="Remonter une idée, un bug ou un feedback"
-      >
-        <MessageSquarePlus className="h-4 w-4" />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => handleOpenChange(true)}
-        className="hidden h-9 w-9 items-center justify-center rounded-full border border-white/38 bg-white/42 text-foreground/58 transition-all hover:border-coral/22 hover:bg-white/58 hover:text-foreground md:inline-flex"
-        aria-label="Remonter une idée, un bug ou un feedback"
-      >
-        <MessageSquarePlus className="h-4 w-4" />
-      </button>
+      {variant === "menu" ? (
+        <button
+          type="button"
+          onClick={() => handleOpenChange(true)}
+          className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-3 text-left text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
+        >
+          <span className="soft-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/58 text-coral">
+            <MessageSquarePlus className="h-4 w-4" />
+          </span>
+          Idée, bug ou feedback
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => handleOpenChange(true)}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-white/38 bg-white/42 text-foreground/58 transition-all hover:border-coral/22 hover:bg-white/58 hover:text-foreground"
+          aria-label="Remonter une idée, un bug ou un feedback"
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+        </button>
+      )}
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
