@@ -11,6 +11,7 @@ import { AppLogo } from "@/components/layout/app-logo";
 import { FavoritesDropdown } from "@/components/favorites/favorites-dropdown";
 import { FavoritesSheet } from "@/components/favorites/favorites-sheet";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
+import { AppLegalInfo } from "@/components/layout/app-footer";
 import { ProfileDropdown } from "@/components/layout/profile-dropdown";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
@@ -262,6 +263,13 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                 </Link>
               ) : null}
             </div>
+          </div>
+
+          <div
+            className="shrink-0 border-t border-foreground/8 px-5 pt-4"
+            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+          >
+            <AppLegalInfo variant="mobile-menu" />
           </div>
         </DialogContent>
       </Dialog>
