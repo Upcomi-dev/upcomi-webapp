@@ -90,13 +90,16 @@ export function InclusionMeasures({ eventName, measures }: InclusionMeasuresProp
   const collapsible = measures.length > INCLUSION_MEASURES_COLLAPSE_AT;
 
   return (
-    <section className="mt-7 border-l-4 border-[#4e9c6b] pl-4">
-      <h3 className="mb-3.5 font-serif text-[20px] leading-tight text-foreground">
+    // Carte dans la carte : le vert de la charte isole le bloc du reste de
+    // « Qui organise ? », et la marge négative rattrape une partie du padding
+    // du parent pour que le contenu ne soit pas rogné deux fois.
+    <section className="-mx-2 mt-7 rounded-[var(--radius-md)] bg-green-light p-4 text-green">
+      <h3 className="mb-3.5 font-serif text-[20px] leading-tight">
         Ce que l&apos;organisation fait pour les femmes et minorités de genre
       </h3>
 
       {measures.length === 0 ? (
-        <p className="text-sm leading-[1.6] text-foreground/55">
+        <p className="text-sm leading-[1.6] text-green/75">
           Pour l&apos;instant, aucune mesure d&apos;inclusivité n&apos;est listée dans
           Upcomi pour cet évènement.
         </p>
@@ -113,7 +116,7 @@ export function InclusionMeasures({ eventName, measures }: InclusionMeasuresProp
 
               return (
                 <div key={group.id}>
-                  <h4 className="mb-1 text-[14px] font-bold leading-snug text-foreground/55">
+                  <h4 className="mb-1 text-[14px] font-bold leading-snug text-green/75">
                     {group.label}
                   </h4>
                   <ul className="flex flex-col gap-1">
@@ -124,7 +127,7 @@ export function InclusionMeasures({ eventName, measures }: InclusionMeasuresProp
                           <button
                             type="button"
                             onClick={() => setOpenMeasure(measure)}
-                            className="flex w-full items-center gap-2.5 py-1 text-left text-[14px] leading-snug text-foreground/55 transition-colors hover:text-coral"
+                            className="flex w-full items-center gap-2.5 py-1 text-left text-[14px] leading-snug text-green/75 transition-colors hover:text-green-dark"
                           >
                             <Icon className="h-4 w-4 flex-none" strokeWidth={1.8} />
                             <span>{measure.label}</span>
@@ -142,10 +145,10 @@ export function InclusionMeasures({ eventName, measures }: InclusionMeasuresProp
             <button
               type="button"
               onClick={() => setExpanded((value) => !value)}
-              className="mt-4 block text-[14px] font-semibold text-foreground hover:underline"
+              className="mt-4 block text-[14px] font-semibold hover:underline"
             >
               {expanded ? "Voir moins" : "Voir tout"}{" "}
-              <span className="font-normal text-foreground/55">({measures.length})</span>
+              <span className="font-normal text-green/75">({measures.length})</span>
             </button>
           )}
         </>
@@ -153,7 +156,7 @@ export function InclusionMeasures({ eventName, measures }: InclusionMeasuresProp
 
       <a
         href={buildAddMeasureMailto(eventName)}
-        className="mt-4 inline-flex items-start gap-1.5 text-[14px] font-semibold text-coral hover:underline"
+        className="mt-4 inline-flex items-start gap-1.5 text-[14px] font-semibold hover:underline"
       >
         <CirclePlus className="mt-[3px] h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
         Signaler une mesure qui a été mise en place
@@ -176,7 +179,7 @@ function MeasureDetail({ measure }: { measure: InclusionMeasure }) {
   const Icon = MEASURE_ICONS[measure.icon] ?? ShieldCheck;
   return (
     <>
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#4e9c6b]/15 text-[#3d7a53]">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-light text-green">
         <Icon className="h-5 w-5" strokeWidth={1.8} />
       </div>
       <DialogTitle className="mt-3 mb-2 font-serif text-[19px] leading-tight text-foreground">
