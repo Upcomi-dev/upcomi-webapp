@@ -5,10 +5,11 @@ import Link from "next/link";
 import { Calendar, Euro, ExternalLink, Flag, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
-import { getDateKey, getLocalDateKey } from "@/lib/utils/event-dates";
+import { getLocalDateKey } from "@/lib/utils/event-dates";
 import { getEventKeyDates } from "@/lib/utils/event-key-dates";
 import { findNearestStation } from "@/lib/utils/stations";
 import { fetchEventInclusionMeasures } from "@/lib/events/inclusion-measures";
+import { getEventFactTags } from "@/lib/events/facts";
 import { getEventPath, getEventUrl, serializeJsonLd, SITE_NAME } from "@/lib/seo";
 import { parseLegacyEventId } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
@@ -163,12 +164,15 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   const minPrice = prices.length > 0 ? Math.min(...prices) : null;
   const minPriceLabel = minPrice == null ? null : minPrice === 0 ? "Gratuit" : `À partir de ${minPrice}€`;
 
-  // Repères affichés sur l'image, comme sur la carte d'événement : durée,
-  // puis distance et dénivelé regroupés (séparés, le dénivelé se perd entre
-  // la durée et la date — les deux se lisent toujours ensemble).
+  // Repères affichés sur l'image : les mêmes que sur la carte d'évènement, pour
+  // retrouver en haut de fiche ce sur quoi on vient de filtrer.
   const heroFacts = [
-    formatDurationLabel(event.dateEvent, event.dateFin),
-    formatDistanceElevationLabel(event.distance, maxElevation(sousEvents)),
+    ...getEventFactTags({
+      dateEvent: event.dateEvent,
+      dateFin: event.dateFin,
+      distance: event.distance,
+      maxElevation: maxElevation(sousEvents),
+    }),
     event.bike_type,
   ].filter((fact): fact is string => Boolean(fact));
 
@@ -441,28 +445,34 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 measures={inclusionMeasures}
               />
 
+              {/* Slider horizontal de lignes compactes (miniature + nom +
+                  date/lieu) plutôt que de grandes cartes photo : ces
+                  évènements sont une sortie possible depuis la fiche, ils ne
+                  doivent pas concurrencer celui qu'on est en train de lire. */}
               {relatedEvents.length > 0 && (
                 <div className="mt-7">
                   <h3 className="mb-2.5 text-[16px] font-semibold text-foreground/55">
                     Leurs autres évènements
                   </h3>
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="scrollbar-hide -mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-5">
                     {relatedEvents.map((relatedEvent) => (
-                      <EventCard
-                        key={relatedEvent.id}
-                        id={relatedEvent.id}
-                        slug={relatedEvent.slug}
-                        nomEvent={relatedEvent.nomEvent}
-                        dateEvent={relatedEvent.dateEvent}
-                        dateFin={relatedEvent.dateFin}
-                        image={relatedEvent.image}
-                        bike_type={relatedEvent.bike_type}
-                        type_event={relatedEvent.type_event}
-                        villeDepart={relatedEvent.villeDepart}
-                        paysDepart={relatedEvent.paysDepart}
-                        distance={relatedEvent.distance}
-                        mint={relatedEvent.mint}
-                      />
+                      <div key={relatedEvent.id} className="w-[240px] flex-none snap-start">
+                        <EventCard
+                          id={relatedEvent.id}
+                          slug={relatedEvent.slug}
+                          nomEvent={relatedEvent.nomEvent}
+                          dateEvent={relatedEvent.dateEvent}
+                          dateFin={relatedEvent.dateFin}
+                          image={relatedEvent.image}
+                          bike_type={relatedEvent.bike_type}
+                          type_event={relatedEvent.type_event}
+                          villeDepart={relatedEvent.villeDepart}
+                          paysDepart={relatedEvent.paysDepart}
+                          distance={relatedEvent.distance}
+                          mint={relatedEvent.mint}
+                          variant="compact"
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -550,52 +560,6 @@ function maxElevation(sousEvents: SousEvent[]): number | null {
     .map((se) => se.elevation)
     .filter((value): value is number => typeof value === "number" && value > 0);
   return values.length > 0 ? Math.max(...values) : null;
-}
-
-/**
- * Durée de l'évènement, départ et arrivée inclus. `dateFin` égale à
- * `dateEvent` décrit une sortie à la journée, pas une arrivée le lendemain ;
- * `dateFin` absente ne dit rien de la durée — mieux vaut alors ne pas afficher
- * de repère que d'annoncer une journée par défaut.
- */
-function formatDurationLabel(
-  dateEvent: string | null,
-  dateFin: string | null
-): string | null {
-  const startKey = getDateKey(dateEvent);
-  const endKey = getDateKey(dateFin);
-  if (!startKey || !endKey) return null;
-  if (endKey <= startKey) return "1 journée";
-
-  const [startYear, startMonth, startDay] = startKey.split("-").map(Number);
-  const [endYear, endMonth, endDay] = endKey.split("-").map(Number);
-  const days =
-    Math.round(
-      (new Date(endYear, endMonth - 1, endDay).getTime() -
-        new Date(startYear, startMonth - 1, startDay).getTime()) /
-        (24 * 60 * 60 * 1000)
-    ) + 1;
-
-  return `${days} jours`;
-}
-
-/**
- * Distance et dénivelé dans un même repère : séparés, le dénivelé se perdait
- * entre la durée et la date. Les deux se lisent toujours ensemble.
- */
-function formatDistanceElevationLabel(
-  distance: string | null,
-  elevation: number | null
-): string | null {
-  const distanceValue = distance?.trim();
-  const distanceLabel = distanceValue
-    ? /\bkm\b/i.test(distanceValue)
-      ? distanceValue
-      : `${distanceValue} km`
-    : null;
-  const elevationLabel = elevation ? `${elevation} m D+` : null;
-
-  return [distanceLabel, elevationLabel].filter(Boolean).join(" · ") || null;
 }
 
 async function fetchOrganizerEvents(

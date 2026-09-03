@@ -239,30 +239,80 @@ session avant chaque requête.
 
 ## 5. Environnement local
 
-`.env.local` (gitignoré) pointe sur la base de **prod**. Le garde-fou principal :
+`.env.local` (gitignoré) pointe sur un stack Supabase **local**, pas sur la
+prod. Le stack tourne dans Docker via Colima ; l'ancien contenu, qui visait la
+base de production, est conservé dans `.env.local.backup`.
 
-> **Ne pas mettre la vraie clé `service_role` en local.** Une valeur factice
-> non vide suffit. Avec la seule clé publique, le code local est enfermé dans
-> les mêmes RLS que n'importe quelle utilisatrice — le pire qu'il puisse faire
-> est ce qu'elle ferait depuis son navigateur.
-
-Vérifié : avec une clé secrète factice, l'app répond 200 et s'affiche
-normalement. C'est la variable *absente* qui provoque une 500
-(`createAdminClient()` lève à la construction) ; une valeur fausse échoue à
-l'appel et `isEventProposalFeatureEnabled()` l'attrape pour retourner `false`.
-
-Ce qu'on perd avec la clé factice, et c'est tout : les flags lisent `false`
-(lien « Proposer un événement » masqué), `/admin` et `/proposer-un-evenement`
-ne fonctionnent pas, le proxy d'images ne sert plus les images — laisser
-`NEXT_PUBLIC_SITE_URL` vide fait alors résoudre les images vers `app.upcomi.cc`.
-
-Autres garde-fous : utiliser un compte de test plutôt qu'un compte réel ; ne
-jamais coller de SQL « pour voir » dans le SQL Editor de la prod (les `select`
-sont sans danger, tout le reste mérite un backup préalable).
+### Démarrer
 
 ```bash
+colima start
+supabase start      # depuis la racine du dépôt
 npm run dev
 ```
+
+`supabase start` lit `supabase/config.toml` et applique les migrations de
+`supabase/migrations/` au premier démarrage. `supabase stop` arrête le stack
+(les données survivent) ; `supabase status` réaffiche les URLs et les clés.
+
+| Service | URL |
+|---|---|
+| API (REST, Auth, Storage) | http://127.0.0.1:54321 |
+| Postgres | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
+| Studio (SQL Editor, table editor) | http://127.0.0.1:54323 |
+| Mailpit (tous les mails sortants) | http://127.0.0.1:54324 |
+
+Les mails d'authentification ne partent nulle part : ils atterrissent dans
+Mailpit, où l'on récupère les liens de confirmation et de connexion.
+
+### La clé secrète locale est sans danger
+
+`SUPABASE_SECRET_KEY` contient la vraie `service_role` **du stack local**.
+C'est une clé de démo, identique sur toutes les installations Supabase CLI, et
+elle n'ouvre que la base Postgres qui tourne dans Docker. Elle n'a aucune
+valeur en dehors de la machine.
+
+Conséquence : plus rien n'est bridé en local. Les feature flags se lisent
+vraiment, `/admin` et `/proposer-un-evenement` fonctionnent, le proxy d'images
+sert les images. Les limitations décrites dans les versions précédentes de ce
+document (clé factice, flags à `false`) n'ont plus cours.
+
+### Contenu de la base locale
+
+Environ 93 évènements seedés, et **0 `sous_events`** — de quoi parcourir les
+listes et les fiches, mais les écrans qui dépendent des sous-évènements
+apparaissent vides. Les créer à la main dans Studio ou par un seed est le seul
+moyen de les tester.
+
+### Appliquer une migration en local
+
+Écrire le fichier dans `supabase/migrations/`, en respectant le format
+`AAAAMMJJHHMMSS_description.sql`, puis :
+
+```bash
+supabase migration up
+```
+
+Pour repartir d'une base propre et rejouer toute l'historique des migrations
+(les données locales sont perdues) :
+
+```bash
+supabase db reset
+```
+
+Une migration n'est poussée en prod qu'après avoir été jouée ici. Les règles de
+la section 3 restent la référence pour ce qu'une migration a le droit de faire.
+
+### Ce qui reste vrai vis-à-vis de la prod
+
+La prod n'a plus de raison d'être touchée depuis le poste de dev. Si l'on y
+retourne malgré tout — `.env.local.backup`, Studio distant, `supabase link` —
+les garde-fous d'origine tiennent toujours :
+
+- ne pas mettre la vraie clé `service_role` de prod dans un `.env` local ;
+- utiliser un compte de test plutôt qu'un compte réel ;
+- ne jamais coller de SQL « pour voir » dans le SQL Editor de la prod (les
+  `select` sont sans danger, tout le reste mérite un backup préalable).
 
 > `pnpm` n'est pas installé sur la machine de dev alors que le dépôt a un
 > `pnpm-lock.yaml`. Les dépendances ont été installées avec `npm` via
@@ -371,6 +421,43 @@ affiché, même vide.
 - Le prix d'un parcours **mène à l'inscription** quand `events.URL` existe.
 - La carte « Détails » de la colonne de droite est supprimée : elle répétait la
   ligne de synthèse. La colonne ne porte plus que le bloc d'inscription.
+
+### Cartes d'évènement (même branche)
+
+La charte de la carte a suivi celle de la fiche : le proto n'a **qu'une seule**
+carte, une tuile photo pleine, déclinée en deux tailles. `EventCard` avait trois
+variantes divergentes, dont deux répétaient le titre (une fois sur l'image, une
+fois dans un panneau blanc en dessous).
+
+- `carousel` (accueil, aperçu carte, panneau de détail) et `list` (résultats de
+  recherche) sont désormais **la même tuile** : photo en fond, dégradé, cœur en
+  haut à droite, repères (mixité, durée, distance · dénivelé) puis titre serif
+  blanc et « ville · date ». Seules les dimensions changent.
+- `grid` a disparu. « Leurs autres évènements » passe à une nouvelle variante
+  **`compact`** (miniature + nom + date/lieu, en slider horizontal), reprise du
+  `.agenda-row` du proto : ces évènements sont une sortie possible depuis la
+  fiche, ils ne doivent pas concurrencer celui qu'on lit. Même traitement dans
+  le panneau de détail de la carte.
+- Le badge **mixité choisie** apparaît enfin sur les cartes : la prop `mint`
+  était passée partout mais n'était pas lue.
+- Les repères sont calculés par `src/lib/events/facts.ts`, partagé entre la
+  carte et le visuel de la fiche — c'est ce qui garantit qu'on retrouve en haut
+  de fiche ce sur quoi on vient de filtrer.
+
+**Dénivelé** : il vit sur `sous_events`, pas sur `events`. `fetchEventMaxElevations`
+(`src/lib/events/elevations.ts`) le remonte en une requête à deux colonnes sur
+les seuls évènements listés, découpée par paquets de 200 identifiants. Pas de
+fonction SQL ni de migration : à ce volume elle n'apporterait rien. Le champ
+voyage dans `MapEvent.maxElevation`, **optionnel** — il reste absent partout où
+il n'a pas été demandé.
+
+> Les collections manuelles font leur propre requête d'évènements (elles peuvent
+> porter un évènement hors filtres ou sans coordonnées) : elles ont donc leur
+> propre lecture du dénivelé. Oublier ce second appel laisse les carrousels de
+> l'accueil sans dénivelé alors que la carte l'affiche.
+
+> `src/components/layout/mobile-bottom-sheet.tsx` n'est référencé nulle part.
+> Il a été mis à jour par cohérence, mais c'est du code mort à supprimer.
 
 ### Checklist de mise en prod
 

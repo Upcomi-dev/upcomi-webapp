@@ -400,24 +400,27 @@ export function EventDetailPanel({
             ref={relatedScrollRef}
             className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
+            {/* Lignes compactes, comme sur la fiche évènement : ces
+                évènements ne doivent pas concurrencer celui qu'on consulte. */}
             {relatedEvents.map((relatedEvent) => (
-              <EventCard
-                key={relatedEvent.id}
-                id={relatedEvent.id}
-                slug={relatedEvent.slug}
-                nomEvent={relatedEvent.nomEvent}
-                dateEvent={relatedEvent.dateEvent}
-                dateFin={relatedEvent.dateFin}
-                image={relatedEvent.image}
-                bike_type={relatedEvent.bike_type}
-                type_event={relatedEvent.type_event}
-                villeDepart={relatedEvent.villeDepart}
-                paysDepart={relatedEvent.paysDepart}
-                distance={relatedEvent.distance}
-                mint={relatedEvent.mint}
-                variant="carousel"
-                onEventClick={(eventId) => onEventSelect?.(eventId, "related")}
-              />
+              <div key={relatedEvent.id} className="w-[240px] flex-none snap-start">
+                <EventCard
+                  id={relatedEvent.id}
+                  slug={relatedEvent.slug}
+                  nomEvent={relatedEvent.nomEvent}
+                  dateEvent={relatedEvent.dateEvent}
+                  dateFin={relatedEvent.dateFin}
+                  image={relatedEvent.image}
+                  bike_type={relatedEvent.bike_type}
+                  type_event={relatedEvent.type_event}
+                  villeDepart={relatedEvent.villeDepart}
+                  paysDepart={relatedEvent.paysDepart}
+                  distance={relatedEvent.distance}
+                  mint={relatedEvent.mint}
+                  variant="compact"
+                  onEventClick={(eventId) => onEventSelect?.(eventId, "related")}
+                />
+              </div>
             ))}
           </div>
         </div>

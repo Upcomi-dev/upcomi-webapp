@@ -594,6 +594,8 @@ function MapPageContent({
                     type_event={event.type_event}
                     villeDepart={event.villeDepart}
                     paysDepart={event.paysDepart}
+                    distance={event.distance}
+                    maxElevation={event.maxElevation}
                     mint={event.mint}
                     variant="list"
                     isSelected={event.id === panel.selectedEventId}
@@ -674,6 +676,8 @@ function MapPageContent({
                   type_event={event.type_event}
                   villeDepart={event.villeDepart}
                   paysDepart={event.paysDepart}
+                  distance={event.distance}
+                  maxElevation={event.maxElevation}
                   mint={event.mint}
                   variant="list"
                   isSelected={event.id === panel.selectedEventId}
