@@ -280,9 +280,7 @@ export function EventDetailPanel({
       {/* Sous-events / Parcours */}
       {sousEvents.length > 0 && (
         <div>
-          <h2 className="mb-3 text-[14px] font-semibold text-foreground">
-            Parcours disponibles
-          </h2>
+
           <div className="space-y-2">
             {sousEvents.map((se) => (
               <div

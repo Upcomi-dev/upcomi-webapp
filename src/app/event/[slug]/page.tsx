@@ -349,14 +349,8 @@ export default async function EventPage({ params, searchParams }: PageProps) {
               </div>
             )}
 
-            {/* Sous-events / Parcours — le prix mène à l'inscription, comme
-                dans la maquette : c'est le geste qu'on cherche à faire depuis
-                un parcours précis. */}
             {sousEvents.length > 0 && (
               <div className="mb-6">
-                <h2 className="mb-3 text-[15px] font-semibold text-foreground">
-                  Parcours disponibles
-                </h2>
                 <div className="max-w-[450px] space-y-2.5">
                   {sousEvents.map((se) => (
                     <div
@@ -408,9 +402,6 @@ export default async function EventPage({ params, searchParams }: PageProps) {
 
             <EventKeyDates eventId={event.id} dates={keyDates} />
 
-            {/* Qui organise ? — les mesures d'inclusion et les autres
-                évènements de l'organisation sont des sous-parties de ce bloc,
-                pas des sections à part. */}
             <div className="glass mb-6 rounded-[var(--radius)] p-5">
               <h2 className="mb-4 font-serif text-[22px] leading-tight text-foreground">
                 Qui organise&nbsp;?
