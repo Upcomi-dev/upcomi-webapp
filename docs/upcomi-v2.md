@@ -124,7 +124,8 @@ Notes :
 - **`feat/partage-experience`** regroupe le parcours de contribution et les blocs
   tags/récits : même flux producteur → données → affichage, une seule migration.
   La **saisie** d'un récit est finalement avancée dans `feat/onboarding-v2`
-  (§7) ; il reste à cette brique l'affichage, les tags et le parcours retour.
+  (§7), et **l'affichage** est traité dans une première tranche (§9) ; il reste
+  à cette brique les tags et le reste du parcours retour.
 - La brique « fiche-communauté » a été supprimée (doublon).
 - « Événement V2 » (page parallèle branchée à la fin) a été abandonné.
 
@@ -689,3 +690,87 @@ c'est une autre famille, qui a ses propres règles dans le proto (`.pill`,
 2. Merger le code (aucun feature flag : les blocs sont visibles au déploiement,
    et dégradent proprement — timeline en « --/-- », mesures en état vide).
 3. Saisir les rattachements `event_inclusion_measures` évènement par évènement.
+
+---
+
+## 9. Brique — `feat/partage-experience` (affichage des récits)
+
+La saisie d'un récit était déjà là, avancée dans `feat/onboarding-v2` (§7) :
+cette branche prend la suite avec **l'affichage** sur la fiche évènement et le
+**parcours de relance** qui va le chercher. Les tags et le reste du parcours
+retour restent à faire.
+
+### Ce qui est livré
+
+**Bloc « Retours d'expérience »** sur la fiche — le `storiesHTML` du proto
+(`upcomi-clone/assets/js/event-detail.js`), en fin de colonne principale, après
+« Qui organise ? ».
+
+- `src/lib/events/stories.ts` (lecture, libellé de plateforme),
+  `src/components/events/event-stories.tsx`.
+- Une ligne par récit : avatar ou initiale, prénom, texte libre, bouton « Son
+  récit sur Instagram / Strava / … ». Le récit de l'utilisatrice est marqué
+  « (toi) ».
+
+**Bandeau orange de relance** — le `#app-banner` du proto (`ui.js`), monté sous
+la barre de navigation dans `TopNavClient` : dans le flux, sur toutes les pages,
+il suit la page au lieu de coller en haut de l'écran.
+
+- `src/components/events/story-prompt-banner.tsx`.
+- Candidat : un évènement **participé** (`favourite_events.participates`),
+  **passé**, **sans récit de sa part**, non fermé. Un seul à la fois, le plus
+  récemment terminé.
+
+**Modale de récit** — le pas-à-pas de `review.js` (« Bravo ! » → saisie →
+confirmation), monté une fois dans le layout et ouvert depuis ses trois points
+d'entrée via `useEventStories()`.
+
+- `src/components/events/event-stories-context.tsx` (récits de l'utilisatrice +
+  état d'ouverture), `src/components/events/event-story-modal.tsx`.
+- Le formulaire est `EventStoryForm`, celui du parcours d'inscription — même
+  champ lien, même champ texte, mêmes contraintes.
+- Points d'entrée : le bandeau, le bouton « Ajoute ton récit » / « Modifier mon
+  récit » du bloc, et la pastille des participations terminées dans le panneau
+  favoris (le « Donner mon avis » d'origine du proto).
+
+### Migration
+
+`supabase/migrations/20260904000000_event_stories_display.sql` — deux fonctions
+`security definer`, aucune table ni policy touchée :
+
+- `get_event_stories(bigint)` : les récits d'un évènement avec le **prénom** et
+  l'avatar de leur autrice (jamais le nom de famille). Réservée à
+  `authenticated`.
+- `get_event_story_counts(bigint[])` : le nombre de récits, ouvert à `anon` —
+  un compteur n'est pas du contenu identifiant. Prend un tableau pour qu'une
+  liste de cartes puisse s'en servir sans changer d'API.
+
+`20260903001000_event_stories.sql` notait « lisible par sa seule autrice tant
+que l'affichage public n'est pas fait » : c'est fait, et la policy de `select`
+n'a pas bougé pour autant.
+
+### Décisions prises
+
+- **Lecture réservée aux personnes connectées** (arbitrage produit). Le proto
+  charge les récits puis les masque derrière un dégradé, ce qui les laisse
+  lisibles dans le code source ; ici, déconnectée, la fiche annonce le nombre
+  de récits et propose de créer un compte — le contenu ne quitte pas la base.
+- **Le texte libre est affiché**, écart assumé avec le proto qui n'a que le
+  lien. La colonne `story` existe, le parcours la remplit, un récit écrit dans
+  Upcomi mérite d'être lu dans Upcomi.
+- **Une seule variante de bandeau**, celle du récit. Le « Finalement, tu t'es
+  inscrit·e ? » du proto relève du cycle d'inscription, pas de cette brique.
+- **Les fermetures de bandeau vivent dans `localStorage`**, par compte
+  (`upcomi:story-prompt-dismissed:<uid>`) : une relance ignorée n'est pas une
+  donnée qui mérite une table, et le stockage indisponible ne fait que
+  réafficher le bandeau.
+- **Le bouton de contribution ne s'affiche qu'aux participantes** d'un
+  évènement passé : c'est exactement la population que relance le bandeau.
+- **Un seul bouton dans le formulaire**, comme dans le proto : « Ajouter »
+  valide même à vide, et rien n'est écrit si les deux champs sont vides.
+
+### Checklist de mise en prod
+
+1. Appliquer `supabase/migrations/20260904000000_event_stories_display.sql`.
+2. Merger le code (aucun feature flag : sans récit, le bloc ne s'affiche pas et
+   le bandeau ne se déclenche pas).

@@ -4,9 +4,10 @@ import { useMemo, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import { CalendarDays, Check, Heart } from "lucide-react";
+import { CalendarDays, Check, Heart, PenLine } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { FavouriteButton } from "@/components/events/favourite-button";
+import { useEventStories } from "@/components/events/event-stories-context";
 import { getEventTypeColor } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 import {
@@ -250,7 +251,15 @@ function FavoritePanelEventRow({
 
       <div className="flex shrink-0 items-center gap-2">
         {activeTab === "participations" ? (
-          <DatePill event={event} />
+          // Sur une participation terminée, la pastille « Terminé » ne dit
+          // rien de plus que la mention déjà présente dans la ligne : le
+          // prototype y met le bouton d'avis, c'est le point d'entrée
+          // d'origine du parcours récit.
+          past ? (
+            <StoryButton event={event} />
+          ) : (
+            <DatePill event={event} />
+          )
         ) : (
           <>
             <FavouriteButton eventId={event.id} eventTitle={event.nomEvent || "Événement"} />
@@ -379,6 +388,40 @@ function ParticipationButton({
       )}
     >
       <Check className="h-[15px] w-[15px]" strokeWidth={2.25} />
+    </button>
+  );
+}
+
+/** « Donner mon avis » du prototype, réduit à une pastille : la ligne est étroite. */
+function StoryButton({ event }: { event: FavoriteEvent }) {
+  const { hasOwnStory, openStoryModal, ready } = useEventStories();
+  const label = hasOwnStory(event.id) ? "Modifier mon récit" : "Partager mon expérience";
+
+  if (!ready) return <DatePill event={event} />;
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={(clickEvent) => {
+        clickEvent.preventDefault();
+        clickEvent.stopPropagation();
+        openStoryModal({
+          id: event.id,
+          nomEvent: event.nomEvent,
+          image: event.image,
+          slug: event.slug,
+        });
+      }}
+      className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors",
+        hasOwnStory(event.id)
+          ? "border-coral bg-coral text-white shadow-[0_8px_18px_rgba(235,95,59,0.2)]"
+          : "border-coral/20 bg-white/58 text-coral hover:border-coral/45 hover:bg-coral/10"
+      )}
+    >
+      <PenLine className="h-4 w-4" strokeWidth={1.8} />
     </button>
   );
 }

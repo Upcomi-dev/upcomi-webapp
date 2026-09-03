@@ -13,6 +13,7 @@ import { FavoritesSheet } from "@/components/favorites/favorites-sheet";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { AppLegalInfo } from "@/components/layout/app-footer";
 import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { StoryPromptBanner } from "@/components/events/story-prompt-banner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled: boolean }) {
@@ -173,6 +174,11 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
           </button>
         </div>
       </nav>
+
+      {/* Sous la barre de navigation et dans le flux, comme le `#app-banner`
+          du prototype : la relance suit la page plutôt que de coller en haut
+          de l'écran pendant toute la lecture. */}
+      <StoryPromptBanner />
 
       <Dialog open={showMobileMenu} onOpenChange={handleMobileMenuChange}>
         <DialogContent

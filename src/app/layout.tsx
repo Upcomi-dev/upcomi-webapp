@@ -8,6 +8,8 @@ import { AuthModal } from "@/components/auth/auth-modal";
 import { AuthProvider } from "@/components/auth/auth-context";
 import { FavoritesProvider } from "@/components/favorites/favorites-context";
 import { FlyingHeartProvider } from "@/components/favorites/flying-heart";
+import { EventStoriesProvider } from "@/components/events/event-stories-context";
+import { EventStoryModal } from "@/components/events/event-story-modal";
 import { OnboardingModal } from "@/components/profile/onboarding-modal";
 import {
   buildInitialUserProfile,
@@ -123,6 +125,7 @@ export default async function RootLayout({
         >
           <AuthModalProvider>
             <FavoritesProvider>
+              <EventStoriesProvider>
               <FlyingHeartProvider>
               <AmbientOrbs />
               <div className="relative z-10 flex min-h-[100dvh] flex-col md:min-h-screen">
@@ -133,7 +136,9 @@ export default async function RootLayout({
                 <OnboardingModal initialValues={initialOnboardingValues} />
               ) : null}
               <AuthModal />
+              <EventStoryModal />
               </FlyingHeartProvider>
+              </EventStoriesProvider>
             </FavoritesProvider>
           </AuthModalProvider>
         </AuthProvider>
