@@ -9,9 +9,10 @@ import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface FavouriteButtonProps {
   eventId: number;
+  eventTitle: string;
 }
 
-export function FavouriteButton({ eventId }: FavouriteButtonProps) {
+export function FavouriteButton({ eventId, eventTitle }: FavouriteButtonProps) {
   const { isFavorite, toggleFavorite, ready } = useFavorites();
   const { user } = useAuth();
   const isAuthenticated = user !== null;
@@ -33,7 +34,9 @@ export function FavouriteButton({ eventId }: FavouriteButtonProps) {
           authenticated: false,
           source: "icon_button",
         });
-        openAuthModal({ view: "login" });
+        openAuthModal({
+          title: `Rejoins la communauté Upcomi pour enregistrer « ${eventTitle} »`,
+        });
         return;
       }
 
@@ -58,7 +61,7 @@ export function FavouriteButton({ eventId }: FavouriteButtonProps) {
         });
       }
     },
-    [eventId, toggleFavorite, openAuthModal, ready, isAuthenticated, favorited, flyingHeart]
+    [eventId, eventTitle, toggleFavorite, openAuthModal, ready, isAuthenticated, favorited, flyingHeart]
   );
 
   return (

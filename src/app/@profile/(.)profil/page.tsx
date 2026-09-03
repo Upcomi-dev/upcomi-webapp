@@ -15,7 +15,7 @@ export default async function InterceptedProfilePage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("email, name, surname, ville, pref1, pref2")
+    .select("email, name, surname, ville, pref1, pref2, genre")
     .eq("uid", user.id)
     .maybeSingle();
 

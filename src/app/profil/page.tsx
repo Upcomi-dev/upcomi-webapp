@@ -20,7 +20,7 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("email, name, surname, ville, pref1, pref2")
+    .select("email, name, surname, ville, pref1, pref2, genre")
     .eq("uid", user.id)
     .maybeSingle();
 
@@ -47,7 +47,7 @@ export default async function ProfilePage() {
           </div>
 
           <div className="mt-6">
-            <UserProfileForm mode="profile" initialValues={initialValues} />
+            <UserProfileForm initialValues={initialValues} />
           </div>
         </section>
       </main>

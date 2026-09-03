@@ -100,7 +100,7 @@ export default async function RootLayout({
           .maybeSingle(),
         supabase
           .from("users")
-          .select("email, name, surname, ville, pref1, pref2")
+          .select("email, name, surname, ville, pref1, pref2, genre")
           .eq("uid", initialUser.id)
           .maybeSingle(),
       ])

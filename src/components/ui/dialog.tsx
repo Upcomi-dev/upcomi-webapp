@@ -7,8 +7,39 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+/**
+ * Raisons de fermeture « involontaires » : un clic à côté ou la touche Échap.
+ * Les dialogues non dismissibles (parcours d'inscription, onboarding) ne
+ * doivent se fermer que par une action explicite — la croix ou la fin du
+ * parcours — pour ne pas perdre la progression sur un geste malheureux.
+ */
+const CASUAL_DISMISS_REASONS = new Set([
+  "outside-press",
+  "escape-key",
+  "close-watcher",
+  "focus-out",
+])
+
+function Dialog({
+  dismissible = true,
+  onOpenChange,
+  ...props
+}: DialogPrimitive.Root.Props & { dismissible?: boolean }) {
+  return (
+    <DialogPrimitive.Root
+      data-slot="dialog"
+      {...props}
+      disablePointerDismissal={!dismissible}
+      onOpenChange={(open, eventDetails) => {
+        if (!dismissible && !open && CASUAL_DISMISS_REASONS.has(eventDetails.reason)) {
+          eventDetails.cancel()
+          return
+        }
+
+        onOpenChange?.(open, eventDetails)
+      }}
+    />
+  )
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {

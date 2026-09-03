@@ -231,7 +231,7 @@ export function EventDetailPanel({
             {event.nomEvent || "Événement"}
           </h1>
           <div className="flex flex-none gap-2 pt-0.5">
-            <FavouriteButton eventId={event.id} />
+            <FavouriteButton eventId={event.id} eventTitle={event.nomEvent || "Événement"} />
             <ShareButton
               title={event.nomEvent || "Événement"}
               url={`/event/${eventSlug}`}
@@ -365,7 +365,11 @@ export function EventDetailPanel({
       )}
 
       {/* Favorite CTA */}
-      <FavoriteCTA eventId={event.id} initialCount={favCount} />
+      <FavoriteCTA
+        eventId={event.id}
+        eventTitle={event.nomEvent || "Événement"}
+        initialCount={favCount}
+      />
 
       {relatedEvents.length > 0 && (
         <div className="space-y-3">

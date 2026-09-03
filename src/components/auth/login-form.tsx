@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { trackAnalyticsEvent } from "@/lib/analytics";
+import { Field, FIELD_INPUT_CLASS, Muted } from "@/components/ui/field";
 import { GoogleAuthButton } from "./google-auth-button";
 
 interface LoginFormProps {
@@ -76,40 +77,26 @@ export function LoginForm({
           </div>
         )}
 
-        <div>
-          <label
-            htmlFor="login-email"
-            className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
-          >
-            Email
-          </label>
+        <Field label="Email" htmlFor="login-email">
           <input
             id="login-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
+            className={FIELD_INPUT_CLASS}
             placeholder="ton@email.com"
           />
-        </div>
+        </Field>
 
-        <div>
-          <div className="mb-1.5">
-            <label
-              htmlFor="login-password"
-              className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
-            >
-              Mot de passe
-            </label>
-          </div>
+        <Field label="Mot de passe" htmlFor="login-password">
           <input
             id="login-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
+            className={FIELD_INPUT_CLASS}
           />
           <div className="mt-1.5 text-right">
             {onSwitchToForgotPassword ? (
@@ -129,7 +116,7 @@ export function LoginForm({
               </Link>
             )}
           </div>
-        </div>
+        </Field>
 
         <button
           type="submit"
@@ -140,7 +127,7 @@ export function LoginForm({
         </button>
       </form>
 
-      <div className="mt-5 text-center text-[13px] text-foreground/45">
+      <Muted className="mt-5 text-center">
         Pas encore de compte ?{" "}
         {onSwitchToSignup ? (
           <button
@@ -158,7 +145,7 @@ export function LoginForm({
             S&apos;inscrire
           </Link>
         )}
-      </div>
+      </Muted>
     </div>
   );
 }

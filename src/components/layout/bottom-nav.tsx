@@ -99,7 +99,7 @@ export function BottomNav() {
           })}
           <button
             type="button"
-            onClick={() => openAuthModal()}
+            onClick={() => openAuthModal({ view: "login" })}
             className="flex flex-1 flex-col items-center gap-1 rounded-[20px] px-2 py-2 text-foreground/55 transition-all"
           >
             <div className="flex h-6 w-6 items-center justify-center">

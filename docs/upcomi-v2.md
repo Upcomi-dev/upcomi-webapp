@@ -123,6 +123,8 @@ Notes :
   et `collection_events` existent déjà, c'est une requête, zéro migration.
 - **`feat/partage-experience`** regroupe le parcours de contribution et les blocs
   tags/récits : même flux producteur → données → affichage, une seule migration.
+  La **saisie** d'un récit est finalement avancée dans `feat/onboarding-v2`
+  (§7) ; il reste à cette brique l'affichage, les tags et le parcours retour.
 - La brique « fiche-communauté » a été supprimée (doublon).
 - « Événement V2 » (page parallèle branchée à la fin) a été abandonné.
 
@@ -295,3 +297,129 @@ Décisions prises :
 **Reporté** : le bouton « Me prévenir » (rappel mail à l'ouverture), qui exige
 une table `registration_reminders`. C'est le bénéfice central de la page selon
 le proto — à traiter dans sa propre brique juste après.
+
+---
+
+## 7. Brique `feat/onboarding-v2`
+
+Le parcours d'inscription passe du couple « formulaire de compte » + « modale
+de profil bloquante » à un parcours unique en six étapes, repris du prototype :
+
+```
+méthode → identité + genre → ville/niveau/pratiques → événements recommandés → récit → confirmation
+```
+
+Fichiers : `src/components/auth/signup-wizard.tsx` (le parcours),
+`src/components/auth/recommended-events-picker.tsx` (l'étape recommandations),
+`src/components/auth/event-story-form.tsx` (l'étape récit),
+`src/lib/profile-mutations.ts` (les écritures, partagées avec la page profil).
+`src/components/auth/signup-form.tsx` est supprimé, remplacé par le parcours.
+
+### Le gate, premier écran
+
+`src/components/auth/auth-gate.tsx` reprend le gate du prototype : ce qu'on
+gagne à avoir un compte, puis « Créer un compte » / « Me connecter ». C'est une
+vue de la modale d'auth (`view: "gate"`), pas une étape du parcours — il précède
+le choix entre inscription et connexion, et n'a donc pas de pastille.
+
+C'est désormais l'écran d'entrée **par défaut** : le lien de la barre de
+navigation et les gestes réservés aux membres (mettre en favori) l'ouvrent, avec
+le geste en titre comme dans le proto. On n'arrive directement sur un formulaire
+que si l'intention est explicite : routes `/login` et `/signup`.
+
+Les trois bénéfices affichés sont réécrits par rapport au proto : « accède à
+tous les retours de la communauté » promettait une fonctionnalité qui n'existe
+pas encore ici.
+
+### Migration
+
+`supabase/migrations/20260901103000_onboarding_v2.sql` :
+
+- `users.genre`, texte nullable, sans contrainte `check` — la liste de l'UI est
+  amenée à bouger et la contraindre coûterait une migration non additive à
+  chaque évolution.
+- `user_recommended_events` (`user_id`, `event_id`, `created_at`), avec RLS,
+  `revoke`/`grant` et les trois policies dans le même fichier.
+
+`supabase/migrations/20260903001000_event_stories.sql` :
+
+- `user_event_stories` (`user_id`, `event_id`, `story_url`, `story`,
+  `created_at`, `updated_at`), clé primaire sur le couple, RLS et grants dans le
+  même fichier — un récit est du contenu identifiant, la table ne doit pas
+  naître publique le temps que le reste suive.
+- Trois `check` : au moins un des deux champs rempli, `story_url` en
+  `http(s)://` et sous 2048 caractères, `story` sous 1500. Les longueurs sont
+  doublées côté UI (`EVENT_STORY_MAX_LENGTH`, `EVENT_STORY_URL_MAX_LENGTH`).
+- `get_events_with_stories(bigint[])`, `security definer` sur le modèle de
+  `get_event_favourite_counts()` : la policy de `select` ne laisse voir que ses
+  propres récits, et le parcours a besoin de savoir lesquels des événements
+  choisis sont **déjà couverts**, par n'importe qui. Elle ne renvoie que des
+  identifiants d'événements — jamais un récit ni son autrice — et n'est
+  exécutable que par `authenticated`.
+
+**À appliquer en base avant de merger le code** : `layout.tsx`, `/profil` et la
+modale profil sélectionnent désormais la colonne `genre`. Tant qu'elle n'existe
+pas, la requête échoue silencieusement et le profil remonte vide.
+
+### Décisions prises
+
+- **Genre facultatif**, et volontairement hors de `isUserProfileComplete()` :
+  l'exiger reviendrait à bloquer le parcours sur une donnée sensible. Ne rien
+  répondre reste distinct de « Je préfère ne pas répondre ».
+- **Table dédiée pour les recommandations**, plutôt qu'un drapeau sur
+  `favourite_events` : « je recommande à la communauté » n'est ni « favori » ni
+  « j'y participe », et les trois doivent pouvoir diverger. C'est le seul écart
+  au périmètre « nouvelles colonnes sur `users` » annoncé en 2.1.
+- **Niveaux inchangés** (`Debutant`/`Intermediaire`/`Confirme`/`Competition`) :
+  le proto propose `Expert`, l'aligner imposerait un backfill de `users.pref2`.
+- **Le nom reste obligatoire**, contrairement au proto : `isUserProfileComplete()`
+  l'exige déjà, et un nom vide laisserait la modale de reprise s'ouvrir à
+  chaque connexion.
+- **L'étape « identité » est tenue courte** : prénom, nom, mot de passe et sa
+  confirmation, puis la case CGU. Pas de confirmation d'email (le champ est
+  saisi une seule fois à l'étape précédente), et le genre est passé à l'étape
+  « profil », à laquelle il appartient. Les règles de mot de passe sont un
+  rappel discret sous le champ, sans encadré ni titre — la version encadrée
+  prenait plus de place que le formulaire.
+- **Le profil est enregistré dès l'étape 3**, le drapeau `onboarding_completed`
+  seulement à la fin : une interruption à l'étape « recommandations » ne perd
+  rien. Les recommandations suivent la même règle et sont écrites en quittant
+  l'étape 4, avant la saisie des récits.
+- **Les récits arrivent avec l'onboarding**, alors qu'ils étaient prévus dans
+  `feat/partage-experience` (§2.2) : la saisie est ici, l'affichage reste à
+  faire avec le reste de la brique partage. En attendant, la table n'est
+  lisible que par son autrice — pas de `select` public tant qu'il n'y a rien
+  pour le rendre.
+- **Un récit est d'abord un lien**, comme dans le proto (`review.js`, étape
+  « links », que `signup.js` rouvre en `startStep: 1` juste après les
+  recommandations) : on colle l'adresse du récit déjà publié sur Instagram,
+  Strava ou un blog plutôt que de le retaper. Le texte libre est gardé sous le
+  lien, en second — la colonne `story` existe et servira à l'extrait affiché
+  sur la fiche.
+- **Un seul récit demandé**, pas un par événement : le proto ne propose que
+  `recommended[0]`. On garde ce principe en sautant les événements déjà
+  couverts — l'étape porte sur le **premier événement recommandé sans récit**,
+  et disparaît entièrement (pastille comprise) s'il n'y en a aucun, faute de
+  recommandation ou parce que toutes ont déjà leur récit.
+- **« Ajouter → » valide même les champs vides**, sans second bouton
+  « Passer » : le récit est facultatif de bout en bout et le proto note qu'un
+  bouton suffit alors. Rien n'est écrit si les deux champs sont vides.
+- **Le lien est complété s'il manque le protocole** (`instagram.com/p/…` →
+  `https://…`), repris du proto ; une adresse qui reste invalide affiche une
+  erreur au lieu d'être écrite.
+
+### Google, et la reprise du parcours
+
+`Continuer avec Google` sort de l'application le temps de l'aller-retour OAuth :
+l'état du parcours est perdu. Au retour, le garde d'onboarding du layout
+(`hasCompletedOnboarding()`) rouvre le parcours **à l'étape 3**, le compte et
+l'identité étant déjà connus. C'est le même mécanisme qui rattrape une session
+interrompue en cours de route. `OnboardingModal` n'est donc plus un formulaire
+mais un hôte pour le parcours, monté avec `startStep="profil"`.
+
+Le prototype propose aussi `Continuer avec Strava` : non repris, il n'y a pas de
+provider Strava configuré côté Supabase.
+
+Si le projet Supabase venait à exiger une confirmation par email, `signUp`
+renverrait un compte sans session : le parcours affiche alors un écran « vérifie
+ta boîte mail » au lieu de continuer.

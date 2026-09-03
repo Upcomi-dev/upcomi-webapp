@@ -253,7 +253,7 @@ function FavoritePanelEventRow({
           <DatePill event={event} />
         ) : (
           <>
-            <FavouriteButton eventId={event.id} />
+            <FavouriteButton eventId={event.id} eventTitle={event.nomEvent || "Événement"} />
             <ParticipationButton
               active={event.participates}
               onClick={async () => {

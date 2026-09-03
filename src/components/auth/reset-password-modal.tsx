@@ -14,6 +14,7 @@ import {
   translatePasswordError,
 } from "@/lib/auth/password";
 import { PASSWORD_RECOVERY_PENDING_KEY } from "@/lib/auth/recovery";
+import { Field, FIELD_INPUT_CLASS, Muted } from "@/components/ui/field";
 import { PasswordRequirements } from "./password-requirements";
 
 type LinkState = "checking" | "ready" | "invalid";
@@ -165,27 +166,23 @@ function ResetPasswordModalContent() {
           <h2 className="mt-4 font-serif text-[22px] font-bold leading-tight text-foreground">
             Nouveau mot de passe
           </h2>
-          <p className="mt-1.5 text-[13px] text-foreground/52">
-            Choisis un mot de passe sécurisé pour ton compte
-          </p>
+          <Muted className="mt-1.5">Choisis un mot de passe sécurisé pour ton compte</Muted>
         </div>
 
         <div className="h-px bg-gradient-to-r from-transparent via-foreground/8 to-transparent" />
 
         <div className="px-6 pt-5 pb-6">
           {linkState === "checking" ? (
-            <p className="text-center text-sm text-foreground/58">
-              Vérification du lien en cours...
-            </p>
+            <Muted className="text-center">Vérification du lien en cours...</Muted>
           ) : linkState === "invalid" ? (
             <div className="text-center">
               <h3 className="font-serif text-xl font-bold text-foreground">
                 Lien expiré ou invalide
               </h3>
-              <p className="mt-2 text-sm leading-6 text-foreground/58">
+              <Muted className="mt-2">
                 {linkError ||
                   "Demande un nouveau lien pour réinitialiser ton mot de passe."}
-              </p>
+              </Muted>
               <Link
                 href="/forgot-password"
                 className="mt-5 inline-block text-[13px] font-semibold text-coral hover:text-coral-dark"
@@ -201,13 +198,7 @@ function ResetPasswordModalContent() {
                 </div>
               )}
 
-              <div>
-                <label
-                  htmlFor="new-password"
-                  className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
-                >
-                  Nouveau mot de passe
-                </label>
+              <Field label="Nouveau mot de passe" htmlFor="new-password">
                 <input
                   id="new-password"
                   type="password"
@@ -216,18 +207,12 @@ function ResetPasswordModalContent() {
                   required
                   minLength={PASSWORD_MIN_LENGTH}
                   autoComplete="new-password"
-                  className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
+                  className={FIELD_INPUT_CLASS}
                 />
                 <PasswordRequirements password={password} />
-              </div>
+              </Field>
 
-              <div>
-                <label
-                  htmlFor="new-password-confirmation"
-                  className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
-                >
-                  Confirmer le mot de passe
-                </label>
+              <Field label="Confirmer le mot de passe" htmlFor="new-password-confirmation">
                 <input
                   id="new-password-confirmation"
                   type="password"
@@ -238,9 +223,9 @@ function ResetPasswordModalContent() {
                   required
                   minLength={PASSWORD_MIN_LENGTH}
                   autoComplete="new-password"
-                  className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
+                  className={FIELD_INPUT_CLASS}
                 />
-              </div>
+              </Field>
 
               <button
                 type="submit"
@@ -271,9 +256,7 @@ export function ResetPasswordModal() {
               <h2 className="mt-4 font-serif text-[22px] font-bold leading-tight text-foreground">
                 Nouveau mot de passe
               </h2>
-              <p className="mt-1.5 text-[13px] text-foreground/52">
-                Vérification du lien en cours...
-              </p>
+              <Muted className="mt-1.5">Vérification du lien en cours...</Muted>
             </div>
           </DialogContent>
         </Dialog>

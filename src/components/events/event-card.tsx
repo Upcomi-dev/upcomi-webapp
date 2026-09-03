@@ -159,7 +159,7 @@ export function EventCard({
             </>
           ) : null}
           <div className="absolute right-2.5 top-2.5 z-10">
-            <FavouriteButton eventId={id} />
+            <FavouriteButton eventId={id} eventTitle={name} />
           </div>
           {past && (
             <div className="absolute left-2.5 top-2.5 z-10 flex max-w-[calc(100%-4rem)] flex-col items-start gap-1.5">
@@ -295,7 +295,7 @@ export function EventCard({
                   </span>
                 )}
               </div>
-              <FavouriteButton eventId={id} />
+              <FavouriteButton eventId={id} eventTitle={name} />
             </div>
 
             <h3 className="max-w-[24ch] font-serif text-[21px] leading-[1.02] text-foreground text-balance md:text-[23px]">

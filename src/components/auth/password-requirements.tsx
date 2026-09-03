@@ -4,29 +4,28 @@ interface PasswordRequirementsProps {
   password: string;
 }
 
+/**
+ * Rappel discret des règles, sous le champ : un encadré titré prenait plus de
+ * place que le formulaire qu'il accompagne.
+ */
 export function PasswordRequirements({ password }: PasswordRequirementsProps) {
   const requirements = getPasswordRequirements(password);
 
   return (
-    <div className="mt-2 rounded-[var(--radius-sm)] border border-white/55 bg-white/42 px-3.5 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40">
-        Mot de passe requis
-      </p>
-      <ul className="mt-2 space-y-1.5 text-[12px] leading-5">
-        {requirements.map((requirement) => (
-          <li
-            key={requirement.id}
-            className={
-              requirement.met ? "text-coral" : "text-foreground/48"
-            }
-          >
-            <span aria-hidden="true" className="mr-2 font-semibold">
-              {requirement.met ? "✓" : "•"}
+    <ul className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[13px] leading-5 text-foreground/55">
+      {requirements.map((requirement, index) => (
+        <li
+          key={requirement.id}
+          className={requirement.met ? "font-medium text-green-600" : undefined}
+        >
+          {index > 0 && (
+            <span aria-hidden="true" className="mr-2 text-foreground/25">
+              ·
             </span>
-            {requirement.label}
-          </li>
-        ))}
-      </ul>
-    </div>
+          )}
+          {requirement.label}
+        </li>
+      ))}
+    </ul>
   );
 }
