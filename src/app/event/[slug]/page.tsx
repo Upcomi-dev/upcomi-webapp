@@ -352,7 +352,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
 
             {sousEvents.length > 0 && (
               <div className="mb-6">
-                <div className="max-w-[450px] space-y-2.5">
+                <div className="space-y-2.5">
                   {sousEvents.map((se) => (
                     <div
                       key={se.sousEventID}
