@@ -89,6 +89,10 @@ export function EventActions({
     [eventId, favorited, flyingHeart, openAuthModal, ready, source, toggleFavorite, user]
   );
 
+  // En rangée, les deux boutons se partagent la largeur ; en colonne, chacun
+  // la prend entière — `flex-1` y porterait sur la hauteur et les aplatirait.
+  const widthClassName = orientation === "column" ? "w-full" : "flex-1";
+
   return (
     <div className={cn("flex gap-2.5", orientation === "column" && "flex-col", className)}>
         {registrationUrl && (
@@ -97,7 +101,7 @@ export function EventActions({
             eventId={eventId}
             eventType={eventType}
             organizer={organizer}
-            className="btn-secondary flex-1 px-4"
+            className={cn("btn-secondary px-4", widthClassName)}
           >
             M&apos;inscrire
             <ExternalLink className="h-4 w-4" strokeWidth={1.8} />
@@ -106,7 +110,7 @@ export function EventActions({
         <button
           type="button"
           onClick={handleInterest}
-          className="btn-primary flex-1 px-4"
+          className={cn("btn-primary px-4", widthClassName)}
           data-active={favorited}
         >
           <Heart className="h-4 w-4" strokeWidth={1.8} fill={favorited ? "currentColor" : "none"} />

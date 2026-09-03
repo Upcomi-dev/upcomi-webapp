@@ -524,6 +524,18 @@ corail) et `.btn-tertiary` (texte souligné), plus `.btn-small` en
 modificateur. Une seule classe suffit ; la largeur reste au contexte
 (`w-full`, `flex-1`).
 
+> **La hauteur est posée en `min-height`, pas en `height`** — deux pièges
+> imbriqués, rencontrés sur la colonne de droite de la fiche, où les boutons
+> se sont retrouvés à 23 px de haut :
+>
+> 1. dans une **colonne** flex, `flex-1` pose `flex-basis: 0%` sur la hauteur
+>    et écrase le `height` du bouton. `flex-1` n'a de sens qu'en rangée ;
+>    `EventActions` bascule sur `w-full` en orientation colonne ;
+> 2. un `min-height` posé **à côté** d'un `height` est supprimé par le
+>    minifieur, qui le juge redondant : le filet de sécurité disparaissait à
+>    la compilation sans rien signaler. Il faut donc l'un *ou* l'autre — et
+>    c'est `min-height` qui protège.
+
 Convertis : les actions de la fiche, les soumissions des formulaires
 d'authentification, le dialogue de feedback, « Confirmer » et « Effacer tout »
 des filtres, la proposition d'évènement, la popin de carte et le panneau de

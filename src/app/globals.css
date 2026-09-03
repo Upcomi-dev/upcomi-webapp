@@ -205,7 +205,12 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    height: 44px;
+    /* Hauteur en `min-height` et non en `height` : dans une colonne flex,
+       `flex-1` pose `flex-basis: 0%` sur la hauteur et écrase un `height`,
+       ce qui aplatissait les boutons de la colonne de droite. Le minifieur
+       supprime par ailleurs un `min-height` posé à côté d'un `height`, qu'il
+       juge redondant — il faut donc bien l'un *ou* l'autre. */
+    min-height: 44px;
     padding: 0 22px;
     border-radius: 999px;
     font-family: inherit;
@@ -271,7 +276,7 @@
   }
 
   .btn-small {
-    height: 32px;
+    min-height: 32px;
     padding: 0 14px;
     font-size: 13px;
     gap: 6px;

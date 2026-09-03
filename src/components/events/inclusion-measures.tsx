@@ -93,14 +93,13 @@ export function InclusionMeasures({ eventName, measures }: InclusionMeasuresProp
   return (
     <section className="mt-7 border-l-4 border-[#4e9c6b] pl-4">
       <h3 className="mb-3.5 font-serif text-[20px] leading-tight text-foreground">
-        Ce que tu peux attendre, en tant que femme ou personne de minorité de genre
+        Ce que l&apos;orga fait pour les femmes et minorités de genre
       </h3>
 
       {measures.length === 0 ? (
         <p className="text-sm leading-[1.6] text-foreground/55">
           Pour l&apos;instant, aucune mesure d&apos;inclusivité n&apos;est listée dans
-          Upcomi pour cet évènement : tu n&apos;as pas encore de garantie particulière
-          ici.
+          Upcomi pour cet évènement.
         </p>
       ) : (
         <>
