@@ -68,7 +68,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
             {eventProposalsEnabled ? (
               <Link
                 href="/proposer-un-evenement"
-                className="hidden h-10 items-center justify-center rounded-full border border-white/50 bg-white/58 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground/55 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-coral/30 hover:bg-white/80 hover:text-coral sm:inline-flex"
+                className="hidden h-10 items-center justify-center rounded-full border border-white/50 bg-white/58 px-4 text-[13px] font-semibold tracking-[0.08em] text-foreground/55 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-coral/30 hover:bg-white/80 hover:text-coral sm:inline-flex"
               >
                 Proposer un événement
               </Link>
@@ -88,7 +88,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                 </svg>
                 <span
                   ref={flyingHeart?.counterRef}
-                  className={`absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white shadow-[0_2px_6px_rgba(235,95,59,0.4)] transition-transform ${count > 0 ? "scale-100" : "scale-0"}`}
+                  className={`absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[13px] font-bold leading-none text-white shadow-[0_2px_6px_rgba(235,95,59,0.4)] transition-transform ${count > 0 ? "scale-100" : "scale-0"}`}
                 >
                   {count}
                 </span>
@@ -151,7 +151,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
           <div className="px-4 pb-3 sm:hidden">
             <Link
               href="/proposer-un-evenement"
-              className="flex h-10 w-full items-center justify-center rounded-full border border-white/50 bg-white/58 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground/55 backdrop-blur-sm transition-all hover:border-coral/30 hover:bg-white/80 hover:text-coral"
+              className="flex h-10 w-full items-center justify-center rounded-full border border-white/50 bg-white/58 px-4 text-[13px] font-semibold tracking-[0.08em] text-foreground/55 backdrop-blur-sm transition-all hover:border-coral/30 hover:bg-white/80 hover:text-coral"
             >
               Proposer un événement
             </Link>

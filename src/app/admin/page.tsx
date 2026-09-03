@@ -388,7 +388,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-semibold">{tab.label}</span>
                   <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    className={`rounded-full px-2.5 py-1 text-[13px] font-semibold ${
                       isActive
                         ? "bg-coral text-white"
                         : "bg-foreground/6 text-foreground/52"
@@ -397,7 +397,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     {tabCounts[tab.id]}
                   </span>
                 </div>
-                <p className="mt-2 text-[12px] leading-5 opacity-75">{tab.description}</p>
+                <p className="mt-2 text-[13px] leading-5 opacity-75">{tab.description}</p>
               </Link>
             );
           })}
@@ -446,7 +446,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       Espaces métier
                     </h3>
                   </div>
-                  <div className="text-right text-[12px] text-foreground/42">
+                  <div className="text-right text-[13px] text-foreground/42">
                     Navigation par onglets
                   </div>
                 </div>
@@ -495,7 +495,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   </div>
                   <Link
                     href="/admin?tab=events"
-                    className="text-[12px] font-semibold text-coral transition-colors hover:text-coral-dark"
+                    className="text-[13px] font-semibold text-coral transition-colors hover:text-coral-dark"
                   >
                     Ouvrir le catalogue
                   </Link>
@@ -524,7 +524,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                               {event.verifie ? "Vérifié" : "À vérifier"}
                             </StatusPill>
                             {event.AlaUne !== null && (
-                              <span className="rounded-full bg-coral/12 px-2.5 py-1 text-[11px] font-semibold text-coral">
+                              <span className="rounded-full bg-coral/12 px-2.5 py-1 text-[13px] font-semibold text-coral">
                                 À la une
                               </span>
                             )}
@@ -562,7 +562,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   </div>
                   <Link
                     href="/admin?tab=users"
-                    className="text-[12px] font-semibold text-coral transition-colors hover:text-coral-dark"
+                    className="text-[13px] font-semibold text-coral transition-colors hover:text-coral-dark"
                   >
                     Ouvrir les comptes
                   </Link>
@@ -578,7 +578,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         <p className="text-[14px] font-semibold text-foreground">
                           {formatAdminUserName(recentUser)}
                         </p>
-                        <p className="mt-1 text-[12px] text-foreground/45">
+                        <p className="mt-1 text-[13px] text-foreground/45">
                           Mis à jour le {formatAdminDate(recentUser.updated_at)}
                         </p>
                       </div>
@@ -763,7 +763,7 @@ function QuickAccessCard({
       </p>
       <div className="mt-3 flex items-end justify-between gap-4">
         <p className="font-serif text-[34px] leading-none text-foreground">{value}</p>
-        <span className="rounded-full bg-coral/10 px-2.5 py-1 text-[11px] font-semibold text-coral">
+        <span className="rounded-full bg-coral/10 px-2.5 py-1 text-[13px] font-semibold text-coral">
           {detail}
         </span>
       </div>
@@ -801,7 +801,7 @@ function StatusPill({
 }) {
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+      className={`rounded-full px-2.5 py-1 text-[13px] font-semibold ${
         active
           ? "bg-green-100 text-green-700"
           : "bg-amber-100 text-amber-700"

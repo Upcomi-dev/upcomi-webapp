@@ -7,7 +7,7 @@ export function AppFooter() {
 
   return (
     <footer className="w-full shrink-0 border-t border-white/55 bg-white/45 px-4 py-4 backdrop-blur-md md:px-6">
-      <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 text-center text-[12px] text-foreground/55 sm:flex-row sm:text-left">
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 text-center text-[13px] text-foreground/55 sm:flex-row sm:text-left">
         <p>© {currentYear} Upcomi. Tous droits réservés.</p>
         <nav
           aria-label="Informations légales"

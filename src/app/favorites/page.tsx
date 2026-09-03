@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import Image from "next/image";
+import { ChevronLeft } from "lucide-react";
 import type { Event } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
 import { withReturnTo } from "@/lib/utils/navigation";
@@ -66,7 +67,8 @@ export default async function FavoritesPage({ searchParams }: FavoritesPageProps
           href="/"
           className="flex items-center gap-2 text-sm font-medium text-[#7C7C7C] hover:text-[#2c1e14] transition-colors"
         >
-          ← Retour à la carte
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Retour à la carte
         </Link>
         <AppLogo href="/" imageClassName="h-7 w-auto" />
       </header>
@@ -196,14 +198,14 @@ function FavoriteEventRow({ event }: { event: Event }) {
           <div className="mb-1 flex items-center gap-2">
             {event.type_event && (
               <span
-                className="rounded-full px-2 py-0.5 text-xs font-medium text-white"
+                className="rounded-full px-2 py-0.5 text-[13px] font-medium text-white"
                 style={{ backgroundColor: typeColor }}
               >
                 {event.type_event}
               </span>
             )}
             {past ? (
-              <span className="rounded-full bg-[#2c1e14]/10 px-2 py-0.5 text-xs font-semibold text-[#2c1e14]/55">
+              <span className="rounded-full bg-[#2c1e14]/10 px-2 py-0.5 text-[13px] font-semibold text-[#2c1e14]/55">
                 Terminé
               </span>
             ) : null}

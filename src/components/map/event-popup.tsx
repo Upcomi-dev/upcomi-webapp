@@ -81,7 +81,7 @@ export function EventPopup({ event }: EventPopupProps) {
       <div className="panel-divider px-4 pt-3 pb-4">
         <div className="flex flex-col gap-1.5">
           {formattedDate && (
-            <div className="flex items-center gap-2 text-[12px] text-foreground/55">
+            <div className="flex items-center gap-2 text-[13px] text-foreground/55">
               <svg
                 width="14"
                 height="14"
@@ -102,7 +102,7 @@ export function EventPopup({ event }: EventPopupProps) {
             </div>
           )}
           {location && (
-            <div className="flex items-center gap-2 text-[12px] text-foreground/55">
+            <div className="flex items-center gap-2 text-[13px] text-foreground/55">
               <svg
                 width="14"
                 height="14"

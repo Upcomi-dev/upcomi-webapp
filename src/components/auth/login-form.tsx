@@ -116,14 +116,14 @@ export function LoginForm({
               <button
                 type="button"
                 onClick={onSwitchToForgotPassword}
-                className="text-[11px] font-medium text-coral hover:text-coral-dark"
+                className="text-[13px] font-medium text-coral hover:text-coral-dark"
               >
                 Oublié ?
               </button>
             ) : (
               <Link
                 href="/forgot-password"
-                className="text-[11px] font-medium text-coral hover:text-coral-dark"
+                className="text-[13px] font-medium text-coral hover:text-coral-dark"
               >
                 Oublié ?
               </Link>

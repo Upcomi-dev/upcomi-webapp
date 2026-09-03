@@ -765,7 +765,7 @@ function MapPageContent({
           <Filter className="h-4 w-4" />
           <span>Filtres</span>
           {activeFilterCount > 0 ? (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/18 px-1.5 text-[10px] text-white">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/18 px-1.5 text-[13px] text-white">
               {activeFilterCount}
             </span>
           ) : null}

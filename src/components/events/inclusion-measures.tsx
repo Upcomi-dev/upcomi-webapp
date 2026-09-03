@@ -93,7 +93,7 @@ export function InclusionMeasures({ eventName, measures }: InclusionMeasuresProp
     // Carte dans la carte : le vert de la charte isole le bloc du reste de
     // « Qui organise ? », et la marge négative rattrape une partie du padding
     // du parent pour que le contenu ne soit pas rogné deux fois.
-    <section className="-mx-2 mt-7 rounded-[var(--radius-md)] bg-green-light p-4 text-green">
+    <section className="-mx-2 -mb-2 mt-7 rounded-[var(--radius-md)] bg-green-light p-4 text-green">
       <h3 className="mb-3.5 font-serif text-[20px] leading-tight">
         Ce que l&apos;organisation fait pour les femmes et minorités de genre
       </h3>

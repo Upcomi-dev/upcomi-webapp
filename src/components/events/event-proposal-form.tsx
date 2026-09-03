@@ -80,7 +80,7 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
         <div className="space-y-3 rounded-[22px] border border-foreground/8 bg-white/45 p-4">
           <div>
             <h3 className="text-[14px] font-semibold text-foreground">Parcours</h3>
-            <p className="mt-1 text-[12px] text-foreground/48">Ajoutez une version complète pour chaque parcours proposé.</p>
+            <p className="mt-1 text-[13px] text-foreground/48">Ajoutez une version complète pour chaque parcours proposé.</p>
           </div>
 
           {routes.map((route, index) => (
@@ -148,7 +148,7 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
             className={`${fieldClassName} min-h-[180px] resize-y`}
             onChange={(event) => setDescriptionLength(event.target.value.length)}
           />
-          <span className="block text-right text-[11px] tabular-nums text-foreground/42">
+          <span className="block text-right text-[13px] tabular-nums text-foreground/42">
             {descriptionLength} / {DESCRIPTION_MAX_LENGTH} caractères
           </span>
         </label>
@@ -275,16 +275,16 @@ function OrganizerAutocomplete({ organizers, value, onChange }: {
       </Autocomplete.Root>
       {trimmedValue ? (
         existingOrganizer ? (
-          <p className="flex items-center gap-1.5 text-[11px] font-medium text-green-700">
+          <p className="flex items-center gap-1.5 text-[13px] font-medium text-green-700">
             <CheckCircle2 className="h-3.5 w-3.5" /> Organisateur existant sélectionné
           </p>
         ) : (
-          <p className="text-[11px] leading-5 text-foreground/50">
+          <p className="text-[13px] leading-5 text-foreground/50">
             <span className="font-semibold text-coral">Nouveau :</span> « {trimmedValue} » sera créé comme organisateur lors de l’envoi.
           </p>
         )
       ) : (
-        <p className="text-[11px] leading-5 text-foreground/42">
+        <p className="text-[13px] leading-5 text-foreground/42">
           Commencez à saisir un nom pour rechercher un organisateur. S’il n’existe pas, il sera créé automatiquement.
         </p>
       )}
@@ -355,7 +355,7 @@ function FileField() {
     <div className="flex flex-col gap-2">
       <FieldLabel label="Image" optional />
       <label className={`${fieldClassName} flex cursor-pointer items-center gap-3 p-1`}>
-        <span className="inline-flex h-10 shrink-0 items-center rounded-full bg-coral/10 px-4 text-[12px] font-semibold text-coral">
+        <span className="inline-flex h-10 shrink-0 items-center rounded-full bg-coral/10 px-4 text-[13px] font-semibold text-coral">
           Choisir un fichier
         </span>
         <span className="min-w-0 truncate px-1 text-[14px] text-foreground">{fileName}</span>
@@ -367,7 +367,7 @@ function FileField() {
           onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "Aucun fichier choisi")}
         />
       </label>
-      <span className="block text-[11px] text-foreground/42">JPEG, PNG ou WebP · 6 Mo maximum</span>
+      <span className="block text-[13px] text-foreground/42">JPEG, PNG ou WebP · 6 Mo maximum</span>
     </div>
   );
 }
@@ -376,11 +376,11 @@ function CheckboxField({ label, name, help, optional = false, value }: { label: 
   return (
     <label className="flex items-center gap-2 rounded-[18px] border border-foreground/10 bg-white/72 px-4 py-3 text-[13px] font-medium text-foreground/68">
       <input name={name} value={value} type="checkbox" className="h-4 w-4" />
-      <span>{label}{optional ? <span className="ml-1.5 text-[11px] font-normal text-foreground/40">Facultatif</span> : null}</span>
+      <span>{label}{optional ? <span className="ml-1.5 text-[13px] font-normal text-foreground/40">Facultatif</span> : null}</span>
       {help ? (
         <span className="group relative ml-1 inline-flex" tabIndex={0} aria-label={help}>
           <HelpCircle className="h-4 w-4 text-foreground/40" />
-          <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-64 -translate-x-1/2 rounded-xl bg-foreground px-3 py-2 text-[12px] font-normal leading-5 text-white shadow-lg group-hover:block group-focus:block">{help}</span>
+          <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-64 -translate-x-1/2 rounded-xl bg-foreground px-3 py-2 text-[13px] font-normal leading-5 text-white shadow-lg group-hover:block group-focus:block">{help}</span>
         </span>
       ) : null}
     </label>

@@ -124,7 +124,7 @@ export function SignupForm({
   return (
     <div>
       <GoogleAuthButton mode="signup" redirectTo={redirectTo} />
-      <p className="mt-2 text-center text-[11px] leading-4 text-foreground/45">
+      <p className="mt-2 text-center text-[13px] leading-4 text-foreground/45">
         En continuant avec Google, tu acceptes les{" "}
         <Link
           href={termsUrl}

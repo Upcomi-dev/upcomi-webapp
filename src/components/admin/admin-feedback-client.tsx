@@ -94,7 +94,7 @@ export function AdminFeedbackClient({ entries }: AdminFeedbackClientProps) {
       </div>
 
       {isPending ? (
-        <div className="text-[12px] text-foreground/50">Mise à jour des retours...</div>
+        <div className="text-[13px] text-foreground/50">Mise à jour des retours...</div>
       ) : null}
 
       <div className="grid gap-4">
@@ -112,7 +112,7 @@ export function AdminFeedbackClient({ entries }: AdminFeedbackClientProps) {
               <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-coral/10 px-2.5 py-1 text-[11px] font-semibold text-coral">
+                    <span className="rounded-full bg-coral/10 px-2.5 py-1 text-[13px] font-semibold text-coral">
                       {getFeedbackKindLabel(entry.kind)}
                     </span>
                     <span className={statusBadgeClassName(entry.status)}>
@@ -128,7 +128,7 @@ export function AdminFeedbackClient({ entries }: AdminFeedbackClientProps) {
                     {entry.message}
                   </p>
 
-                  <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[12px] text-foreground/46">
+                  <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-foreground/46">
                     <span>Contact: {contactLabel}</span>
                     {entry.contact_email ? <span>Email: {entry.contact_email}</span> : null}
                     <span>Créé le {formatDateTime(entry.created_at)}</span>
@@ -173,7 +173,7 @@ export function AdminFeedbackClient({ entries }: AdminFeedbackClientProps) {
       {filteredEntries.length === 0 ? (
         <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/36 px-6 py-12 text-center">
           <p className="text-sm font-semibold text-foreground">Aucun retour trouvé</p>
-          <p className="mt-1 text-xs text-foreground/45">
+          <p className="mt-1 text-[13px] text-foreground/45">
             Ajuste la recherche ou le filtre de statut.
           </p>
         </div>
@@ -184,14 +184,14 @@ export function AdminFeedbackClient({ entries }: AdminFeedbackClientProps) {
 
 function statusBadgeClassName(status: FeedbackStatus) {
   if (status === "new") {
-    return "rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700";
+    return "rounded-full bg-amber-100 px-2.5 py-1 text-[13px] font-semibold text-amber-700";
   }
 
   if (status === "reviewing") {
-    return "rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-semibold text-sky-700";
+    return "rounded-full bg-sky-100 px-2.5 py-1 text-[13px] font-semibold text-sky-700";
   }
 
-  return "rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-semibold text-green-700";
+  return "rounded-full bg-green-100 px-2.5 py-1 text-[13px] font-semibold text-green-700";
 }
 
 function formatDateTime(value: string) {

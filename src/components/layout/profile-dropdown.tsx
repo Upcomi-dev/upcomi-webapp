@@ -73,7 +73,7 @@ export function ProfileDropdown({
               Tu veux vraiment te déconnecter ?
             </p>
             {logoutError && (
-              <p className="rounded-[12px] border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+              <p className="rounded-[12px] border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
                 {logoutError}
               </p>
             )}
@@ -83,7 +83,7 @@ export function ProfileDropdown({
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="flex-1 rounded-[12px] bg-red-500 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+                className="flex-1 rounded-[12px] bg-red-500 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
               >
                 {loggingOut ? "Déconnexion..." : "Confirmer"}
               </button>
@@ -91,7 +91,7 @@ export function ProfileDropdown({
                 type="button"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => setConfirming(false)}
-                className="flex-1 rounded-[12px] border border-foreground/12 py-2 text-[12px] font-medium text-foreground/60 transition-colors hover:bg-foreground/5"
+                className="flex-1 rounded-[12px] border border-foreground/12 py-2 text-[13px] font-medium text-foreground/60 transition-colors hover:bg-foreground/5"
               >
                 Annuler
               </button>

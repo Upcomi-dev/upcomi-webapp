@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, Euro, ExternalLink, Flag, MapPin } from "lucide-react";
+import { Calendar, ChevronLeft, Euro, ExternalLink, Flag, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
@@ -236,7 +236,8 @@ export default async function EventPage({ params, searchParams }: PageProps) {
           href={returnTo}
           className="mb-2 inline-flex items-center gap-1.5 py-1 text-[13px] text-foreground/55 transition-colors hover:text-foreground"
         >
-          ← {backLabel}
+          <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+          {backLabel}
         </Link>
 
         {/* Hero — le titre est dans l'image, les repères (durée, distance,
@@ -361,7 +362,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                         <div className="text-sm font-semibold text-foreground">
                           {se.nom || "Parcours"}
                         </div>
-                        <div className="mt-0.5 flex items-center gap-2 text-xs text-foreground/55">
+                        <div className="mt-0.5 flex items-center gap-2 text-[13px] text-foreground/55">
                           {se.distance && <span>{se.distance} km</span>}
                           {se.elevation && (
                             <>
@@ -384,10 +385,9 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                             eventId={event.id}
                             eventType={event.type_event}
                             organizer={event.organisateur}
-                            className="inline-flex flex-none items-center gap-1.5 text-sm font-semibold text-coral transition-colors hover:text-coral-dark"
+                            className="inline-flex flex-none items-center gap-1.5 text-sm font-semibold text-foreground transition-colors hover:text-foreground/70"
                           >
                             {se.prix} €
-                            <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.8} />
                           </ExternalRegistrationLink>
                         ) : (
                           <span className="flex-none text-sm font-semibold text-foreground">

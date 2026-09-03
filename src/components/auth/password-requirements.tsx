@@ -12,7 +12,7 @@ export function PasswordRequirements({ password }: PasswordRequirementsProps) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40">
         Mot de passe requis
       </p>
-      <ul className="mt-2 space-y-1.5 text-[12px] leading-5">
+      <ul className="mt-2 space-y-1.5 text-[13px] leading-5">
         {requirements.map((requirement) => (
           <li
             key={requirement.id}
