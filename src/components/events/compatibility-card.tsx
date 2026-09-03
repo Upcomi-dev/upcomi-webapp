@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Heart, SearchCheck, Users } from "lucide-react";
+import { Heart, UserRoundSearch, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
@@ -23,7 +23,7 @@ import {
 } from "@/lib/compatibility/questions";
 import { computeCompatibility, getProfileScore } from "@/lib/compatibility/scoring";
 import type { CompatEventInput } from "@/lib/compatibility/scoring";
-import { getSimilarPeople, SIMILAR_PEOPLE_LIMIT } from "@/lib/events/interested-people";
+import { getSimilarPeople } from "@/lib/events/interested-people";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
@@ -46,10 +46,13 @@ type CardState =
 export function CompatibilityCard({
   eventId,
   event,
+  eventDate,
   className,
 }: {
   eventId: number;
   event: CompatEventInput;
+  /** Date de départ (`events.dateEvent`), pour le délai de préparation. */
+  eventDate: string | null;
   className?: string;
 }) {
   const { user, ready: authReady } = useAuth();
@@ -104,6 +107,10 @@ export function CompatibilityCard({
   );
 
   const favorited = isFavorite(eventId);
+
+  // Mois restants avant le départ, pour situer les conseils dans le temps :
+  // « quelques conseils » n'a pas le même poids à trois semaines qu'à un an.
+  const monthsToPrepare = useMemo(() => getMonthsUntil(eventDate), [eventDate]);
 
   const persist = useCallback(
     async (finalAnswers: CompatAnswers) => {
@@ -193,16 +200,23 @@ export function CompatibilityCard({
   return (
     <div
       className={cn(
-        "compat-card mb-5 scroll-mt-24 rounded-[var(--radius)] bg-violet p-7 text-white",
+        "compat-card relative mb-5 overflow-hidden scroll-mt-24 rounded-[var(--radius)] bg-violet p-7 text-white",
         className
       )}
     >
-      <h2 className="mb-1 flex items-center gap-3 font-serif text-[22px] leading-tight text-white">
-        <SearchCheck className="h-8 w-8 flex-none opacity-90" strokeWidth={1.4} />
-        <span>Qui participe déjà&nbsp;?</span>
+      {/* Filigrane, comme sur la maquette : l'icône déborde du coin, très
+          discrète, et le titre passe devant. */}
+      <UserRoundSearch
+        className="pointer-events-none absolute -top-[26px] -right-[26px] z-0 h-[92px] w-[92px] text-white opacity-[0.18]"
+        strokeWidth={1.2}
+        aria-hidden
+      />
+
+      <h2 className="relative z-[1] mb-1 font-serif text-[22px] leading-tight text-white">
+        Qui participe déjà&nbsp;?
       </h2>
 
-      <CompatibilityPath overall={overall} people={people} />
+      <CompatibilityPath overall={overall} interestedCount={count} />
 
       <hr className="mb-[18px] border-none border-t border-white/20" />
 
@@ -239,6 +253,7 @@ export function CompatibilityCard({
         <ResultBody
           count={count}
           similarCount={similar.length}
+          monthsToPrepare={monthsToPrepare}
           gaps={result.criteria.filter((c) => c.score !== null && c.score < 9)}
           favorited={favorited}
           onOpenSheet={openSheet}
@@ -247,15 +262,36 @@ export function CompatibilityCard({
         />
       )}
 
+      {/* La même feuille que partout ailleurs sur la fiche : toutes les
+          personnes intéressées, jamais la sélection « expérience similaire ».
+          Celle-ci ne sert qu'à compter. */}
       <PeopleSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        title={`${similar.length} personne${similar.length > 1 ? "s" : ""} avec une expérience similaire`}
-        people={similar.slice(0, SIMILAR_PEOPLE_LIMIT)}
-        totalCount={similar.length}
+        title={`Qui est intéressée par ${event.name} ?`}
+        people={people}
       />
     </div>
   );
+}
+
+/**
+ * Mois qui restent avant le départ. `null` quand la date manque ou qu'il reste
+ * moins d'un mois : « tu as 0 mois pour te préparer » n'est pas un conseil.
+ */
+function getMonthsUntil(dateEvent: string | null): number | null {
+  if (!dateEvent) return null;
+  const departure = new Date(dateEvent);
+  if (Number.isNaN(departure.getTime())) return null;
+
+  const months = Math.floor((departure.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.44));
+  return months >= 1 ? months : null;
+}
+
+function tipsIntro(months: number | null): string {
+  if (months === null) return "Pour te préparer de ton côté :";
+  if (months === 1) return "Tu as un mois pour te préparer, voici quelques conseils :";
+  return `Tu as ${months} mois pour te préparer, voici quelques conseils :`;
 }
 
 /** Une question à la fois : cliquer une réponse fait avancer, il n'y a pas de « Suivant ». */
@@ -350,6 +386,7 @@ function SteppingBody({
 function ResultBody({
   count,
   similarCount,
+  monthsToPrepare,
   gaps,
   favorited,
   onOpenSheet,
@@ -358,6 +395,7 @@ function ResultBody({
 }: {
   count: number;
   similarCount: number;
+  monthsToPrepare: number | null;
   gaps: { key: string; gapText: string }[];
   favorited: boolean;
   onOpenSheet: () => void;
@@ -365,46 +403,62 @@ function ResultBody({
   onRestart: () => void;
 }) {
   const plural = similarCount > 1;
+  // « Personne » est toujours féminin, quel que soit qui est compté.
+  const socialProof = (
+    <button
+      type="button"
+      onClick={onOpenSheet}
+      className="mb-2.5 flex w-full items-start gap-2 text-left text-[17px] font-extrabold leading-snug text-white"
+    >
+      <Users className="mt-0.5 h-[18px] w-[18px] flex-none" strokeWidth={2} />
+      {/* « Intéressées », jamais « inscrites » : cohérence avec l'action
+          « Ça m'intéresse », pour ne pas suggérer trop tôt un engagement à
+          l'inscription. */}
+      <span>
+        {similarCount} personne{plural ? "s" : ""} avec une expérience similaire{" "}
+        {plural ? "sont" : "est"} déjà intéressée{plural ? "s" : ""}
+      </span>
+    </button>
+  );
+
+  const tips = (
+    <div className="mb-3.5 text-[13px] text-white/75">
+      {gaps.length > 0 ? (
+        <>
+          <p className="mb-2 font-semibold text-white/90">{tipsIntro(monthsToPrepare)}</p>
+          <ul className="flex list-disc flex-col gap-1.5 pl-[18px] leading-relaxed">
+            {gaps.map((criterion) => (
+              <li key={criterion.key}>{criterion.gapText}</li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p>Tu as le profil pour cet évènement, fonce&nbsp;!</p>
+      )}
+    </div>
+  );
 
   return (
     <>
+      {/* Quand quelqu'un se reconnaît dans les intéressées, c'est la promesse
+          du bloc et ça passe en tête ; les conseils suivent, en secondaire.
+          Quand personne ne correspond, il n'y a plus rien à annoncer — ce sont
+          les conseils qui deviennent la réponse, et ils prennent la tête. */}
       {similarCount > 0 ? (
-        <button
-          type="button"
-          onClick={onOpenSheet}
-          className="mb-2.5 flex w-full items-start gap-2 text-left text-[17px] font-extrabold leading-snug text-white"
-        >
-          <Users className="mt-0.5 h-[18px] w-[18px] flex-none" strokeWidth={2} />
-          {/* « Intéressé·es », jamais « inscrit·es » : cohérence avec l'action
-              « Ça m'intéresse », pour ne pas suggérer trop tôt un engagement à
-              l'inscription. */}
-          <span>
-            {similarCount} personne{plural ? "s" : ""} avec une expérience similaire{" "}
-            {plural ? "sont" : "est"} déjà intéressé·e{plural ? "s" : ""}
-          </span>
-        </button>
+        <>
+          {socialProof}
+          {tips}
+        </>
       ) : (
-        <p className="mb-2.5 text-[15px] font-semibold leading-snug text-white">
-          {count > 0
-            ? "Personne avec une expérience proche de la tienne pour l'instant."
-            : "Personne ne s'est encore dit intéressé·e."}
-        </p>
+        <>
+          {tips}
+          <p className="mb-3.5 text-[13px] text-white/60">
+            {count > 0
+              ? "Personne avec une expérience proche de la tienne pour l'instant."
+              : "Personne ne s'est encore dit intéressée."}
+          </p>
+        </>
       )}
-
-      <div className="mb-3.5 text-[13px] text-white/75">
-        {gaps.length > 0 ? (
-          <>
-            <p className="mb-2 font-semibold text-white/90">Pour te préparer de ton côté&nbsp;:</p>
-            <ul className="flex list-disc flex-col gap-1.5 pl-[18px] leading-relaxed">
-              {gaps.map((criterion) => (
-                <li key={criterion.key}>{criterion.gapText}</li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p>Tu as le profil pour cet évènement, fonce&nbsp;!</p>
-        )}
-      </div>
 
       <button
         type="button"

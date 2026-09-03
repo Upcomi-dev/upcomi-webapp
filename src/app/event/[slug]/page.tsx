@@ -421,11 +421,6 @@ export default async function EventPage({ params, searchParams }: PageProps) {
               </div>
             )}
 
-            {/* Score d'adéquation — deux emplacements, un seul visible à la
-                fois, comme dans le proto : sous les parcours en mobile, en
-                colonne de droite en desktop. */}
-            <CompatibilityCard eventId={event.id} event={compatEvent} className="lg:hidden" />
-
             <EventKeyDates eventId={event.id} dates={keyDates} />
 
             <div className="glass mb-6 rounded-[var(--radius)] p-5">
@@ -499,6 +494,15 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 </div>
               )}
             </div>
+
+            {/* Score d'adéquation — après « Qui organise ? », à la place que
+                lui donne le proto (`compat-slot-inline`). Un seul emplacement,
+                dans la colonne de lecture : le proto n'en rend pas d'autre. */}
+            <CompatibilityCard
+              eventId={event.id}
+              event={compatEvent}
+              eventDate={event.dateEvent}
+            />
           </div>
 
           {/* Colonne de droite — le bloc d'action quitte la barre collante du
@@ -507,11 +511,16 @@ export default async function EventPage({ params, searchParams }: PageProps) {
               elle est déjà sous le titre. */}
           <div className="hidden flex-shrink-0 lg:block lg:w-[280px]">
             <div className="lg:sticky lg:top-24">
-              <CompatibilityCard eventId={event.id} event={compatEvent} />
               <div
                 className="glass rounded-[var(--radius)] p-4"
                 style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
               >
+                <InterestedBlock
+                  eventId={event.id}
+                  eventName={event.nomEvent || "cet évènement"}
+                  size="compact"
+                  className="mb-3"
+                />
                 <EventActions
                   eventId={event.id}
                   registrationUrl={event.URL}
@@ -539,6 +548,12 @@ export default async function EventPage({ params, searchParams }: PageProps) {
             className="glass rounded-[var(--radius)] p-4"
             style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
           >
+            <InterestedBlock
+              eventId={event.id}
+              eventName={event.nomEvent || "cet évènement"}
+              size="compact"
+              className="mb-2.5"
+            />
             <EventActions
               eventId={event.id}
               registrationUrl={event.URL}

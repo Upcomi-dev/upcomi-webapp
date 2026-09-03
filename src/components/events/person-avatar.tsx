@@ -1,82 +1,58 @@
 import { cn } from "@/lib/utils";
-import {
-  getPersonDisplayName,
-  getPersonInitials,
-  type InterestedPerson,
-} from "@/lib/events/interested-people";
 
 /**
- * Une tête, et son repli. Le prototype pioche dans un jeu de faux portraits ;
- * ici les avatars sont réels et le plus souvent **absents** — les initiales
- * sur fond ocre sont donc le cas courant, pas l'exception. Même traitement que
- * la pastille de l'organisateur sur la fiche.
+ * Les « petites têtes » de la fiche évènement.
+ *
+ * Ce sont des **portraits d'illustration**, pas les personnes intéressées :
+ * `user_public.avatar_url` est vide dans l'immense majorité des cas, et une
+ * rangée de pastilles à initiales ne dit pas « il y a du monde ». Mêmes
+ * portraits que le prototype (randomuser.me), rapatriés dans `public/` pour ne
+ * pas dépendre d'un domaine tiers au rendu.
+ *
+ * Deux femmes et un homme, dans cet ordre : c'est la proportion de la
+ * communauté, et c'est ce que la pile doit donner à voir en un coup d'œil.
  */
-export function PersonAvatar({
-  person,
-  size = 26,
-  className,
-}: {
-  person: InterestedPerson;
-  size?: number;
-  className?: string;
-}) {
-  const common = cn(
-    "flex flex-none items-center justify-center rounded-full border-2 border-white bg-orange/25 object-cover shadow-[0_2px_6px_rgba(36,23,15,0.18)]",
-    className
-  );
-  const style = { width: size, height: size };
-
-  if (person.avatarUrl) {
-    return (
-      // Avatars hébergés hors du domaine (Supabase storage, Google) : `img`
-      // plutôt que `next/image`, qui exigerait de déclarer chaque hôte.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={person.avatarUrl}
-        alt={getPersonDisplayName(person)}
-        className={common}
-        style={style}
-      />
-    );
-  }
-
-  return (
-    <span
-      className={cn(common, "font-bold text-orange-dark")}
-      style={{ ...style, fontSize: Math.round(size * 0.38) }}
-      aria-hidden
-    >
-      {getPersonInitials(person)}
-    </span>
-  );
-}
+const PLACEHOLDER_AVATARS = [
+  "/avatars/placeholder-1.jpg",
+  "/avatars/placeholder-2.jpg",
+  "/avatars/placeholder-3.jpg",
+];
 
 /**
- * Pile de têtes en léger chevauchement, partagée par le bloc « qui est
- * intéressé » du haut de fiche et l'arrivée du chemin d'adéquation.
+ * En dessous de ce nombre d'intéressé·es, pas de visages : trois portraits
+ * au-dessus de « 2 personnes intéressées » se lisent comme trois personnes
+ * précises, et l'illustration devient un mensonge lisible à l'œil nu.
  */
+export const MIN_PEOPLE_FOR_AVATARS = 5;
+
 export function AvatarStack({
-  people,
-  max = 3,
+  count,
   size = 26,
   className,
 }: {
-  people: InterestedPerson[];
-  max?: number;
+  /** Nombre de personnes intéressées — décide de l'affichage, pas du contenu. */
+  count: number;
   size?: number;
   className?: string;
 }) {
-  const shown = people.slice(0, max);
-  if (shown.length === 0) return null;
+  if (count < MIN_PEOPLE_FOR_AVATARS) return null;
 
   return (
-    <div className={cn("flex w-max flex-none items-center", className)}>
-      {shown.map((person, index) => (
-        <PersonAvatar
-          key={person.uid}
-          person={person}
-          size={size}
-          className={index === 0 ? undefined : "-ml-[9px]"}
+    <div className={cn("flex w-max flex-none items-center", className)} aria-hidden>
+      {PLACEHOLDER_AVATARS.map((src, index) => (
+        // Illustration décorative : `aria-hidden` sur la pile, `alt` vide.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={src}
+          src={src}
+          alt=""
+          width={size}
+          height={size}
+          className={cn(
+            "flex-none rounded-full border-2 border-white bg-white/35 object-cover shadow-[0_2px_6px_rgba(36,23,15,0.18)]",
+            index > 0 && "-ml-[9px]"
+          )}
+          style={{ width: size, height: size }}
         />
       ))}
     </div>

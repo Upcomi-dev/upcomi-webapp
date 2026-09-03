@@ -789,10 +789,13 @@ la compter.
   favoris bascule de façon optimiste, avant que l'écriture ne soit partie : une
   relecture déclenchée sur ce basculement rapporte l'ancien compte. L'écart est
   connu — c'est moi, une personne — autant le corriger sans requête.
-- **Le compteur de personnes similaires n'est jamais plafonné**, seule la liste
-  l'est (8, comme le proto) : annoncer « 8 personnes » quand il y en a trente
-  rendrait le chiffre faux au moment précis où il rassure. La feuille dit « et N
-  autres » quand elle écourte.
+- **Une seule feuille de personnes**, ouverte depuis les trois endroits : la
+  liste complète des intéressées. La sélection « expérience similaire » ne sert
+  qu'à **compter** — ouvrir une liste filtrée obligerait à expliquer pourquoi
+  telle personne n'y est pas.
+- **Le compteur de personnes similaires n'est jamais plafonné** : annoncer
+  « 8 personnes » quand il y en a trente rendrait le chiffre faux au moment
+  précis où il rassure.
 - **Le profil est global, pas par évènement** : on répond une fois, le résultat
   se rejoue sur chaque fiche. Seule la question « itinéraire » est propre à
   l'évènement en cours et n'est jamais enregistrée.
@@ -804,17 +807,44 @@ la compter.
   le met à jour ? » reste à faire.
 - **Pas de pré-remplissage** depuis l'onboarding, comme le proto — mais les
   tableaux ci-dessus sont écrits pour que ce soit une ligne à ajouter.
-- **Avatars réels, repli initiales.** `AVATAR_POOL` (faux portraits
-  randomuser.me) ne se porte pas : `user_public.avatar_url` est le plus souvent
-  **vide**, les initiales sur pastille ocre sont donc le cas courant.
+- **Des visages d'illustration, pas les personnes.** `user_public.avatar_url`
+  est vide dans l'immense majorité des cas, et une rangée de pastilles à
+  initiales ne dit pas « il y a du monde ». Les trois portraits du prototype
+  (randomuser.me, deux femmes et un homme) sont rapatriés dans
+  `public/avatars/` — pas de dépendance à un domaine tiers au rendu.
+  **En dessous de cinq intéressées, aucun visage** (`MIN_PEOPLE_FOR_AVATARS`) :
+  trois portraits au-dessus de « 2 personnes intéressées » se lisent comme
+  trois personnes précises, et l'illustration devient un mensonge lisible à
+  l'œil nu. La feuille de personnes, elle, n'en porte aucun — comme dans le
+  proto : coller un visage d'illustration à côté d'un nom réel donnerait un
+  visage à quelqu'un qui n'en a pas.
+- **Icônes exclusivement Lucide**, le set de l'app — jamais les noms Tabler du
+  prototype. `zoom-question` n'a pas d'équivalent : c'est `UserRoundSearch` qui
+  le remplace, et qui dit d'ailleurs mieux le sujet du bloc. L'icône est un
+  **filigrane** (92 px, opacité 0,18, débordant du coin haut-droit), le titre
+  passe devant.
+- **« Personne » est toujours féminin**, quel qu'en soit le sujet : « X
+  personnes … sont déjà intéressées », sans point médian.
 - **Le bloc lila est le seul fond plein de l'app** : ses boutons secondaires
   passent en texte violet sur blanc, sans liseré corail. La règle est un
   descendant (`.compat-card .btn-secondary`), pas un utilitaire Tailwind posé
   sur le bouton — `text-*` et `.btn-secondary` vivent dans la même couche, et
   c'est la règle écrite en dernier qui gagnait : le bouton ressortait corail.
-- **Deux emplacements, un seul visible** (sous les parcours en mobile, colonne
-  de droite en desktop), comme le proto. Les deux instances ont donc leur propre
-  état — sans conséquence, elles ne sont jamais visibles ensemble.
+- **Un seul emplacement pour le bloc violet**, dans la colonne de lecture,
+  **après « Qui organise ? »** — c'est là que le proto pose son
+  `compat-slot-inline`, et il n'en rend pas d'autre. Ordre complet de la fiche :
+  synthèse → intérêt → description → parcours → pour se préparer → qui organise
+  → **qui participe déjà** .
+- **Le compteur d'intéressées est aux trois endroits du proto** : en haut de
+  fiche au-dessus des actions, dans la barre collante en mobile
+  (`registered-count-label`) et dans la colonne de droite en desktop. Même
+  composant, une variante `compact` pour les deux emplacements étroits.
+- **État vide assumé** : quand personne ne correspond, il n'y a plus de preuve
+  sociale à annoncer — ce sont les **conseils qui prennent la tête**, et leur
+  intro se date (« Tu as 6 mois pour te préparer, voici quelques conseils : »).
+  En dessous d'un mois, ou sans date exploitable, on retombe sur « Pour te
+  préparer de ton côté : » — « tu as 0 mois pour te préparer » n'est pas un
+  conseil.
 
 ### ⚠️ Bloquant relevé : `favourite_events` n'a pas de policy d'écriture
 

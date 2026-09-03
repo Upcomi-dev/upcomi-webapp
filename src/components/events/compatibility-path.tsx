@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { User } from "lucide-react";
-import { AvatarStack } from "@/components/events/person-avatar";
-import type { InterestedPerson } from "@/lib/events/interested-people";
+import { AvatarStack, MIN_PEOPLE_FOR_AVATARS } from "@/components/events/person-avatar";
 
 /**
  * Le « chemin » entre moi et les personnes déjà intéressées : une piste, un
@@ -22,10 +21,11 @@ export function pathPercent(overall: number | null): number {
 
 export function CompatibilityPath({
   overall,
-  people,
+  interestedCount,
 }: {
   overall: number | null;
-  people: InterestedPerson[];
+  /** Décide de la ligne d'arrivée : des visages, ou une simple borne. */
+  interestedCount: number;
 }) {
   const target = pathPercent(overall);
   // Le personnage part toujours de sa position précédente : monté directement
@@ -53,11 +53,11 @@ export function CompatibilityPath({
           <User className="h-3 w-3" strokeWidth={2.2} />
         </div>
         <div className="absolute top-1/2 left-full -translate-x-1/2 -translate-y-1/2">
-          {people.length > 0 ? (
-            <AvatarStack people={people} max={3} />
+          {interestedCount >= MIN_PEOPLE_FOR_AVATARS ? (
+            <AvatarStack count={interestedCount} />
           ) : (
-            // Personne encore : un point d'arrivée quand même, sinon la piste
-            // n'a plus de but et le trajet ne veut plus rien dire.
+            // Trop peu de monde pour des visages : une borne quand même, sinon
+            // la piste n'a plus de but et le trajet ne veut plus rien dire.
             <span className="block h-[26px] w-[26px] rounded-full border border-white/40 bg-white/20" />
           )}
         </div>

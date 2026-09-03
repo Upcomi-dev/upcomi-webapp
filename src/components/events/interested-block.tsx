@@ -10,21 +10,24 @@ import { trackAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 /**
- * « Qui est intéressé », en haut de fiche.
+ * « X personnes intéressées », avec ses visages.
  *
- * Le prototype l'a remonté du bas de page : l'intérêt social se montre tout de
- * suite, plutôt que caché sous les actions. Le compteur est cliquable et ouvre
- * la feuille de personnes ; déconnectée, il ouvre le gate — on peut savoir
- * combien elles sont sans avoir de compte, pas qui elles sont.
+ * Le même bloc aux trois endroits du prototype : en haut de fiche au-dessus des
+ * actions, dans la barre collante en mobile, et dans la colonne de droite en
+ * desktop. Partout il ouvre la même feuille — la liste complète des personnes
+ * intéressées, jamais une sélection.
  */
 export function InterestedBlock({
   eventId,
   eventName,
   className,
+  size = "default",
 }: {
   eventId: number;
   eventName: string;
   className?: string;
+  /** `compact` pour la barre collante et la colonne de droite, plus étroites. */
+  size?: "default" | "compact";
 }) {
   const { count, people } = useInterestedPeople();
   const { user } = useAuth();
@@ -46,7 +49,6 @@ export function InterestedBlock({
       });
       openAuthModal({
         title: "Rejoins la communauté Upcomi pour voir qui est déjà intéressé·e",
-        redirect: `/event/${eventId}`,
       });
       return;
     }
@@ -56,24 +58,27 @@ export function InterestedBlock({
   };
 
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-      {people.length > 0 && <AvatarStack people={people} max={3} />}
+    <div className={cn("flex items-center gap-2.5", className)}>
+      <AvatarStack count={count} size={size === "compact" ? 22 : 26} />
       <button
         type="button"
         onClick={handleClick}
         disabled={count === 0}
-        className="text-left text-sm font-semibold text-foreground underline decoration-from-font underline-offset-[3px] disabled:cursor-default disabled:font-normal disabled:text-muted-foreground disabled:no-underline"
+        className={cn(
+          "min-w-0 text-left font-semibold text-foreground underline decoration-from-font underline-offset-[3px] disabled:cursor-default disabled:font-normal disabled:text-muted-foreground disabled:no-underline",
+          size === "compact" ? "text-[13px]" : "text-sm"
+        )}
       >
         {label}
       </button>
 
-      {/* Titre sans chiffre : la liste ne montre que les **autres**, et un
-          nombre en titre se lirait comme une promesse de lignes à compter. Le
-          compte est déjà sur le bouton qui vient d'ouvrir la feuille. */}
+      {/* Titre sans chiffre : la liste ne montre que les autres, et un nombre
+          en titre se lirait comme une promesse de lignes à compter. Le compte
+          est déjà sur le bouton qui vient d'ouvrir la feuille. */}
       <PeopleSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        title={`Qui est intéressé·e par ${eventName} ?`}
+        title={`Qui est intéressée par ${eventName} ?`}
         people={people}
       />
     </div>
