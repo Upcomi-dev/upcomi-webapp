@@ -60,7 +60,7 @@ feat/onboarding-v2             (T1 — nouvelles colonnes sur `users`, additif)
 feat/dates-cles                (T1)
 feat/mesures-inclusion         (T1)
 feat/evenements-similaires     (T3 — gratuite, casable ici ou avant)
-feat/score-adequation          (T2 — sa propre petite migration)
+feat/score-adequation          (T2 — LIVRÉE, voir §9)
    ↓ bloquant, seule :
 feat/socle-data                (profils publics consultables + entité organisateur)
    ↓
@@ -689,3 +689,172 @@ c'est une autre famille, qui a ses propres règles dans le proto (`.pill`,
 2. Merger le code (aucun feature flag : les blocs sont visibles au déploiement,
    et dégradent proprement — timeline en « --/-- », mesures en état vide).
 3. Saisir les rattachements `event_inclusion_measures` évènement par évènement.
+
+---
+
+## 9. Brique `feat/score-adequation` (T2) — score + « qui est intéressé »
+
+Les deux blocs sortis du périmètre de `feat/fiche-evenement-v2` (§8) sont
+traités ensemble, parce que le prototype n'en fait qu'un : `isCompatV2()` y
+renvoie `true` en dur, et le questionnaire ne sert pas à noter l'évènement mais
+à **se situer parmi les personnes déjà intéressées**. Les séparer aurait donné
+un questionnaire sans réponse et un compteur sans raison d'être.
+
+### Le pont entre le questionnaire et l'onboarding
+
+C'est le point dur de la brique. Le prototype compare les réponses des membres
+entre elles : chaque personne y porte un profil cycliste complet. Ici, les
+autres membres n'ont qu'un **niveau déclaré à l'inscription** (`users.pref2`) —
+le questionnaire est neuf, personne n'y a répondu. Il faut donc ramener les deux
+sur une échelle commune.
+
+`src/lib/compatibility/levels.ts` porte cette correspondance, et rien d'autre.
+
+**Trois paliers, pas quatre** : `Competition` est rangé avec `Confirme`. Presque
+personne ne coche « compétition » alors que la pratique réelle y correspond
+souvent ; un palier que personne ne peuple n'isole que les rares qui l'ont
+coché.
+
+| `users.pref2` | Palier | Sortie la plus longue | Distance max | Dénivelé max |
+|---|:---:|---|---|---|
+| `Debutant` | **1** | moins de 4 h | < 100 km | < 1000 m |
+| `Intermediaire` | **2** | demi-journée → une journée | 100 – 400 km | 1000 – 3500 m |
+| `Confirme` / `Competition` | **3** | plus de 8 h | 200 km et plus | 2000 m et plus |
+| *(non renseigné)* | *aucun* | — | — | — |
+
+Les colonnes de droite ne sont pas décoratives : passées dans
+`getProfileScore()`, elles redonnent bien le palier annoncé. C'est ce qui rend
+la correspondance vérifiable plutôt qu'arbitraire.
+
+**Les seuils sont tassés vers le bas**, parce qu'on se sous-déclare à
+l'inscription : `CONFIRME` commence à 2,75 et non à 3 (« plus de 8 h, 200 km,
+2000 m D+ » vaut 2,83 sur cette échelle et doit y tomber), et `DEBUTANT`
+s'arrête à 1,45 — au-delà, deux réponses sur trois sont déjà sorties du plus bas
+échelon.
+
+Conséquence, vérifiée : quelqu'un qui répond « une demi-journée / 100 km /
+1000-2000 m » (1,92) est intermédiaire et **voit** les confirmées déjà
+intéressées ; quelqu'un qui répond « moins de 4 h / moins de 100 km / moins de
+1000 m » (1,00) est débutante et ne voit que des conseils de préparation.
+
+**L'appariement se fait sur des paliers voisins**, les fourchettes de pratique
+se chevauchant d'un palier à l'autre :
+
+| moi ↓ / elle → | 1 Débutant | 2 Intermédiaire | 3 Confirmé |
+|---|:---:|:---:|:---:|
+| **1 Débutant** | oui | oui | non |
+| **2 Intermédiaire** | oui | oui | oui |
+| **3 Confirmé** | non | oui | oui |
+
+Une débutante ne croise donc jamais le peloton de tête : voir le niveau des plus
+aguerries décourage plus que ça ne rassure (constat du prototype). La règle
+« une débutante est toujours incluse » du proto n'est **pas** reprise — elle y
+repose sur « aucun évènement à son actif », donnée qu'on n'a pas, et la
+transposer en « palier 1 toujours inclus » rendait la matrice non monotone.
+
+Un **palier inconnu** n'entre jamais dans la sélection, mais reste compté dans
+le total des intéressé·es : on ne peut rien affirmer de son expérience, on peut
+la compter.
+
+### Migration `20260904120000_score_adequation.sql`
+
+- `user_compatibility_answers` (`user_id`, `question_key`, `answer_value`), une
+  ligne par question plutôt qu'un `jsonb` — le catalogue de questions vit dans
+  le code, il bougera, et une question retirée doit pouvoir laisser ses réponses
+  derrière elle. Données personnelles : RLS, `revoke`/`grant` et les quatre
+  policies dans le même fichier.
+- **`user_public.niveau`**, recopié de `users.pref2` par le trigger existant
+  `trg_sync_user_public` (élargi à cette colonne), plus un backfill rejouable.
+  C'est le seul moyen de lire le niveau de quelqu'un d'autre sans ouvrir
+  `public.users` en RLS, c'est-à-dire sans faire `feat/socle-data` : la table
+  existe précisément pour ça (« infos affichées aux autres users ») et est déjà
+  lisible par `authenticated`. Les **réponses** au questionnaire, elles, ne
+  sortent jamais.
+- `get_event_interested_people(bigint)`, `security definer`, réservée à
+  `authenticated`. Non pas pour contourner une policy — les deux tables sont
+  lisibles — mais parce que la clé étrangère de `favourite_events.user_id`
+  pointe sur `users.uid` et non sur `user_public.uid` : PostgREST ne sait pas
+  embarquer l'un dans l'autre.
+- `get_event_interested_count(bigint)`, exécutable par `anon` : on peut savoir
+  combien elles sont sans compte, pas qui elles sont.
+
+### Décisions prises
+
+- **Compter des personnes, pas des favoris.** `favourite_events` n'a aucune
+  contrainte d'unicité et porte des doublons : `get_event_favourite_counts()`
+  annonçait onze personnes là où la liste en montrait dix. Elle reste en place
+  pour `/admin`, qui compte bien des favoris ; le bloc social a la sienne, et la
+  jointure est en `select distinct`.
+- **Mon propre intérêt est ajusté côté client, sans relecture.** Le contexte des
+  favoris bascule de façon optimiste, avant que l'écriture ne soit partie : une
+  relecture déclenchée sur ce basculement rapporte l'ancien compte. L'écart est
+  connu — c'est moi, une personne — autant le corriger sans requête.
+- **Le compteur de personnes similaires n'est jamais plafonné**, seule la liste
+  l'est (8, comme le proto) : annoncer « 8 personnes » quand il y en a trente
+  rendrait le chiffre faux au moment précis où il rassure. La feuille dit « et N
+  autres » quand elle écourte.
+- **Le profil est global, pas par évènement** : on répond une fois, le résultat
+  se rejoue sur chaque fiche. Seule la question « itinéraire » est propre à
+  l'évènement en cours et n'est jamais enregistrée.
+- **Le résultat s'affiche même déconnectée** — en test, ne rien voir à la fin du
+  questionnaire était pris pour un bug. Il n'est simplement pas gardé, et la
+  liste de personnes reste derrière le gate.
+- **Le questionnaire n'écrase pas `pref2`** : la déclaration d'onboarding et la
+  mesure fine coexistent. Proposer « ton niveau déclaré ne correspond plus, on
+  le met à jour ? » reste à faire.
+- **Pas de pré-remplissage** depuis l'onboarding, comme le proto — mais les
+  tableaux ci-dessus sont écrits pour que ce soit une ligne à ajouter.
+- **Avatars réels, repli initiales.** `AVATAR_POOL` (faux portraits
+  randomuser.me) ne se porte pas : `user_public.avatar_url` est le plus souvent
+  **vide**, les initiales sur pastille ocre sont donc le cas courant.
+- **Le bloc lila est le seul fond plein de l'app** : ses boutons secondaires
+  passent en texte violet sur blanc, sans liseré corail. La règle est un
+  descendant (`.compat-card .btn-secondary`), pas un utilitaire Tailwind posé
+  sur le bouton — `text-*` et `.btn-secondary` vivent dans la même couche, et
+  c'est la règle écrite en dernier qui gagnait : le bouton ressortait corail.
+- **Deux emplacements, un seul visible** (sous les parcours en mobile, colonne
+  de droite en desktop), comme le proto. Les deux instances ont donc leur propre
+  état — sans conséquence, elles ne sont jamais visibles ensemble.
+
+### ⚠️ Bloquant relevé : `favourite_events` n'a pas de policy d'écriture
+
+`public.favourite_events` porte, dans la baseline issue de la prod, **une seule
+policy** : `for select using (true)`. Aucune policy d'`insert` ni de `delete`.
+Le bouton « Ça m'intéresse » écrit pourtant en direct depuis le navigateur
+(`favorites-context.tsx`) : en local, il répond **403**.
+
+La baseline capture bien les policies d'écriture des autres tables
+(`feedback_entries` `for insert`, `prix` `for delete`, `organisateurs`
+`for update`) — le dump n'est donc pas tronqué. Deux explications possibles :
+les policies ont été ajoutées dans le dashboard Supabase après le dump, ou la
+prod est réellement dans cet état.
+
+**À vérifier avant toute mise en prod de cette brique** : c'est le geste dont
+tout le bloc dépend. Rien n'a été ajouté à la migration — corriger à l'aveugle
+la RLS d'une table partagée avec l'app mobile serait pire que le problème. Pour
+débloquer le développement en local :
+
+```sql
+create policy "Own favourites insert" on public.favourite_events
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "Own favourites delete" on public.favourite_events
+  for delete to authenticated using ((select auth.uid()) = user_id);
+create policy "Own favourites update" on public.favourite_events
+  for update to authenticated using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+```
+
+Second point, plus ancien et sans rapport avec cette brique :
+`favourite_events` a `grant all … to anon` et une policy de `select` sans clause
+`to`. Avec la clé publique, n'importe qui peut énumérer qui a mis quoi en
+favori. Lecture seule (aucune policy d'écriture, cf. ci-dessus), mais à traiter.
+
+### Checklist de mise en prod
+
+1. Vérifier la RLS d'écriture de `favourite_events` (ci-dessus).
+2. Appliquer `supabase/migrations/20260904120000_score_adequation.sql`, et
+   contrôler le backfill de `user_public.niveau` sur les comptes existants.
+3. Merger le code (pas de feature flag : sans intéressé·es le bloc affiche
+   « Sois la première… », et le questionnaire reste jouable).
+4. Contrôler sur un évènement réel qu'un compte sans `pref2` est compté dans le
+   total mais absent de la sélection « expérience similaire ».

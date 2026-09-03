@@ -294,6 +294,30 @@
     padding: 0 4px;
   }
 
+  /* Le bloc lila du score d'adéquation est le seul fond plein de l'app. Le
+     liseré corail du bouton secondaire n'y a plus de sens — il ne se justifie
+     que sur fond clair. Sur ce fond, c'est texte violet sur blanc, sans
+     contour, comme dans le proto.
+
+     Descendant plutôt qu'utilitaire Tailwind posé sur le bouton : `text-*` et
+     `.btn-secondary` vivent dans la même couche, et c'est la règle écrite en
+     dernier qui gagne — le bouton ressortait corail. */
+  .compat-card .btn-secondary {
+    border: none;
+    color: var(--violet-dark);
+  }
+  .compat-card .btn-secondary:not(:disabled):hover {
+    background: #fff;
+    opacity: 0.9;
+  }
+  /* Une fois intéressé·e, le texte et le cœur passent à l'ocre de la charte —
+     jamais de fond ocre. */
+  .compat-card .btn-secondary[data-active="true"] {
+    background: #fff;
+    border: none;
+    color: var(--orange-dark);
+  }
+
   .text-balance {
     text-wrap: balance;
   }

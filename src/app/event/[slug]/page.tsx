@@ -10,6 +10,7 @@ import { getEventKeyDates } from "@/lib/utils/event-key-dates";
 import { findNearestStation } from "@/lib/utils/stations";
 import { fetchEventInclusionMeasures } from "@/lib/events/inclusion-measures";
 import { getEventFactTags } from "@/lib/events/facts";
+import { buildCompatEvent } from "@/lib/compatibility/event-input";
 import { getEventPath, getEventUrl, serializeJsonLd, SITE_NAME } from "@/lib/seo";
 import { parseLegacyEventId } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
@@ -22,6 +23,9 @@ import { EventCard } from "@/components/events/event-card";
 import { StickyActionBar } from "@/components/events/sticky-action-bar";
 import { EventKeyDates } from "@/components/events/event-key-dates";
 import { EventViewTracker } from "@/components/events/event-view-tracker";
+import { InterestedPeopleProvider } from "@/components/events/interested-people-context";
+import { InterestedBlock } from "@/components/events/interested-block";
+import { CompatibilityCard } from "@/components/events/compatibility-card";
 import { InclusionMeasures } from "@/components/events/inclusion-measures";
 import { MixiteBadge } from "@/components/events/mixite-badge";
 import { AppFooter } from "@/components/layout/app-footer";
@@ -141,6 +145,10 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   const nearestStation = findNearestStation(event.latitude, event.longitude);
   const keyDates = getEventKeyDates(event, { station: nearestStation });
 
+  // L'évènement tel que le score d'adéquation le lit : les `sous_events`
+  // tiennent lieu de « parcours », la durée se déduit des deux dates.
+  const compatEvent = buildCompatEvent(event, sousEvents);
+
   const formattedDate = event.dateEvent
     ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
         day: "numeric",
@@ -213,7 +221,11 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    // Les personnes intéressées sont chargées une seule fois pour toute la
+    // fiche : le bloc du haut, le score d'adéquation et la feuille de personnes
+    // lisent la même liste.
+    <InterestedPeopleProvider eventId={event.id}>
+      <div className="flex min-h-screen flex-col">
       <EventViewTracker
         eventId={event.id}
         eventType={event.type_event}
@@ -324,6 +336,15 @@ export default async function EventPage({ params, searchParams }: PageProps) {
           </div>
         </div>
 
+        {/* Qui est intéressé — remonté du bas de page, comme dans le proto :
+            l'intérêt social se montre tout de suite plutôt que caché sous les
+            actions. Pleine largeur, au-dessus des deux colonnes. */}
+        <InterestedBlock
+          eventId={event.id}
+          eventName={event.nomEvent || "cet évènement"}
+          className="mb-3.5"
+        />
+
         {/* Actions principales, visibles dès l'arrivée sur la fiche. Masquées
             en desktop : la colonne de droite les porte en permanence, les
             répéter ici leur donnerait deux fois la même place. */}
@@ -399,6 +420,11 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 </div>
               </div>
             )}
+
+            {/* Score d'adéquation — deux emplacements, un seul visible à la
+                fois, comme dans le proto : sous les parcours en mobile, en
+                colonne de droite en desktop. */}
+            <CompatibilityCard eventId={event.id} event={compatEvent} className="lg:hidden" />
 
             <EventKeyDates eventId={event.id} dates={keyDates} />
 
@@ -481,6 +507,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
               elle est déjà sous le titre. */}
           <div className="hidden flex-shrink-0 lg:block lg:w-[280px]">
             <div className="lg:sticky lg:top-24">
+              <CompatibilityCard eventId={event.id} event={compatEvent} />
               <div
                 className="glass rounded-[var(--radius)] p-4"
                 style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
@@ -522,7 +549,8 @@ export default async function EventPage({ params, searchParams }: PageProps) {
           </div>
         </div>
       </StickyActionBar>
-    </div>
+      </div>
+    </InterestedPeopleProvider>
   );
 }
 

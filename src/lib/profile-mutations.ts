@@ -51,6 +51,10 @@ export async function saveUserProfile(
         uid: user.id,
         name: profile.firstName || null,
         surname: profile.lastName || null,
+        // Le niveau est recopié ici pour être lisible des autres membres : le
+        // bloc « qui participe déjà » de la fiche évènement s'en sert pour
+        // apparier les personnes, et `users.pref2` n'est visible que de soi.
+        niveau: profile.practiceLevel || null,
         updated_at: now,
       },
       { onConflict: "uid" }
