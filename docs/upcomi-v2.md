@@ -257,6 +257,16 @@ npm run dev
 `supabase/migrations/` au premier démarrage. `supabase stop` arrête le stack
 (les données survivent) ; `supabase status` réaffiche les URLs et les clés.
 
+⚠️ **Les migrations versionnées ne décrivent pas le socle de la base.** Elles
+ne créent que six tables (`collections`, `collection_events`, `admin_users`,
+`app_features`, `feedback_entries`, `event_submission_contacts`). Les vingt
+autres — `users`, `events`, `organisateurs`, `notifications`, `user_public`,
+`friendships`, `sous_events`… — n'ont jamais été décrites par une migration :
+elles viennent de FlutterFlow et du dashboard Supabase. Sur un volume Docker
+vierge, `supabase start` s'arrête donc en erreur dès la première migration V2
+(`alter table public.users` sur une table absente). Voir « Reconstruire la base
+locale » plus bas.
+
 | Service | URL |
 |---|---|
 | API (REST, Auth, Storage) | http://127.0.0.1:54321 |
@@ -295,15 +305,36 @@ moyen de les tester.
 supabase migration up
 ```
 
-Pour repartir d'une base propre et rejouer toute l'historique des migrations
-(les données locales sont perdues) :
-
-```bash
-supabase db reset
-```
+`supabase db reset` rejoue toute l'historique des migrations — mais, pour la
+raison ci-dessus, **il ne reconstruit plus une base exploitable** : il vide le
+volume puis échoue en cours de route. Ne pas le lancer sans avoir de quoi
+recréer le socle.
 
 Une migration n'est poussée en prod qu'après avoir été jouée ici. Les règles de
 la section 3 restent la référence pour ce qu'une migration a le droit de faire.
+
+### Reconstruire la base locale
+
+Le schéma de production n'est **pas versionné**. Il l'a été un temps, sous la
+forme d'un `supabase db dump` déposé dans `supabase/migrations/` : ce dump
+embarquait les clés d'API du projet en clair, cachées dans la définition des
+webhooks DB, et il a été retiré du dépôt.
+
+La photo du schéma est conservée hors dépôt, expurgée de ses clés et de ses
+webhooks :
+
+```
+~/Sites/upcomi-db-baseline/schema_prod_2026-09-01.sql
+```
+
+Pour repartir d'une base neuve, l'appliquer à la main sur le stack local avant
+de jouer les migrations V2 :
+
+```bash
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres \
+  -f ~/Sites/upcomi-db-baseline/schema_prod_2026-09-01.sql
+supabase migration up
+```
 
 ### Ce qui reste vrai vis-à-vis de la prod
 
