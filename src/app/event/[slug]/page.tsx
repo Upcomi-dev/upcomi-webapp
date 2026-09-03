@@ -16,9 +16,10 @@ import { getEventTypeColor } from "@/lib/types/database";
 import { getAppStorageImage, getAppStorageImageUrl } from "@/lib/storage/urls";
 import type { Event, SousEvent } from "@/lib/types/database";
 import { ShareButton } from "@/components/events/share-button";
-import { FavoriteCTA } from "@/components/events/favorite-cta";
 import { ExternalRegistrationLink } from "@/components/events/external-registration-link";
+import { EventActions } from "@/components/events/event-actions";
 import { EventCard } from "@/components/events/event-card";
+import { StickyActionBar } from "@/components/events/sticky-action-bar";
 import { EventKeyDates } from "@/components/events/event-key-dates";
 import { EventViewTracker } from "@/components/events/event-view-tracker";
 import { InclusionMeasures } from "@/components/events/inclusion-measures";
@@ -229,11 +230,10 @@ export default async function EventPage({ params, searchParams }: PageProps) {
 
       <TopNav />
 
-      <div
-        className={`mx-auto w-full max-w-[1040px] flex-1 px-4 pt-8 md:px-6 ${
-          event.URL ? "pb-36 lg:pb-8" : "pb-8"
-        }`}
-      >
+      {/* La barre collante en mobile est là quelle que soit la présence d'un
+          lien d'inscription — « Ça m'intéresse » y figure toujours : la page
+          lui réserve sa place en bas à toutes les fiches. */}
+      <div className="mx-auto w-full max-w-[1040px] flex-1 px-4 pt-8 pb-40 md:px-6 lg:pb-8">
         {/* Back */}
         <Link
           href={returnTo}
@@ -326,12 +326,18 @@ export default async function EventPage({ params, searchParams }: PageProps) {
           </div>
         </div>
 
-        {/* Intérêt porté à l'évènement, remonté en haut de fiche : le
-            rendre visible tout de suite plutôt que le cacher sous les
-            détails. */}
-        <div className="mb-6 border-b border-black/8 pb-4">
-          <FavoriteCTA eventId={event.id} initialCount={favCount} />
-        </div>
+        {/* Actions principales, visibles dès l'arrivée sur la fiche. Masquées
+            en desktop : la colonne de droite les porte en permanence, les
+            répéter ici leur donnerait deux fois la même place. */}
+        <EventActions
+          eventId={event.id}
+          registrationUrl={event.URL}
+          eventType={event.type_event}
+          organizer={event.organisateur}
+          initialFavCount={favCount}
+          source="detail_top"
+          className="mb-6 border-b border-black/8 pb-5 lg:hidden"
+        />
 
         {/* Le contenu suit un ordre de lecture linéaire ; seul le bloc
             d'inscription en sort à partir du desktop, où il devient une
@@ -482,76 +488,55 @@ export default async function EventPage({ params, searchParams }: PageProps) {
             </div>
           </div>
 
-          {/* Right column — le bloc d'inscription, sorti du flux de lecture à
-              partir du desktop (en mobile, c'est la barre collante en bas). La
-              synthèse type/date/lieu/prix n'y est plus répétée : elle est déjà
-              sous le titre. */}
-          {event.URL && (
-            <div className="w-full flex-shrink-0 lg:w-[280px]">
-              <div className="lg:sticky lg:top-24">
-                <div className="hidden lg:block">
-                  <div
-                    className="glass flex items-center justify-between gap-4 rounded-[var(--radius)] p-4"
-                    style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
-                  >
-                    <div className="min-w-0">
-                      {minPriceLabel && (
-                        <div className="text-[16px] font-semibold text-foreground">
-                          {minPriceLabel}
-                        </div>
-                      )}
-                    </div>
-                    <ExternalRegistrationLink
-                      href={event.URL}
-                      eventId={event.id}
-                      eventType={event.type_event}
-                      organizer={event.organisateur}
-                      className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white transition-all hover:bg-coral-dark"
-                      style={{ boxShadow: "0 2px 12px rgba(255,94,65,0.25)" }}
-                    >
-                      S&apos;inscrire →
-                    </ExternalRegistrationLink>
-                  </div>
-                </div>
+          {/* Colonne de droite — le bloc d'action quitte la barre collante du
+              mobile pour devenir une sidebar visible en permanence pendant la
+              lecture. La synthèse type/date/lieu/prix n'y est pas répétée :
+              elle est déjà sous le titre. */}
+          <div className="hidden flex-shrink-0 lg:block lg:w-[280px]">
+            <div className="lg:sticky lg:top-24">
+              <div
+                className="glass rounded-[var(--radius)] p-4"
+                style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
+              >
+                <EventActions
+                  eventId={event.id}
+                  registrationUrl={event.URL}
+                  eventType={event.type_event}
+                  organizer={event.organisateur}
+                  initialFavCount={favCount}
+                  orientation="column"
+                  source="detail_sidebar"
+                />
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
       <AppFooter />
 
-      {event.URL && (
-        <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+      {/* Barre collante en mobile : les mêmes actions qu'en haut de fiche,
+          à portée quel que soit l'endroit où on est dans la lecture. */}
+      <StickyActionBar>
+        <div
+          className="mx-auto w-full max-w-[1040px] px-4 pt-3 md:px-6"
+          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
           <div
-            className="mx-auto w-full max-w-[1040px] px-4 pt-3 md:px-6"
-            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+            className="glass rounded-[var(--radius)] p-4"
+            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
           >
-            <div
-              className="glass flex items-center justify-between gap-4 rounded-[var(--radius)] p-4"
-              style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
-            >
-              <div className="min-w-0">
-                {minPriceLabel && (
-                  <div className="text-[16px] font-semibold text-foreground">
-                    {minPriceLabel}
-                  </div>
-                )}
-              </div>
-              <ExternalRegistrationLink
-                href={event.URL}
-                eventId={event.id}
-                eventType={event.type_event}
-                organizer={event.organisateur}
-                className="flex-shrink-0 rounded-[var(--radius-sm)] bg-coral px-5 py-2.5 text-center text-[14px] font-semibold text-white transition-all hover:bg-coral-dark"
-                style={{ boxShadow: "0 2px 12px rgba(255,94,65,0.25)" }}
-              >
-                S&apos;inscrire →
-              </ExternalRegistrationLink>
-            </div>
+            <EventActions
+              eventId={event.id}
+              registrationUrl={event.URL}
+              eventType={event.type_event}
+              organizer={event.organisateur}
+              initialFavCount={favCount}
+              source="detail_sticky"
+            />
           </div>
         </div>
-      )}
+      </StickyActionBar>
     </div>
   );
 }

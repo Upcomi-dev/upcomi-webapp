@@ -198,7 +198,9 @@ export function EventCard({
       <div className="relative z-10 mt-auto p-3.5">
         {(mint || past || factTags.length > 0) && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            {mint && <MixiteBadge />}
+            {mint && (
+              <MixiteBadge className="px-2 py-[3px] text-[10px] font-normal tracking-[0.04em]" />
+            )}
             {past && (
               <span className="rounded-full border border-white/35 bg-foreground/62 px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.1em] text-white backdrop-blur-sm">
                 Terminé

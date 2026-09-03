@@ -479,23 +479,40 @@ contre `localhost:8080`), mobile et desktop :
   `.btn-secondary.small` du proto, factorisé dans l'utilitaire
   `.btn-outline-coral` (`globals.css`).
 - Liseré du bloc mesures : `#315643` → **`#4e9c6b`**, le vert inclusion du proto.
+- **Badge mixité** : `MixiteBadge` prend la forme et la typographie des repères
+  posés à côté de lui (capitales, 11 px/700, même pastille), en gardant le
+  vert — c'est un repère parmi les autres, pas une décoration à part. La carte
+  d'évènement, dont les repères sont plus petits, passe sa propre taille.
 - Description : 14 → **15 px**.
 - Cartes : mois en toutes lettres (« 12 septembre », pas « 12 sept. »), comme
   le proto — la ligne « ville · date » est tronquée si besoin.
 
+### Actions de la fiche
+
+`EventActions` porte la paire du proto : **« M'inscrire » secondaire** et
+**« Ça m'intéresse » primaire**. L'inscription part sur le site de
+l'organisation — elle ne peut pas être l'engagement demandé en premier.
+
+La paire est répétée aux trois endroits du proto : en haut de fiche (masquée en
+desktop, où la colonne de droite fait doublon), dans la colonne de droite en
+desktop (boutons empilés, compteur centré), et dans la barre collante en
+mobile. Cette dernière reste escamotée tant qu'on n'a pas commencé à lire
+(`StickyActionBar`, seuil à 24 px comme le proto) : visible d'emblée, elle
+afficherait deux fois la même chose à l'écran.
+
+Le compteur « X personnes intéressées » remplace le `FavoriteCTA` sur la fiche,
+qui faisait doublon avec le bouton d'intérêt. `FavoriteCTA` reste utilisé par
+le panneau de détail de la carte. Les avatars et la feuille « qui est
+intéressé » restent hors périmètre.
+
+Le prix ne figure plus dans le bloc d'action : il est dans la ligne de
+synthèse, comme dans le proto.
+
 ### Écarts assumés
 
-- **Badge mixité** : le proto le veut vert vif plein, en capitales, 11 px/700.
-  Le composant `MixiteBadge` existant est vert foncé translucide en casse
-  normale. La consigne est de garder le composant existant quand la maquette le
-  contredit — donc inchangé, mais c'est un écart visible.
 - **Tag `bike_type` sur le hero** : le proto n'a que mixité + durée +
   distance · dénivelé. Le type de vélo est une donnée que la webapp possède et
   qui n'apparaîtrait plus nulle part sur la fiche autrement ; gardé en 3ᵉ tag.
-- **Colonne de droite** : le proto y met les avatars, le compteur
-  d'intéressé·es et deux boutons (« M'inscrire » secondaire, « Ça m'intéresse »
-  primaire). La webapp n'a que le prix et « S'inscrire », le reste relevant du
-  bloc « qui est intéressé » hors périmètre. À reprendre avec lui.
 - **Organisateur** : le proto affiche une description, Instagram et Strava.
   `events` ne porte aucun de ces champs — ils viendront avec
   `feat/organisateur-enrichi`, qui dépend de `feat/socle-data`.
