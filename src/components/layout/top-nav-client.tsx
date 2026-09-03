@@ -177,7 +177,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
         <DialogContent
           id="mobile-header-menu"
           showCloseButton={false}
-          className="top-0 right-0 bottom-0 left-auto flex h-dvh w-[min(88vw,380px)] max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none rounded-l-[30px] border-y-0 border-r-0 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(243,235,223,0.97))] p-0 data-open:slide-in-from-right data-closed:slide-out-to-right md:hidden"
+          className="top-0 right-0 bottom-0 left-auto flex h-dvh max-h-dvh w-[min(88vw,380px)] max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-y-0 border-r-0 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(243,235,223,0.97))] p-0 data-open:slide-in-from-right data-closed:slide-out-to-right md:hidden"
         >
           <div className="flex h-[75px] shrink-0 items-center justify-end border-b border-foreground/8 px-5">
             <DialogTitle className="sr-only">
