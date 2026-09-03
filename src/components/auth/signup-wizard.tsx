@@ -23,7 +23,14 @@ import {
   sanitizeRedirectPath,
   type UserProfileFormValues,
 } from "@/lib/profile";
-import { saveRecommendedEvents, saveUserProfile } from "@/lib/profile-mutations";
+import {
+  fetchEventsWithStories,
+  saveEventStory,
+  saveRecommendedEvents,
+  saveUserProfile,
+} from "@/lib/profile-mutations";
+import { Field, FIELD_INPUT_CLASS, FieldLabel, Muted } from "@/components/ui/field";
+import { EventStoryForm } from "./event-story-form";
 import { GoogleAuthButton } from "./google-auth-button";
 import { PasswordRequirements } from "./password-requirements";
 import {
@@ -35,7 +42,14 @@ import {
 // l'application le temps de l'aller-retour OAuth : on ne revient pas dans cet
 // état-ci mais dans une nouvelle page, où le garde d'onboarding rouvre le
 // parcours directement à l'étape « profil » (voir OnboardingModal).
-const STEPS = ["methode", "identite", "profil", "recommandations", "confirmation"] as const;
+const STEPS = [
+  "methode",
+  "identite",
+  "profil",
+  "recommandations",
+  "recits",
+  "confirmation",
+] as const;
 
 export type SignupWizardStep = (typeof STEPS)[number];
 
@@ -63,6 +77,11 @@ const STEP_TITLES: Record<SignupWizardStep, { title: string; description?: strin
     title: "As-tu déjà participé à des événements ?",
     description: "Si oui, indique ceux que tu recommandes à la communauté.",
   },
+  recits: {
+    title: "As-tu écris un récit ou pris des photos de l'événement ?",
+    description:
+      "Pour aider les autres membres de la communauté, ajoute un lien vers Instagram, Strava ou ton blog pour ajouter ton récit ou tes photos à l'événement.",
+  },
   confirmation: { title: "C'est tout bon !" },
 };
 
@@ -86,6 +105,10 @@ export function SignupWizard({
   const router = useRouter();
   const { user } = useAuth();
   const [step, setStep] = useState<SignupWizardStep>(startStep);
+  // Le genre est demandé avec le prénom et le nom. Quand le parcours reprend
+  // plus loin (retour de Google, session coupée), cette étape n'est jamais
+  // jouée : la question est alors rattachée à l'étape « profil ».
+  const identityStepSkipped = startStep !== "methode";
   const [profile, setProfile] = useState<UserProfileFormValues>(() =>
     normalizeUserProfile(initialValues ?? EMPTY_PROFILE)
   );
@@ -93,6 +116,11 @@ export function SignupWizard({
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(false);
   const [recommended, setRecommended] = useState<RecommendableEvent[]>([]);
+  // Un seul récit est demandé, comme dans le proto : le premier événement
+  // recommandé qui n'en a pas déjà un. Nul tant que l'étape n'est pas atteinte.
+  const [storyEvent, setStoryEvent] = useState<RecommendableEvent | null>(null);
+  const [storyUrl, setStoryUrl] = useState("");
+  const [story, setStory] = useState("");
   const [signedUpUser, setSignedUpUser] = useState<User | null>(null);
   // Vrai seulement si le projet Supabase exige une confirmation par email :
   // `signUp` renvoie alors un compte sans session, et le parcours ne peut pas
@@ -102,7 +130,15 @@ export function SignupWizard({
   const [pending, setPending] = useState(false);
 
   const accountUser = user ?? signedUpUser;
-  const stepIndex = STEPS.indexOf(step);
+  // Sans événement recommandé il n'y a rien à raconter : l'étape « récits » est
+  // sautée, et la pastille correspondante disparaît de la barre de progression.
+  // Elle est aussi sautée, plus tard, si tous les événements choisis ont déjà
+  // un récit — ça ne se sait qu'une fois la question posée à la base.
+  const visibleSteps = useMemo<readonly SignupWizardStep[]>(
+    () => (recommended.length > 0 ? STEPS : STEPS.filter((name) => name !== "recits")),
+    [recommended.length]
+  );
+  const stepIndex = visibleSteps.indexOf(step);
   const heading = STEP_TITLES[step];
 
   const updateProfile = (patch: Partial<UserProfileFormValues>) => {
@@ -245,7 +281,27 @@ export function SignupWizard({
 
   // ---- Étape 4 : événements recommandés --------------------------------------
 
-  const handleFinish = async () => {
+  // Le drapeau « onboarding terminé » est posé une seule fois, quel que soit le
+  // chemin emprunté — avec ou sans étape « récits ».
+  const completeOnboarding = async ({ storyAdded }: { storyAdded: boolean }) => {
+    const { error: flagError } = await createClient().auth.updateUser({
+      data: { onboarding_completed: true },
+    });
+    setPending(false);
+
+    if (flagError) {
+      setError(flagError.message || "Impossible de finaliser ton inscription.");
+      return;
+    }
+
+    trackAnalyticsEvent("Onboarding Completed", {
+      recommended_events: recommended.length,
+      story_added: storyAdded,
+    });
+    setStep("confirmation");
+  };
+
+  const handleRecommendationsSubmit = async () => {
     setError(null);
 
     if (!accountUser) {
@@ -267,23 +323,54 @@ export function SignupWizard({
       return;
     }
 
-    const { error: flagError } = await supabase.auth.updateUser({
-      data: { onboarding_completed: true },
-    });
-    setPending(false);
+    // Les recommandations sont enregistrées avant l'étape suivante, sur le
+    // modèle du profil : une interruption pendant le récit ne les perd pas.
+    const alreadyCovered = await fetchEventsWithStories(
+      supabase,
+      recommended.map((event) => event.id)
+    );
+    const nextStoryEvent =
+      recommended.find((event) => !alreadyCovered.has(event.id)) ?? null;
 
-    if (flagError) {
-      setError(flagError.message || "Impossible de finaliser ton inscription.");
+    if (!nextStoryEvent) {
+      await completeOnboarding({ storyAdded: false });
       return;
     }
 
-    trackAnalyticsEvent("Onboarding Completed", {
-      recommended_events: recommended.length,
-    });
-    setStep("confirmation");
+    setStoryEvent(nextStoryEvent);
+    setPending(false);
+    setStep("recits");
   };
 
-  // ---- Étape 5 : confirmation -------------------------------------------------
+  // ---- Étape 5 : récits ------------------------------------------------------
+
+  // « Ajouter » valide l'étape même les champs vides : le récit est facultatif
+  // de bout en bout, et le proto ne double donc pas le bouton d'un « Passer ».
+  const handleStorySubmit = async () => {
+    setError(null);
+
+    if (!accountUser || !storyEvent) {
+      setError("Ta session a expiré. Reconnecte-toi pour continuer.");
+      return;
+    }
+
+    setPending(true);
+    const { error: storyError, saved } = await saveEventStory(createClient(), accountUser, {
+      eventId: storyEvent.id,
+      storyUrl,
+      story,
+    });
+
+    if (storyError) {
+      setPending(false);
+      setError(storyError);
+      return;
+    }
+
+    await completeOnboarding({ storyAdded: saved });
+  };
+
+  // ---- Étape 6 : confirmation -------------------------------------------------
 
   const handleDone = () => {
     onDone?.();
@@ -298,26 +385,24 @@ export function SignupWizard({
         <h3 className="font-serif text-[20px] leading-tight text-foreground">
           Vérifie ta boîte mail
         </h3>
-        <p className="text-[13px] leading-6 text-foreground/60">
+        <Muted>
           On vient d&apos;envoyer un lien de confirmation à{" "}
           <span className="font-semibold text-foreground">{profile.email}</span>. Ouvre-le
           pour finir de créer ton profil.
-        </p>
+        </Muted>
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
-      <StepDots currentIndex={stepIndex} />
+      <StepDots steps={visibleSteps} currentIndex={stepIndex} />
 
       <div className="space-y-1.5">
         <h3 className="font-serif text-[20px] font-bold leading-tight text-foreground">
           {heading.title}
         </h3>
-        {heading.description && (
-          <p className="text-[13px] leading-5 text-foreground/52">{heading.description}</p>
-        )}
+        {heading.description && <Muted>{heading.description}</Muted>}
       </div>
 
       {error && (
@@ -347,7 +432,7 @@ export function SignupWizard({
                 onChange={(event) => updateProfile({ firstName: event.target.value })}
                 required
                 disabled={pending}
-                className={INPUT_CLASS}
+                className={FIELD_INPUT_CLASS}
                 placeholder="Ton prénom"
               />
             </Field>
@@ -359,11 +444,17 @@ export function SignupWizard({
                 onChange={(event) => updateProfile({ lastName: event.target.value })}
                 required
                 disabled={pending}
-                className={INPUT_CLASS}
+                className={FIELD_INPUT_CLASS}
                 placeholder="Ton nom"
               />
             </Field>
           </div>
+
+          <GenderField
+            value={profile.gender}
+            disabled={pending}
+            onChange={(gender) => updateProfile({ gender })}
+          />
 
           <Field label="Mot de passe" htmlFor="signup-password">
             <input
@@ -374,7 +465,7 @@ export function SignupWizard({
               required
               minLength={PASSWORD_MIN_LENGTH}
               disabled={pending}
-              className={INPUT_CLASS}
+              className={FIELD_INPUT_CLASS}
               placeholder="••••••••"
             />
             <PasswordRequirements password={password} />
@@ -389,14 +480,14 @@ export function SignupWizard({
               required
               minLength={PASSWORD_MIN_LENGTH}
               disabled={pending}
-              className={INPUT_CLASS}
+              className={FIELD_INPUT_CLASS}
               placeholder="••••••••"
             />
           </Field>
 
           <label
             htmlFor="signup-privacy-policy"
-            className="flex items-start gap-2.5 text-[12px] leading-5 text-foreground/60"
+            className="flex items-start gap-2.5 text-[13px] leading-5 text-foreground/60"
           >
             <input
               id="signup-privacy-policy"
@@ -447,7 +538,7 @@ export function SignupWizard({
                 onChange={(event) => updateProfile({ city: event.target.value })}
                 required
                 disabled={pending}
-                className={INPUT_CLASS}
+                className={FIELD_INPUT_CLASS}
                 placeholder="Nantes, Lyon…"
               />
             </Field>
@@ -458,7 +549,7 @@ export function SignupWizard({
                 onChange={(event) => updateProfile({ practiceLevel: event.target.value })}
                 required
                 disabled={pending}
-                className={INPUT_CLASS}
+                className={FIELD_INPUT_CLASS}
               >
                 <option value="">Choisir</option>
                 {PRACTICE_LEVEL_OPTIONS.map((level) => (
@@ -479,11 +570,13 @@ export function SignupWizard({
             />
           </Field>
 
-          <GenderField
-            value={profile.gender}
-            disabled={pending}
-            onChange={(gender) => updateProfile({ gender })}
-          />
+          {identityStepSkipped && (
+            <GenderField
+              value={profile.gender}
+              disabled={pending}
+              onChange={(gender) => updateProfile({ gender })}
+            />
+          )}
 
           <button type="submit" disabled={pending} className={`${PRIMARY_BUTTON_CLASS} w-full`}>
             {pending ? "Enregistrement..." : "Continuer →"}
@@ -500,12 +593,50 @@ export function SignupWizard({
           />
           <button
             type="button"
-            onClick={handleFinish}
+            onClick={handleRecommendationsSubmit}
             disabled={pending}
             className={`${PRIMARY_BUTTON_CLASS} w-full`}
           >
-            {pending ? "Enregistrement..." : recommended.length > 0 ? "Terminer" : "Passer cette étape"}
+            {pending
+              ? "Enregistrement..."
+              : recommended.length > 0
+                ? "Continuer →"
+                : "Passer cette étape"}
           </button>
+        </div>
+      )}
+
+      {step === "recits" && storyEvent && (
+        <div className="space-y-4">
+          <EventStoryForm
+            event={storyEvent}
+            storyUrl={storyUrl}
+            story={story}
+            onStoryUrlChange={setStoryUrl}
+            onStoryChange={setStory}
+            disabled={pending}
+          />
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setStep("recommandations");
+              }}
+              disabled={pending}
+              className="rounded-[var(--radius-sm)] px-3.5 py-3 text-sm font-medium text-foreground/55 transition-colors hover:text-foreground disabled:opacity-50"
+            >
+              Retour
+            </button>
+            <button
+              type="button"
+              onClick={handleStorySubmit}
+              disabled={pending}
+              className={`${PRIMARY_BUTTON_CLASS} flex-1`}
+            >
+              {pending ? "Enregistrement..." : "Ajouter →"}
+            </button>
+          </div>
         </div>
       )}
 
@@ -513,11 +644,11 @@ export function SignupWizard({
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-3 text-center">
             <CircleCheck className="size-7 text-foreground/72" />
-            <p className="text-[14px] leading-6 text-foreground/68">
+            <Muted>
               Ton compte est bien créé
               {profile.firstName ? `, ${profile.firstName}` : ""} — bienvenue dans la
               communauté Upcomi !
-            </p>
+            </Muted>
           </div>
           <button type="button" onClick={handleDone} className={`${PRIMARY_BUTTON_CLASS} w-full`}>
             C&apos;est parti →
@@ -548,11 +679,11 @@ function MethodStep({
   return (
     <div>
       <GoogleAuthButton mode="signup" redirectTo={redirectTo} />
-      <p className="mt-2 text-center text-[11px] leading-4 text-foreground/45">
+      <Muted className="mt-2 text-center">
         En continuant avec Google, tu acceptes les{" "}
         <ExternalLink href={TERMS_URL}>CGU</ExternalLink> et la{" "}
         <ExternalLink href={PRIVACY_POLICY_URL}>politique de confidentialité</ExternalLink>.
-      </p>
+      </Muted>
 
       <div className="my-4 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/35">
         <span className="h-px flex-1 bg-foreground/10" />
@@ -568,7 +699,7 @@ function MethodStep({
             value={email}
             onChange={(event) => onEmailChange(event.target.value)}
             required
-            className={INPUT_CLASS}
+            className={FIELD_INPUT_CLASS}
             placeholder="ton@email.com"
           />
         </Field>
@@ -578,7 +709,7 @@ function MethodStep({
         </button>
       </form>
 
-      <div className="mt-5 text-center text-[13px] text-foreground/45">
+      <Muted className="mt-5 text-center">
         Déjà un compte ?{" "}
         {onSwitchToLogin ? (
           <button
@@ -593,23 +724,26 @@ function MethodStep({
             Se connecter
           </Link>
         )}
-      </div>
+      </Muted>
     </div>
   );
 }
 
 // ---- Briques d'UI partagées ---------------------------------------------------
 
-const INPUT_CLASS =
-  "soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40 disabled:opacity-50";
-
 const PRIMARY_BUTTON_CLASS =
   "rounded-[var(--radius-sm)] bg-coral py-3 text-sm font-semibold text-white shadow-[0_4px_20px_rgba(255,94,65,0.35)] transition-all hover:bg-coral-dark hover:shadow-[0_6px_24px_rgba(255,94,65,0.45)] disabled:opacity-50";
 
-function StepDots({ currentIndex }: { currentIndex: number }) {
+function StepDots({
+  steps,
+  currentIndex,
+}: {
+  steps: readonly SignupWizardStep[];
+  currentIndex: number;
+}) {
   return (
     <div className="flex items-center gap-1.5" aria-hidden="true">
-      {STEPS.map((stepName, index) => (
+      {steps.map((stepName, index) => (
         <span
           key={stepName}
           className={`h-1.5 flex-1 rounded-full transition-colors ${
@@ -621,28 +755,6 @@ function StepDots({ currentIndex }: { currentIndex: number }) {
           }`}
         />
       ))}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label
-        htmlFor={htmlFor}
-        className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
-      >
-        {label}
-      </label>
-      {children}
     </div>
   );
 }
@@ -699,9 +811,9 @@ function GenderField({
 
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40">
-        Genre <span className="normal-case tracking-normal text-foreground/35">(facultatif)</span>
-      </label>
+      <FieldLabel>
+        Genre <span className="normal-case tracking-normal text-foreground/40">(facultatif)</span>
+      </FieldLabel>
       <PillGroup
         options={options}
         isActive={(option) => value === option}

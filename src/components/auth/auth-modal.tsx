@@ -2,6 +2,7 @@
 
 import { AppLogo } from "@/components/layout/app-logo";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Muted } from "@/components/ui/field";
 import { AuthGate } from "./auth-gate";
 import { ForgotPasswordForm } from "./forgot-password-form";
 import { LoginForm } from "./login-form";
@@ -50,8 +51,11 @@ export function AuthModalDialog({
   const closeOnAuthSuccess = showCloseButton ? onClose : undefined;
 
   return (
+    // Le parcours d'inscription se ferme uniquement par la croix : un clic à
+    // côté ou un Échap ferait perdre la progression des étapes déjà remplies.
     <Dialog
       open={open}
+      dismissible={false}
       onOpenChange={(open) => {
         if (!open) onClose?.();
       }}
@@ -68,11 +72,11 @@ export function AuthModalDialog({
               <h2 className="mt-4 font-serif text-[22px] font-bold leading-tight text-foreground">
                 {view === "login" ? "Connexion" : "Mot de passe oublié"}
               </h2>
-              <p className="mt-1.5 text-[13px] text-foreground/52">
+              <Muted className="mt-1.5">
                 {view === "login"
                   ? "Connecte-toi pour retrouver tes événements favoris"
                   : "Reçois un lien pour choisir un nouveau mot de passe"}
-              </p>
+              </Muted>
             </>
           )}
         </div>

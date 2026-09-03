@@ -227,7 +227,7 @@ function FavoriteEventRow({ event }: { event: Event }) {
           )}
         </Link>
 
-        <FavouriteButton eventId={event.id} />
+        <FavouriteButton eventId={event.id} eventTitle={event.nomEvent || "Événement"} />
       </div>
     </div>
   );

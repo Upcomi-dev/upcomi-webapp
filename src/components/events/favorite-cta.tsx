@@ -9,10 +9,11 @@ import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface FavoriteCTAProps {
   eventId: number;
+  eventTitle: string;
   initialCount: number;
 }
 
-export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
+export function FavoriteCTA({ eventId, eventTitle, initialCount }: FavoriteCTAProps) {
   const { isFavorite, toggleFavorite, ready } = useFavorites();
   const { user } = useAuth();
   const { openAuthModal } = useAuthModal();
@@ -46,7 +47,9 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
           authenticated: false,
           source: "detail_cta",
         });
-        openAuthModal({ title: "Rejoins la communauté Upcomi pour enregistrer cet évènement" });
+        openAuthModal({
+          title: `Rejoins la communauté Upcomi pour enregistrer « ${eventTitle} »`,
+        });
         return;
       }
       if (!favorited && flyingHeart) {
@@ -69,7 +72,7 @@ export function FavoriteCTA({ eventId, initialCount }: FavoriteCTAProps) {
         });
       }
     },
-    [eventId, toggleFavorite, openAuthModal, ready, user, favorited, flyingHeart]
+    [eventId, eventTitle, toggleFavorite, openAuthModal, ready, user, favorited, flyingHeart]
   );
 
   return (

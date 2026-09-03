@@ -123,6 +123,8 @@ Notes :
   et `collection_events` existent déjà, c'est une requête, zéro migration.
 - **`feat/partage-experience`** regroupe le parcours de contribution et les blocs
   tags/récits : même flux producteur → données → affichage, une seule migration.
+  La **saisie** d'un récit est finalement avancée dans `feat/onboarding-v2`
+  (§7) ; il reste à cette brique l'affichage, les tags et le parcours retour.
 - La brique « fiche-communauté » a été supprimée (doublon).
 - « Événement V2 » (page parallèle branchée à la fin) a été abandonné.
 
@@ -301,14 +303,15 @@ le proto — à traiter dans sa propre brique juste après.
 ## 7. Brique `feat/onboarding-v2`
 
 Le parcours d'inscription passe du couple « formulaire de compte » + « modale
-de profil bloquante » à un parcours unique en cinq étapes, repris du prototype :
+de profil bloquante » à un parcours unique en six étapes, repris du prototype :
 
 ```
-méthode → identité + genre → ville/niveau/pratiques → événements recommandés → confirmation
+méthode → identité + genre → ville/niveau/pratiques → événements recommandés → récit → confirmation
 ```
 
 Fichiers : `src/components/auth/signup-wizard.tsx` (le parcours),
 `src/components/auth/recommended-events-picker.tsx` (l'étape recommandations),
+`src/components/auth/event-story-form.tsx` (l'étape récit),
 `src/lib/profile-mutations.ts` (les écritures, partagées avec la page profil).
 `src/components/auth/signup-form.tsx` est supprimé, remplacé par le parcours.
 
@@ -338,6 +341,22 @@ pas encore ici.
 - `user_recommended_events` (`user_id`, `event_id`, `created_at`), avec RLS,
   `revoke`/`grant` et les trois policies dans le même fichier.
 
+`supabase/migrations/20260903001000_event_stories.sql` :
+
+- `user_event_stories` (`user_id`, `event_id`, `story_url`, `story`,
+  `created_at`, `updated_at`), clé primaire sur le couple, RLS et grants dans le
+  même fichier — un récit est du contenu identifiant, la table ne doit pas
+  naître publique le temps que le reste suive.
+- Trois `check` : au moins un des deux champs rempli, `story_url` en
+  `http(s)://` et sous 2048 caractères, `story` sous 1500. Les longueurs sont
+  doublées côté UI (`EVENT_STORY_MAX_LENGTH`, `EVENT_STORY_URL_MAX_LENGTH`).
+- `get_events_with_stories(bigint[])`, `security definer` sur le modèle de
+  `get_event_favourite_counts()` : la policy de `select` ne laisse voir que ses
+  propres récits, et le parcours a besoin de savoir lesquels des événements
+  choisis sont **déjà couverts**, par n'importe qui. Elle ne renvoie que des
+  identifiants d'événements — jamais un récit ni son autrice — et n'est
+  exécutable que par `authenticated`.
+
 **À appliquer en base avant de merger le code** : `layout.tsx`, `/profil` et la
 modale profil sélectionnent désormais la colonne `genre`. Tant qu'elle n'existe
 pas, la requête échoue silencieusement et le profil remonte vide.
@@ -364,7 +383,30 @@ pas, la requête échoue silencieusement et le profil remonte vide.
   prenait plus de place que le formulaire.
 - **Le profil est enregistré dès l'étape 3**, le drapeau `onboarding_completed`
   seulement à la fin : une interruption à l'étape « recommandations » ne perd
-  rien.
+  rien. Les recommandations suivent la même règle et sont écrites en quittant
+  l'étape 4, avant la saisie des récits.
+- **Les récits arrivent avec l'onboarding**, alors qu'ils étaient prévus dans
+  `feat/partage-experience` (§2.2) : la saisie est ici, l'affichage reste à
+  faire avec le reste de la brique partage. En attendant, la table n'est
+  lisible que par son autrice — pas de `select` public tant qu'il n'y a rien
+  pour le rendre.
+- **Un récit est d'abord un lien**, comme dans le proto (`review.js`, étape
+  « links », que `signup.js` rouvre en `startStep: 1` juste après les
+  recommandations) : on colle l'adresse du récit déjà publié sur Instagram,
+  Strava ou un blog plutôt que de le retaper. Le texte libre est gardé sous le
+  lien, en second — la colonne `story` existe et servira à l'extrait affiché
+  sur la fiche.
+- **Un seul récit demandé**, pas un par événement : le proto ne propose que
+  `recommended[0]`. On garde ce principe en sautant les événements déjà
+  couverts — l'étape porte sur le **premier événement recommandé sans récit**,
+  et disparaît entièrement (pastille comprise) s'il n'y en a aucun, faute de
+  recommandation ou parce que toutes ont déjà leur récit.
+- **« Ajouter → » valide même les champs vides**, sans second bouton
+  « Passer » : le récit est facultatif de bout en bout et le proto note qu'un
+  bouton suffit alors. Rien n'est écrit si les deux champs sont vides.
+- **Le lien est complété s'il manque le protocole** (`instagram.com/p/…` →
+  `https://…`), repris du proto ; une adresse qui reste invalide affiche une
+  erreur au lieu d'être écrite.
 
 ### Google, et la reprise du parcours
 

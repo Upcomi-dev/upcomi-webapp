@@ -1,7 +1,7 @@
 export const PASSWORD_MIN_LENGTH = 8;
 
 export interface PasswordRequirement {
-  id: "length" | "lowercase" | "uppercase" | "digit" | "symbol";
+  id: "length";
   /** Télégraphique : la liste est un rappel discret, pas une consigne. */
   label: string;
   met: boolean;
@@ -14,26 +14,6 @@ export function getPasswordRequirements(password: string): PasswordRequirement[]
       label: `${PASSWORD_MIN_LENGTH} caractères`,
       met: password.length >= PASSWORD_MIN_LENGTH,
     },
-    {
-      id: "lowercase",
-      label: "minuscule",
-      met: /[a-z]/.test(password),
-    },
-    {
-      id: "uppercase",
-      label: "majuscule",
-      met: /[A-Z]/.test(password),
-    },
-    {
-      id: "digit",
-      label: "chiffre",
-      met: /\d/.test(password),
-    },
-    {
-      id: "symbol",
-      label: "symbole",
-      met: /[^A-Za-z0-9]/.test(password),
-    },
   ];
 }
 
@@ -42,19 +22,11 @@ export function isPasswordValid(password: string) {
 }
 
 export function getPasswordRequirementsMessage() {
-  return "Ton mot de passe doit contenir au moins 8 caractères, une minuscule, une majuscule, un chiffre et un symbole.";
+  return `Ton mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`;
 }
 
 export function translatePasswordError(message: string) {
   const lowerMessage = message.toLowerCase();
-
-  if (
-    lowerMessage.includes("password should contain at least one character of each") ||
-    lowerMessage.includes("weak password") ||
-    lowerMessage.includes("password is weak")
-  ) {
-    return getPasswordRequirementsMessage();
-  }
 
   if (
     lowerMessage.includes("password should be at least") ||

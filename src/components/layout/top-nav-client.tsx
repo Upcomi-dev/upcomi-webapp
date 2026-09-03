@@ -130,7 +130,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
               <>
                 <button
                   type="button"
-                  onClick={() => openAuthModal()}
+                  onClick={() => openAuthModal({ view: "login" })}
                   className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/50 bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] text-orange-dark transition-all hover:-translate-y-0.5 hover:border-orange/55 hover:text-coral md:hidden"
                   aria-label="Ouvrir la connexion"
                 >
@@ -138,7 +138,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                 </button>
                 <button
                   type="button"
-                  onClick={() => openAuthModal()}
+                  onClick={() => openAuthModal({ view: "login" })}
                   className="hidden h-10 items-center justify-center rounded-full border border-white/50 bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] px-4 text-[12px] font-semibold tracking-[0.18em] text-orange-dark uppercase transition-all hover:-translate-y-0.5 hover:border-orange/55 hover:text-coral md:inline-flex"
                 >
                   Connexion

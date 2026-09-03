@@ -137,7 +137,7 @@ export function RecommendedEventsPicker({
           disabled={disabled}
           autoComplete="off"
           placeholder="Rechercher un événement…"
-          className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 py-2.5 pl-10 pr-3.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40 disabled:opacity-50"
+          className="w-full rounded-[var(--radius-sm)] border border-foreground/14 bg-white/80 py-2.5 pl-10 pr-3.5 text-sm text-foreground placeholder:text-foreground/35 transition-colors focus:border-orange/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/25 disabled:opacity-50"
         />
 
         {query.trim().length >= MIN_QUERY_LENGTH && (
@@ -157,7 +157,7 @@ export function RecommendedEventsPicker({
                 </button>
               ))
             ) : (
-              <p className="px-3 py-2.5 text-[13px] text-foreground/45">
+              <p className="px-3 py-2.5 text-[13px] text-foreground/55">
                 {searching ? "Recherche…" : "Aucun événement trouvé."}
               </p>
             )}
@@ -168,7 +168,7 @@ export function RecommendedEventsPicker({
   );
 }
 
-function EventThumb({ event }: { event: RecommendableEvent }) {
+export function EventThumb({ event }: { event: RecommendableEvent }) {
   const eventImage = getAppStorageImage(event.image);
 
   return (

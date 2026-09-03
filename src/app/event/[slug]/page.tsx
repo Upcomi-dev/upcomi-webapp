@@ -272,7 +272,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 {event.nomEvent || "Événement"}
               </h1>
               <div className="flex flex-shrink-0 gap-2 pt-1">
-                <FavouriteButton eventId={event.id} />
+                <FavouriteButton eventId={event.id} eventTitle={event.nomEvent || "Événement"} />
                 <ShareButton
                   title={event.nomEvent || "Événement"}
                   url={`/event/${eventSlug}`}
@@ -379,7 +379,11 @@ export default async function EventPage({ params, searchParams }: PageProps) {
 
             {/* Favorite CTA */}
             <div className="mb-6">
-              <FavoriteCTA eventId={event.id} initialCount={favCount} />
+              <FavoriteCTA
+                eventId={event.id}
+                eventTitle={event.nomEvent || "Événement"}
+                initialCount={favCount}
+              />
             </div>
 
             {relatedEvents.length > 0 && (

@@ -35,7 +35,7 @@ export function OnboardingModal({ initialValues }: OnboardingModalProps) {
   }
 
   return (
-    <Dialog open onOpenChange={() => undefined}>
+    <Dialog open dismissible={false} onOpenChange={() => undefined}>
       <DialogContent
         showCloseButton={false}
         overlayClassName="bg-[rgba(244,235,223,0.12)] supports-backdrop-filter:backdrop-blur-md"
@@ -49,9 +49,6 @@ export function OnboardingModal({ initialValues }: OnboardingModalProps) {
                 parcours lui-même ; celui du dialogue reste pour les lecteurs
                 d'écran. */}
             <DialogHeader className="gap-3">
-              <div className="inline-flex w-fit items-center rounded-full border border-white/60 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-dark shadow-[var(--shadow-sm)]">
-                Première connexion
-              </div>
               <DialogTitle className="sr-only">Complète ton profil</DialogTitle>
               <DialogDescription className="sr-only">
                 Quelques questions pour finir de créer ton profil Upcomi. Tu pourras modifier

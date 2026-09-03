@@ -95,7 +95,7 @@ export function UserProfileForm({ initialValues }: UserProfileFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="space-y-2">
-          <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/45">
+          <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/55">
             Prénom
           </span>
           <input
@@ -108,13 +108,13 @@ export function UserProfileForm({ initialValues }: UserProfileFormProps) {
               }))
             }
             disabled={pending}
-            className="w-full rounded-[18px] border border-white/70 bg-white/80 px-4 py-3 text-[15px] text-foreground shadow-[var(--shadow-sm)] outline-none transition focus:border-orange/45 focus:ring-2 focus:ring-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-[18px] border border-foreground/14 bg-white/80 px-4 py-3 text-[15px] text-foreground shadow-[var(--shadow-sm)] outline-none transition focus:border-orange/50 focus:ring-2 focus:ring-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder="Ton prénom"
           />
         </label>
 
         <label className="space-y-2">
-          <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/45">
+          <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/55">
             Nom
           </span>
           <input
@@ -127,93 +127,15 @@ export function UserProfileForm({ initialValues }: UserProfileFormProps) {
               }))
             }
             disabled={pending}
-            className="w-full rounded-[18px] border border-white/70 bg-white/80 px-4 py-3 text-[15px] text-foreground shadow-[var(--shadow-sm)] outline-none transition focus:border-orange/45 focus:ring-2 focus:ring-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-[18px] border border-foreground/14 bg-white/80 px-4 py-3 text-[15px] text-foreground shadow-[var(--shadow-sm)] outline-none transition focus:border-orange/50 focus:ring-2 focus:ring-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
             placeholder="Ton nom"
           />
         </label>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
-        <label className="space-y-2">
-          <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/45">
-            Ville
-          </span>
-          <input
-            type="text"
-            value={form.city}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                city: event.target.value,
-              }))
-            }
-            disabled={pending}
-            className="w-full rounded-[18px] border border-white/70 bg-white/80 px-4 py-3 text-[15px] text-foreground shadow-[var(--shadow-sm)] outline-none transition focus:border-orange/45 focus:ring-2 focus:ring-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
-            placeholder="Ta ville"
-          />
-        </label>
-
-        <label className="space-y-2">
-          <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/45">
-            Niveau
-          </span>
-          <select
-            value={form.practiceLevel}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                practiceLevel: event.target.value,
-              }))
-            }
-            disabled={pending}
-            className="w-full rounded-[18px] border border-white/70 bg-white/80 px-4 py-3 text-[15px] text-foreground shadow-[var(--shadow-sm)] outline-none transition focus:border-orange/45 focus:ring-2 focus:ring-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <option value="">Choisir</option>
-            {PRACTICE_LEVEL_OPTIONS.map((level) => (
-              <option key={level} value={level}>
-                {level}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
       <div className="space-y-3">
         <div className="space-y-1">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/45">
-            Type de pratique
-          </p>
-          <p className="text-[13px] leading-6 text-foreground/60">
-            Sélectionne une ou plusieurs pratiques pour personnaliser ton profil.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {PRACTICE_TYPE_OPTIONS.map((practiceType) => {
-            const isActive = form.practiceTypes.includes(practiceType);
-
-            return (
-              <button
-                key={practiceType}
-                type="button"
-                disabled={pending}
-                onClick={() => togglePracticeType(practiceType)}
-                className={`rounded-full border px-4 py-2 text-[13px] font-medium transition ${
-                  isActive
-                    ? "border-orange/45 bg-orange/12 text-orange-dark"
-                    : "border-white/65 bg-white/70 text-foreground/70 hover:border-orange/25 hover:text-foreground"
-                } disabled:cursor-not-allowed disabled:opacity-60`}
-              >
-                {practiceType}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/45">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/55">
             Genre
           </p>
           <p className="text-[13px] leading-6 text-foreground/60">
@@ -250,11 +172,89 @@ export function UserProfileForm({ initialValues }: UserProfileFormProps) {
         </div>
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]">
+        <label className="space-y-2">
+          <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/55">
+            Ville
+          </span>
+          <input
+            type="text"
+            value={form.city}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                city: event.target.value,
+              }))
+            }
+            disabled={pending}
+            className="w-full rounded-[18px] border border-foreground/14 bg-white/80 px-4 py-3 text-[15px] text-foreground shadow-[var(--shadow-sm)] outline-none transition focus:border-orange/50 focus:ring-2 focus:ring-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
+            placeholder="Ta ville"
+          />
+        </label>
+
+        <label className="space-y-2">
+          <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/55">
+            Niveau
+          </span>
+          <select
+            value={form.practiceLevel}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                practiceLevel: event.target.value,
+              }))
+            }
+            disabled={pending}
+            className="w-full rounded-[18px] border border-foreground/14 bg-white/80 px-4 py-3 text-[15px] text-foreground shadow-[var(--shadow-sm)] outline-none transition focus:border-orange/50 focus:ring-2 focus:ring-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <option value="">Choisir</option>
+            {PRACTICE_LEVEL_OPTIONS.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/55">
+            Type de pratique
+          </p>
+          <p className="text-[13px] leading-6 text-foreground/60">
+            Sélectionne une ou plusieurs pratiques pour personnaliser ton profil.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {PRACTICE_TYPE_OPTIONS.map((practiceType) => {
+            const isActive = form.practiceTypes.includes(practiceType);
+
+            return (
+              <button
+                key={practiceType}
+                type="button"
+                disabled={pending}
+                onClick={() => togglePracticeType(practiceType)}
+                className={`rounded-full border px-4 py-2 text-[13px] font-medium transition ${
+                  isActive
+                    ? "border-orange/45 bg-orange/12 text-orange-dark"
+                    : "border-white/65 bg-white/70 text-foreground/70 hover:border-orange/25 hover:text-foreground"
+                } disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                {practiceType}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="space-y-2">
-        <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/45">
+        <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/55">
           E-mail
         </span>
-        <div className="flex min-h-[52px] items-center rounded-[18px] border border-white/60 bg-[rgba(255,255,255,0.5)] px-4 py-3 text-[15px] text-foreground/70 shadow-[var(--shadow-sm)]">
+        <div className="flex min-h-[52px] items-center rounded-[18px] border border-foreground/14 bg-[rgba(255,255,255,0.5)] px-4 py-3 text-[15px] text-foreground/70 shadow-[var(--shadow-sm)]">
           {normalizedForm.email || user?.email || "E-mail indisponible"}
         </div>
       </div>
