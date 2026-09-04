@@ -26,7 +26,7 @@ pas du code source. Son état validé est figé par le tag `spec-v1`.
 | Avantages membres (code promo) | fusionné preprod | livrer + **saisir les codes** |
 | Calendrier des inscriptions | écrit, hors preprod | rebaser, merger |
 | Récits d'expérience (affichage) | écrit, hors preprod | rebaser, merger |
-| Score d'adéquation | écrit, **divergé** | arbitrer un conflit produit |
+| Score d'adéquation | écrit, **divergé** | trancher une phrase d'affichage, puis rebaser |
 | Évènements similaires | maquette | trancher la règle de sélection |
 | Fiche organisatrice enrichie | maquette | créer l'écran de saisie |
 | Réseau social & profils | maquette | concevoir les notifications |
@@ -139,9 +139,10 @@ pas du code source. Son état validé est figé par le tag `spec-v1`.
 1. **Évènements similaires** : sélection éditoriale par l'équipe, ou proposition
    automatique par proximité ? Deux promesses différentes, deux coûts
    différents.
-2. **Suivre une organisatrice vs suivre une personne** : les deux abonnements
-   cohabiteraient sans qu'on ait décidé ce que chacun veut dire pour la
-   membre.
+2. **Ce qu'on affiche du niveau des autres** : la ville et le niveau qu'elle a
+   déclarés (« Lyon · pratique Confirmée »), ou un palier calculé sur trois
+   crans (« Pratique Intermédiaire ») ? Les deux écrans existent, il faut en
+   garder un — voir §2.2.
 3. **« Mes évènements »** : la page s'appelle encore « Mes favoris » et ne
    distingue pas ce qui m'intéresse de ce à quoi je suis inscrite. À redéfinir
    avant l'inscription publique.
@@ -171,16 +172,38 @@ valeur promise ci-dessus n'existe pas.
 |---|---|---|
 | `feat/calendrier-inscriptions` | 45 commits | rebaser puis merger. Le bouton « Me prévenir » n'est **pas** dans le périmètre — voir §2.4 |
 | `feat/partage-experience` | 13 commits | rebaser puis merger. Sa migration doit passer **après** celle de la modération |
-| `feat/score-adequation` | 22 commits, **divergée** | arbitrage produit, voir ci-dessous |
+| `feat/score-adequation` | 22 commits, **divergée** | une décision d'affichage à trancher, voir ci-dessous |
 | `worktree-burger-menu-v2` | partie d'un `main` ancien | décider de son sort : elle refait le menu mobile, que `feat/nav-v2` refait aussi. L'une des deux doit disparaître |
 
-**`feat/score-adequation` ne peut pas être fusionnée en l'état.** Elle porte sa
-propre version du bloc « qui est intéressé », écrite avant que
-`feat/personnes-interessees` ne sorte seule et parte dans `preprod`. Sept
-fichiers en conflit, dont cinq créés des deux côtés. Ce n'est pas un conflit de
-texte : il faut trancher **ce que la membre voit**, le niveau déclaré tel quel
-(`preprod`) ou un repli en trois paliers (la branche), puis rebrancher le
-questionnaire dessus. Chantier à programmer pour lui-même.
+#### Le souci avec `feat/score-adequation`, concrètement
+
+Cette branche apporte **deux choses** : le questionnaire d'adéquation (« cet
+évènement est-il à ma portée ? ») et le bloc « qui est intéressé ». Le second a
+été **livré entre-temps par une autre branche**, `feat/personnes-interessees`,
+qui est partie seule dans `preprod`. Résultat : les deux versions du même bloc
+existent, écrites chacune de son côté — sept fichiers en conflit, dont cinq
+créés des deux côtés.
+
+Ce n'est pas grave, et ce n'est pas un gros chantier. Les deux versions ne
+diffèrent que sur **une décision d'affichage** : dans la liste des personnes
+intéressées, `preprod` montre ce que la personne a déclaré (« Lyon · pratique
+Confirmée ») ; la branche montre un palier calculé sur trois crans (« Pratique
+Intermédiaire »), parce que le questionnaire a besoin de compter les personnes
+d'expérience *comparable* à la mienne.
+
+**Trancher cette phrase suffit à débloquer le merge.** Le reste s'aligne tout
+seul :
+
+- côté base, la version de `preprod` couvre déjà tout ce dont la branche a
+  besoin (elle recopie le niveau **et** la ville) ; la moitié de la migration de
+  la branche fait double emploi et doit simplement disparaître ;
+- le palier en trois crans se **déduit** du niveau déclaré par une simple table
+  de correspondance, sans rien lire de plus en base : garder l'affichage de
+  `preprod` n'empêche donc pas le questionnaire de compter.
+
+À faire : trancher l'affichage, garder la version `preprod` des cinq fichiers
+partagés, ne conserver de la migration de la branche que la table des réponses
+au questionnaire, rebaser, merger.
 
 ### 2.3 Maquettes — écrans en place, données en dur
 
@@ -296,7 +319,7 @@ dans cet état — **c'est ce qu'il faut aller regarder avant de livrer.**
 ```
 1. feat/calendrier-inscriptions   (rebase — 45 commits de retard)
 2. feat/partage-experience        (rebase)
-3. feat/score-adequation          (après arbitrage produit)
+3. feat/score-adequation          (après la décision d'affichage, cf. §2.2)
 4. les maquettes, une fois branchées
 5. feat/nav-v2                    (en dernier, et après le calendrier)
 ```
@@ -408,7 +431,7 @@ session avant chaque requête.
 | Évènements | `events`, `sous_events` | server / client |
 | Favoris & inscriptions | `favourite_events` | client (contexte React) |
 | Profil | `users` + `user_metadata`, `user_public` | server |
-| Organisatrices | `organisateurs`, `favourite_organisateurs` | server |
+| Organisatrices | `organisateurs` | server |
 | Suivi entre membres | `friendships` | — (pas encore branché) |
 | Collections | `collections`, `collection_events` | server |
 | Statut admin | `admin_users` | server |
