@@ -9,8 +9,8 @@ import {
 } from "@/lib/events/interested-people";
 
 /**
- * La feuille « qui est intéressé ». Une ligne par personne : son nom, puis sa
- * ville et son niveau quand ils sont déclarés.
+ * La feuille « qui est intéressé ». Une ligne par personne : son prénom suivi de
+ * l'initiale de son nom, puis sa ville et son niveau quand ils sont déclarés.
  *
  * Pas de portrait ici, comme dans le prototype : les visages de la fiche sont
  * des illustrations (voir `person-avatar.tsx`), et en coller un à côté d'un nom

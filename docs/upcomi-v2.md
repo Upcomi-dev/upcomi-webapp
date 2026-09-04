@@ -766,7 +766,10 @@ composant, une variante `compact` pour les deux emplacements étroits.
 > colonne de droite.
 
 **La feuille des personnes**, ouverte en cliquant sur le compteur : une ligne
-par personne — son nom, puis « ville · pratique niveau ». Sans compte, le clic
+par personne — son prénom suivi de l'initiale de son nom (« Camille D. »), puis
+« ville · pratique niveau ». Le nom de famille n'est pas affiché en entier : la
+feuille est ouverte à tout compte connecté, le prénom suffit à se reconnaître
+entre membres et le nom entier en ferait un annuaire. Sans compte, le clic
 ouvre le gate d'inscription (« Rejoins la communauté Upcomi pour voir qui est
 déjà intéressé·e »), comme dans le proto.
 

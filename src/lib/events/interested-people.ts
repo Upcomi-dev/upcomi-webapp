@@ -99,7 +99,16 @@ export function getPersonCity(person: InterestedPerson): string | null {
   return person.city?.trim() || null;
 }
 
+/**
+ * Le prénom, puis le nom de famille réduit à son initiale — « Camille D. ».
+ *
+ * La feuille est une liste de personnes réelles ouverte à tout compte connecté :
+ * le prénom suffit à se reconnaître entre membres, le nom entier en ferait un
+ * annuaire. Un nom composé garde une seule initiale, celle du champ entier.
+ */
 export function getPersonDisplayName(person: InterestedPerson): string {
-  const full = [person.name, person.surname].filter(Boolean).join(" ").trim();
+  const surname = person.surname?.trim();
+  const initial = surname ? `${Array.from(surname)[0].toUpperCase()}.` : null;
+  const full = [person.name?.trim() || null, initial].filter(Boolean).join(" ").trim();
   return full || "Un·e membre";
 }
