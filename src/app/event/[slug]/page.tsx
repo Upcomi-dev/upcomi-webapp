@@ -332,11 +332,13 @@ export default async function EventPage({ params, searchParams }: PageProps) {
 
         {/* Qui est intéressé — juste au-dessus de « M'inscrire » et « Ça
             m'intéresse », comme dans le proto : l'intérêt social se montre au
-            moment du geste. Pleine largeur, au-dessus des deux colonnes. */}
+            moment du geste. Masqué en desktop avec la paire qu'il accompagne :
+            la colonne de droite porte le sien, et le laisser ici affichait deux
+            fois le même compteur sur le même écran. */}
         <InterestedBlock
           eventId={event.id}
           eventName={event.nomEvent || "cet évènement"}
-          className="mb-3.5"
+          className="mb-3.5 lg:hidden"
         />
 
         {/* Actions principales, visibles dès l'arrivée sur la fiche. Masquées
