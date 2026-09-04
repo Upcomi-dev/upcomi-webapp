@@ -6,7 +6,7 @@ import { CollectionsView } from "@/components/collections/collections-view";
 import { EventCard } from "@/components/events/event-card";
 import { EventDetailPanel } from "@/components/events/event-detail-panel";
 import { SortControl } from "@/components/events/sort-control";
-import { InlineFilters } from "@/components/events/event-filters";
+import { SearchPanelV2 } from "@/components/events/search-panel-v2";
 
 type SnapLevel = "peek" | "half" | "full";
 
@@ -214,7 +214,7 @@ export function MobileBottomSheet({
         ) : hasFilters ? (
           <div className="space-y-4">
             <div className="rounded-[20px] border border-white/48 bg-white/34 p-3">
-              <InlineFilters />
+              <SearchPanelV2 />
             </div>
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-[18px] text-foreground">Résultats</h3>
@@ -252,7 +252,7 @@ export function MobileBottomSheet({
         ) : (
           <div className="space-y-4">
             <div className="rounded-[20px] border border-white/48 bg-white/34 p-3">
-              <InlineFilters />
+              <SearchPanelV2 />
             </div>
             {collections.length > 0 ? (
               <CollectionsView

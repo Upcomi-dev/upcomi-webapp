@@ -21,6 +21,7 @@ const EventMap = dynamic(
   { ssr: false }
 );
 import { InlineFilters } from "@/components/events/event-filters";
+import { SearchPanelV2 } from "@/components/events/search-panel-v2";
 import { EventCard } from "@/components/events/event-card";
 import { EventDetailPanel } from "@/components/events/event-detail-panel";
 import { PastEventsToggle } from "@/components/events/past-events-toggle";
@@ -524,11 +525,10 @@ function MapPageContent({
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
                 Affiner la sélection
               </p>
-              <InlineFilters
-                searchValue={searchQuery}
-                onSearchChange={setSearchQuery}
-                eventTypeOptions={eventTypeOptions}
-              />
+              {/* MAQUETTE (feat/recherche-v2) — le panneau à trois axes
+                  remplace les filtres à plat. Il ne filtre rien : voir
+                  `search-panel-v2`. */}
+              <SearchPanelV2 eventTypeOptions={eventTypeOptions} />
             </div>
           </section>
 
@@ -554,11 +554,8 @@ function MapPageContent({
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
               Affiner la sélection
             </p>
-            <InlineFilters
-              searchValue={searchQuery}
-              onSearchChange={setSearchQuery}
-              eventTypeOptions={eventTypeOptions}
-            />
+            {/* MAQUETTE (feat/recherche-v2) — voir plus haut. */}
+            <SearchPanelV2 eventTypeOptions={eventTypeOptions} />
           </div>
         </section>
 

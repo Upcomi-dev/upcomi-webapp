@@ -1176,3 +1176,116 @@ Vérifié en local avec la clé publique : `select` sur `event_promo_codes` renv
 2. Merger le code (aucun feature flag : sans saisie, le bandeau ne s'affiche pas
    et la timeline est inchangée).
 3. Saisir les codes promo et les dispositions évènement par évènement.
+
+---
+
+## 15. Brique `feat/recherche-v2` (T5) — MAQUETTE
+
+**Cette branche est une maquette.** Le panneau est à sa place et tous les
+gestes fonctionnent, mais **il ne filtre rien** : l'état est local, l'URL n'est
+pas touchée, la carte ne réagit pas. Voir §12 pour la convention de
+numérotation.
+
+### Ce qui est livré
+
+- `src/components/events/search-panel-v2.tsx` — le panneau : trois axes en
+  boutons, une feuille de propositions par axe, le champ de recherche libre
+  avec « Filtres… » à sa droite, les filtres repliés, et le bouton
+  « Rechercher ».
+- `src/lib/events/search-v2.ts` — durées, paliers de distance (génériques et
+  par durée), périodes connues, mois à venir, formatage.
+- Le panneau remplace `InlineFilters` à **quatre** endroits : les deux blocs
+  « Affiner la sélection » de `map-page-client.tsx`, et les deux de
+  `mobile-bottom-sheet.tsx`.
+
+**`InlineFilters` n'est pas supprimé** : il reste dans le dépôt, et il porte
+encore le tiroir de filtres mobile (`map-page-client.tsx`, la modale « Affine
+les événements affichés »). C'est délibéré — voir « Décisions » ci-dessous.
+
+### Les trois axes, et pourquoi cet ordre
+
+La recherche tient en trois questions, posées dans l'ordre où elles se posent :
+**combien de temps**, **quelle distance**, **pour quand**.
+
+L'ordre n'est pas décoratif : **la durée conditionne les paliers de distance**.
+Une sortie à la journée et un raid de cinq jours n'appellent pas les mêmes
+ordres de grandeur, et proposer « moins de 300 km » à quelqu'un qui cherche une
+journée ne veut rien dire. Les paliers ne se spécialisent que si **une seule**
+durée est cochée — avec deux, on ne peut pas trancher lequel des jeux afficher,
+et on retombe sur les génériques.
+
+### Décisions prises
+
+- **Le champ de recherche libre est sorti des filtres avancés.** Vient du test
+  utilisateur : tant qu'il était replié dedans, aucune participante ne le
+  trouvait. « Filtres… » est accolé à sa droite, pas en dessous, pour garder le
+  bloc compact.
+- **Les trois axes passent de la ligne à la pile dès qu'on en engage un** — un
+  critère posé ou une feuille ouverte. Taper dans le champ libre ou cocher un
+  filtre replié ne les fait pas bouger : ça ne les concerne pas.
+- **Les propositions restent ouvertes après un clic.** On coche plusieurs
+  valeurs dans un même axe (logique OU) ; c'est « Valider » qui referme.
+- **« Toutes distances » efface au lieu de s'ajouter** : c'est l'absence de
+  restriction, pas un palier de plus.
+- **Changer de durée vide la distance.** Garder une sélection faite sur
+  l'ancien jeu de paliers afficherait un libellé qui ne correspond plus à rien.
+- **« Personnalisé » est une proposition comme les autres**, qui ouvre deux
+  champs de date au lieu de choisir directement.
+- **Les périodes connues sont filtrées sur l'avenir et triées.** Une liste en
+  dur vieillit : sans ce filtre, « Vacances de Noël 2026 » resterait proposée
+  en 2027.
+- **Le tiroir de filtres mobile n'est pas touché.** Imbriquer les feuilles des
+  axes dans un tiroir donnerait une modale dans une modale. **À supprimer au
+  branchement** : la V2 n'a plus de tiroir, tout passe par les feuilles.
+
+### ⚠️ Pourquoi cette maquette ne filtre rien
+
+**Les deux premiers axes n'ont pas de donnée en base.**
+
+- `events.distance` est du **texte** libre (« 180 », « 180 km », « 2x120 »).
+  Le filtre actuel tourne sur `distance_range_filter`, quatre chaînes figées
+  (« Moins de 200km », « Entre 200 et 500km »…). Trop grossier pour les paliers
+  du proto, et surtout incapable de se spécialiser selon la durée.
+- **La durée en jours n'existe nulle part.** `formatDurationLabel()` la déduit
+  de `dateEvent`/`dateFin`, absentes ou égales sur une bonne part du catalogue.
+  `sous_events.delai` est du texte.
+
+Les quatre autres critères (dates, type, vélo, zone, mixité) *pourraient* être
+branchés sur l'URL tout de suite. Ils ne le sont pas volontairement : un écran
+où la moitié des boutons filtre et l'autre non est plus trompeur qu'un écran
+qui n'en promet aucun. **Le branchement se fait d'un bloc, après la migration.**
+
+### Migration à écrire au branchement
+
+Additive, **partagée avec les évènements similaires (§12)** — les deux briques
+butent exactement sur les deux mêmes colonnes. À écrire **une seule fois** :
+
+```sql
+alter table public.events add column if not exists distance_km   integer;
+alter table public.events add column if not exists duration_days smallint;
+```
+
+Plus un backfill : `distance_km` depuis `sous_events` (max des distances),
+`duration_days` depuis `dateEvent`/`dateFin` (nombre de jours, bornes
+incluses). Prévoir le cas des évènements où ni l'un ni l'autre n'est
+calculable — ils doivent rester trouvables, donc **ne jamais être exclus par un
+filtre de durée ou de distance qu'ils ne peuvent pas satisfaire**.
+
+### ⚠️ Autre reste-à-faire
+
+**Les périodes connues sont en dur, année par année** (`ALL_KNOWN_PERIODS`),
+comme dans le prototype. Il faut soit une table, soit un calcul — les fêtes
+mobiles se déduisent de Pâques. Sinon la liste sera périmée en 2027, et le
+filtre sur l'avenir la videra silencieusement.
+
+### Checklist de branchement
+
+1. Écrire la migration `distance_km` / `duration_days` + backfill (partagée
+   avec §12).
+2. Brancher les six critères sur l'URL d'un seul coup, en reprenant la
+   mécanique de `InlineFilters` (`buildParams`, `router.replace`).
+3. Traiter les évènements sans durée ni distance calculables : ne pas les
+   exclure.
+4. Supprimer le tiroir de filtres mobile de `map-page-client.tsx`.
+5. Supprimer `InlineFilters` une fois qu'il n'a plus d'appelant.
+6. Décider du sort des périodes connues (table ou calcul).
