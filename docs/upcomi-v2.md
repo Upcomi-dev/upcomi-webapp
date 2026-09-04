@@ -1176,3 +1176,82 @@ Vérifié en local avec la clé publique : `select` sur `event_promo_codes` renv
 2. Merger le code (aucun feature flag : sans saisie, le bandeau ne s'affiche pas
    et la timeline est inchangée).
 3. Saisir les codes promo et les dispositions évènement par évènement.
+
+---
+
+## 13. Brique `feat/organisateur-enrichi` (T3) — MAQUETTE
+
+**Cette branche est une maquette.** Le bloc est à sa place définitive, la
+description et les réseaux sont en dur, aucune migration n'est fournie. Voir
+§12 pour la convention de numérotation des briques maquettées.
+
+### Ce qui est livré
+
+- `src/components/events/organizer-card.tsx` — l'identité de l'organisation en
+  tête du bloc « Qui organise ? » : logo (initiales en repli), nom,
+  description, puis les liens site / Instagram / Strava.
+- `src/lib/events/organizer-profile.ts` — la fiche en dur et le commentaire de
+  branchement.
+- `src/app/event/[slug]/page.tsx` — le bloc en ligne est remplacé par l'appel
+  au composant. L'import `ExternalLink` devenu inutile est retiré.
+
+### Décisions prises
+
+- **Le composant ne rend que l'identité.** Les mesures d'inclusion et
+  « Leurs autres évènements » restent posées par la page, dans la même carte,
+  sous ce composant. Les absorber aurait fait de ce fichier un point de
+  conflit avec deux autres briques pour rien.
+- **Les liens passent sur leur propre ligne.** En production ils partagent la
+  ligne du nom, ce qui tenait avec un seul bouton ; à trois, le nom se
+  faisait écraser.
+- **Un lien absent ne laisse pas de trou** : la liste est filtrée, et
+  « Voir le site » disparaît sur les évènements sans `events.URL` — c'est déjà
+  le cas en production, la maquette ne le change pas.
+- **Le nom et le site restent réels**, même en maquette : ce sont les deux
+  seules données que la page a déjà sous la main, et les fausser ferait croire
+  que le bloc entier est décoratif.
+
+### Migration à écrire au branchement
+
+Additive, sans backfill. L'entité existe déjà — `public.organisateurs`
+(`nom_orga`, `image`, `nb_events`, `nb_abo`), sa déduplication
+`ensure_organisateur()` et sa fonction de page `get_organizer_details()` — il
+n'y a **rien à créer ni à dédoublonner** (§2.1) :
+
+```sql
+alter table public.organisateurs add column if not exists description   text;
+alter table public.organisateurs add column if not exists instagram_url text;
+alter table public.organisateurs add column if not exists strava_url    text;
+```
+
+La jointure se fait par **nom** : `events.organisateur = organisateurs.nom_orga`.
+
+### ⚠️ Trois points que la maquette ne peut pas trancher
+
+1. **Qui saisit ces champs ?** Ils n'arrivent par aucun flux existant.
+   `/proposer-un-evenement` appelle `ensure_organisateur()` mais ne collecte ni
+   description ni réseaux. **Sans écran de saisie — dans `/admin`, le plus
+   probable — les colonnes resteront vides et le bloc n'aura pas bougé d'un
+   pixel en production.** C'est le vrai reste-à-faire de cette brique, et il
+   est plus gros que la migration.
+2. **`nb_abo` et `favourite_organisateurs` existent déjà**, de quoi afficher
+   « X abonné·es » et un bouton « S'abonner ». **Le prototype ne le fait pas** :
+   son bloc s'arrête aux liens. Ne pas l'ajouter sans décision produit — c'est
+   un abonnement de plus à côté de « Suivre » quelqu'un (§14), et les deux ne
+   veulent pas dire la même chose.
+3. **La jointure par nom reste le point faible du modèle** : renommer une
+   organisation détache ses évènements. `ensure_organisateur()` protège
+   l'écriture, rien ne protège une correction faite à la main dans Studio.
+   Passer à une clé étrangère est un vrai backfill, à faire le jour où ça
+   coince — pas un préalable à cette brique.
+
+### Checklist de branchement
+
+1. Appliquer la migration ci-dessus.
+2. Ajouter la saisie des trois champs dans `/admin`.
+3. Remplacer `getOrganizerProfile()` par la lecture de `organisateurs`, jointe
+   sur `events.organisateur = organisateurs.nom_orga`, en gardant la signature.
+4. Brancher `organisateurs.image` sur le logo — le repli en initiales est déjà
+   en place et doit le rester : la colonne est vide sur l'essentiel du
+   catalogue.
+5. Supprimer les valeurs en dur de `getOrganizerProfile()`.

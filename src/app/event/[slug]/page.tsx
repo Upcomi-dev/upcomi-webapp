@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, ChevronLeft, Euro, ExternalLink, Flag, MapPin } from "lucide-react";
+import { Calendar, ChevronLeft, Euro, Flag, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
@@ -28,6 +28,7 @@ import { InterestedPeopleProvider } from "@/components/events/interested-people-
 import { InterestedBlock } from "@/components/events/interested-block";
 import { InclusionMeasures } from "@/components/events/inclusion-measures";
 import { EventPromoCode } from "@/components/events/event-promo-code";
+import { OrganizerCard } from "@/components/events/organizer-card";
 import { MixiteBadge } from "@/components/events/mixite-badge";
 import { AppFooter } from "@/components/layout/app-footer";
 import { TopNav } from "@/components/layout/top-nav";
@@ -439,33 +440,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 Qui organise&nbsp;?
               </h2>
 
-              {event.organisateur ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-orange/30 bg-orange/20 text-sm font-bold text-orange-dark">
-                    {event.organisateur.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-foreground">
-                      {event.organisateur}
-                    </div>
-                  </div>
-                  {event.URL && (
-                    <a
-                      href={event.URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-secondary btn-small flex-none"
-                    >
-                      Voir le site
-                      <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.8} />
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-foreground/55">
-                  L&apos;organisation de cet évènement n&apos;est pas encore renseignée.
-                </p>
-              )}
+              <OrganizerCard organizer={event.organisateur} websiteUrl={event.URL} />
 
               <InclusionMeasures
                 eventName={event.nomEvent || "cet évènement"}
