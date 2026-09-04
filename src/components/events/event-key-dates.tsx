@@ -1,4 +1,4 @@
-import { CalendarPlus, MapPin, Train, Venus } from "lucide-react";
+import { CalendarPlus, MapPin, Sparkles, Train } from "lucide-react";
 import { KeyDateReminderButton } from "@/components/events/key-date-reminder-button";
 import type { EventKeyDate } from "@/lib/utils/event-key-dates";
 
@@ -90,13 +90,15 @@ export function EventKeyDates({ eventId, dates }: EventKeyDatesProps) {
 
               {/* Ce que l'organisation met en place pour les femmes et
                   minorités de genre : le vert de la charte inclusion et le gras
-                  les sortent des précisions grises juste au-dessus. */}
+                  les sortent des précisions grises juste au-dessus. Icône
+                  « bonus » plutôt que « femmes » — le highlight, c'est
+                  l'avantage obtenu, pas à qui il s'adresse. */}
               {date.highlights.map((highlight) => (
                 <div
                   key={highlight}
                   className="mt-1 flex items-start gap-1.5 text-[13px] font-bold text-green"
                 >
-                  <Venus className="mt-[3px] h-3 w-3 flex-none" strokeWidth={2} aria-hidden />
+                  <Sparkles className="mt-[3px] h-3 w-3 flex-none" strokeWidth={2} aria-hidden />
                   {highlight}
                 </div>
               ))}

@@ -1,8 +1,8 @@
 "use client";
 
-import { Ticket } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
+import { Button } from "@/components/ui/button";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import type { EventPromoCode } from "@/lib/events/promo-code";
 import { cn } from "@/lib/utils";
@@ -11,10 +11,16 @@ import { cn } from "@/lib/utils";
  * Le code promo réservé aux membres, en bandeau pleine largeur en haut de
  * fiche — entre la ligne de synthèse et le bloc d'intérêt.
  *
- * Une seule couleur, l'ocre de la charte : la fiche a déjà le corail des
- * actions et le vert des mesures d'inclusion, et un avantage membre n'est ni
- * l'un ni l'autre. Fond clair plutôt qu'aplat plein — le bandeau est au-dessus
- * des boutons d'inscription, il ne doit pas leur passer devant.
+ * Aplat plein de la couleur principale Upcomi (le corail des boutons, pas
+ * l'ocre `--orange`), pas le fond clair des autres blocs : c'est un avantage
+ * à part, pas une info logistique de plus, et il doit se voir. Bleed
+ * horizontal jusqu'aux bords du conteneur de page (marges négatives
+ * compensant son padding) plutôt qu'inséré avec les mêmes marges que le
+ * reste du contenu.
+ *
+ * Le bouton fond blanc / texte corail est une exception assumée à la palette
+ * de boutons de l'appli — sur un aplat de couleur, un bouton à la charte
+ * habituelle (fond corail) se fondrait dans le bandeau.
  *
  * Sans compte, le code n'est pas dans la page : la table ne l'accorde pas à
  * `anon` (voir `lib/events/promo-code.ts`). C'est le gate d'inscription
@@ -44,28 +50,26 @@ export function EventPromoCode({
   return (
     <section
       className={cn(
-        "flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5",
-        "rounded-[var(--radius-md)] bg-orange-light px-4 py-3.5 text-orange-dark",
+        "-mx-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 bg-primary px-4 py-3.5 text-white md:-mx-6 md:px-6",
         className
       )}
     >
-      <p className="flex min-w-0 items-center gap-2.5 text-[15px] leading-snug">
-        <Ticket className="h-[18px] w-[18px] flex-none" strokeWidth={1.8} aria-hidden />
+      <p className="min-w-0 text-[15px] leading-snug">
         Profite du code promo exclusif réservé aux membres
       </p>
 
       {user && promo.code ? (
-        <span className="rounded-full bg-white/70 px-3.5 py-1.5 text-[15px] font-bold tracking-[0.08em]">
+        <span className="rounded-full bg-white px-3.5 py-1.5 text-[15px] font-bold tracking-[0.08em] text-primary">
           {promo.code}
         </span>
       ) : (
-        <button
+        <Button
           type="button"
           onClick={handleClick}
-          className="rounded-full bg-white/70 px-3.5 py-1.5 text-sm font-bold transition-colors hover:bg-white"
+          className="rounded-full bg-white px-3.5 text-primary hover:bg-white/90"
         >
-          Créer un compte
-        </button>
+          Voir le code promo
+        </Button>
       )}
     </section>
   );
