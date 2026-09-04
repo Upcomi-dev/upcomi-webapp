@@ -1176,3 +1176,96 @@ Vérifié en local avec la clé publique : `select` sur `event_promo_codes` renv
 2. Merger le code (aucun feature flag : sans saisie, le bandeau ne s'affiche pas
    et la timeline est inchangée).
 3. Saisir les codes promo et les dispositions évènement par évènement.
+
+---
+
+## 12. Brique `feat/evenements-similaires` (T3) — MAQUETTE
+
+**Cette branche est une maquette.** L'écran est en place, à sa place
+définitive, avec le vrai composant de carte ; les données sont en dur. Rien
+n'est lu en base, aucune migration n'est fournie. Le branchement se fait sur
+cette branche avant de la merger dans `preprod`.
+
+### Numérotation
+
+Les briques maquettées prennent §12 à §16, dans cet ordre : évènements
+similaires (§12), organisateur enrichi (§13), social (§14), recherche V2 (§15),
+navigation (§16). Elles sont réservées d'avance pour qu'elles ne se disputent
+pas une même place comme `feat/score-adequation` et
+`feat/personnes-interessees` se disputent §9.
+
+### Ce qui est livré
+
+- `src/components/events/similar-events.tsx` — le bloc « Évènements
+  similaires », carrousel horizontal de grandes tuiles photo
+  (`EventCard variant="carousel"`, celle de la home et des résultats).
+- `src/lib/events/similar-events.ts` — six évènements fictifs et la fonction
+  `getSimilarEvents(currentEventId, limit)` qui les renvoie.
+- L'appel dans `src/app/event/[slug]/page.tsx`, **hors** de la grille deux
+  colonnes : le carrousel prend toute la largeur de la page, sous la colonne de
+  lecture comme sous la sidebar d'action, en dernier bloc avant le pied de page.
+
+### Décisions prises
+
+- **Dernier bloc de la fiche, pas au milieu.** On ne propose d'aller voir
+  ailleurs qu'une fois la fiche lue.
+- **Grandes tuiles, contrairement à « Leurs autres évènements ».** Les deux
+  carrousels se suivent dans la page et devaient se distinguer : « Leurs autres
+  évènements » reste en lignes compactes sous le bloc organisateur — c'est une
+  note de bas de page sur l'organisation ; « Évènements similaires » est une
+  proposition franche, il prend la carte pleine.
+- **Identifiants fictifs à 900 000+.** Une carte de maquette ne doit jamais
+  tomber sur un vrai évènement ni écrire un favori sur un `id` existant. En
+  contrepartie les liens ne mènent nulle part : c'est visible en cliquant, et
+  c'est assumé le temps de la maquette.
+
+### ⚠️ Ce que la maquette ne peut pas trancher : quelle sélection ?
+
+Le plan (§2.1) annonce « zéro migration, une requête sur `collections` /
+`collection_events` ». **Le prototype ne fait pas ça.** `getSimilarEvents()`
+(upcomi-clone, `assets/js/data.js`) classe tous les évènements à venir par un
+score de proximité :
+
+```
+score = min(|distance − distance_ref| / distance_ref, 2) × 3
+      + min(|durée − durée_ref|, 4) × 0.6
+      + 1.5  si aucun type de vélo en commun
+      + 0.8  si le type d'évènement diffère
+      + 1.2  si la mixité choisie diffère
+```
+
+Sélection éditoriale d'un côté, calcul de proximité de l'autre : **ce sont deux
+produits différents**, et il faut choisir avant d'écrire la requête.
+
+### ⚠️ Si c'est le score, la donnée manque
+
+- `events.distance` est du **texte** libre (« 180 », « 180 km », « 2x120 »).
+  Le seul champ exploitable est `distance_range_filter`, quatre chaînes
+  (« Moins de 200km »…) — trop grossier pour un écart relatif.
+- **La durée en jours n'existe nulle part.** `formatDurationLabel()` la déduit
+  de `dateEvent`/`dateFin`, absentes ou égales sur une bonne part du catalogue.
+  `sous_events.delai` est du texte.
+- Le **dénivelé** n'est pas sur `events` : il vit sur `sous_events.elevation`
+  et se remonte à part (`fetchEventMaxElevations`).
+
+D'où la migration additive à prévoir — **la même que pour la Recherche V2
+(§15), qui bute exactement sur les deux mêmes colonnes** :
+
+```sql
+alter table public.events add column if not exists distance_km   integer;
+alter table public.events add column if not exists duration_days smallint;
+```
+
+plus un backfill depuis `sous_events` (max des distances) et depuis
+`dateEvent`/`dateFin` (nombre de jours, bornes incluses). À écrire **une fois
+pour les deux briques**, pas deux fois.
+
+### Checklist de branchement
+
+1. Trancher : collections éditoriales ou score de proximité.
+2. Si score : écrire la migration `distance_km` / `duration_days` + backfill
+   (partagée avec §15).
+3. Remplacer `getSimilarEvents()` par la vraie lecture, en gardant la signature.
+4. Supprimer `MOCK_SIMILAR_EVENTS`.
+5. Vérifier qu'un évènement sans similaire proche n'affiche pas un bloc vide
+   (le composant renvoie déjà `null` sur liste vide).
