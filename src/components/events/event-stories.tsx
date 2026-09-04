@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ExternalLink, Lock, PenLine } from "lucide-react";
+import { ExternalLink, PenLine } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
@@ -49,7 +49,7 @@ export function EventStories({ event, stories, storyCount, isPast }: EventStorie
   if (storyCount === 0 && !canContribute) return null;
 
   return (
-    <div className="glass mb-6 rounded-[var(--radius)] p-5">
+    <section className="mb-6">
       <h2 className="mb-4 font-serif text-[22px] leading-tight text-foreground">
         Retours d&apos;expérience
       </h2>
@@ -67,7 +67,14 @@ export function EventStories({ event, stories, storyCount, isPast }: EventStorie
           </p>
         )
       ) : (
-        <GatedStories count={storyCount} onOpenAuth={() => openAuthModal({ view: "gate" })} />
+        <GatedStories
+          count={storyCount}
+          onOpenAuth={() =>
+            openAuthModal({
+              title: "Rejoins la communauté Upcomi pour voir les récits de l'évènement",
+            })
+          }
+        />
       )}
 
       {/* Le bouton n'apparaît qu'une fois les récits de l'utilisatrice
@@ -83,7 +90,7 @@ export function EventStories({ event, stories, storyCount, isPast }: EventStorie
           {ownStory ? "Modifier mon récit" : "Ajoute ton récit"}
         </button>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -93,7 +100,7 @@ function StoryRow({ story, isOwn }: { story: EventStory; isOwn: boolean }) {
 
   return (
     <div className="flex gap-3 py-3.5 first:pt-0 last:pb-0">
-      <StoryAvatar name={authorName} avatarUrl={story.authorAvatarUrl} />
+      <StoryAvatar avatarUrl={story.authorAvatarUrl} />
 
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold text-foreground">
@@ -112,7 +119,7 @@ function StoryRow({ story, isOwn }: { story: EventStory; isOwn: boolean }) {
             href={story.storyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-secondary btn-small mt-2.5"
+            className="btn-secondary btn-small mt-4"
           >
             Son récit sur {getStoryLinkLabel(story.storyUrl)}
             <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.8} />
@@ -124,44 +131,38 @@ function StoryRow({ story, isOwn }: { story: EventStory; isOwn: boolean }) {
 }
 
 /**
- * L'avatar du profil public s'il existe, sinon l'initiale — la même pastille
- * orange que celle de l'organisation, juste au-dessus sur la fiche.
+ * L'avatar du profil public, quand il y en a un. Pas de pastille à l'initiale
+ * en repli : personne n'a encore d'avatar, et une lettre inventée se lit comme
+ * une photo qu'on n'aurait pas su charger.
  */
-function StoryAvatar({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
+function StoryAvatar({ avatarUrl }: { avatarUrl: string | null }) {
   const avatar = getAppStorageImage(avatarUrl);
 
-  if (avatar) {
-    return (
-      <div className="relative h-9 w-9 flex-none overflow-hidden rounded-full">
-        <Image
-          src={avatar.src}
-          alt=""
-          fill
-          unoptimized={avatar.unoptimized}
-          className="object-cover"
-          sizes="36px"
-        />
-      </div>
-    );
-  }
+  if (!avatar) return null;
 
   return (
-    <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-orange/30 bg-orange/20 text-[13px] font-bold text-orange-dark">
-      {name.substring(0, 1).toUpperCase()}
+    <div className="relative h-9 w-9 flex-none overflow-hidden rounded-full">
+      <Image
+        src={avatar.src}
+        alt=""
+        fill
+        unoptimized={avatar.unoptimized}
+        className="object-cover"
+        sizes="36px"
+      />
     </div>
   );
 }
 
 function GatedStories({ count, onOpenAuth }: { count: number; onOpenAuth: () => void }) {
   return (
-    <div className="rounded-[var(--radius-sm)] border border-dashed border-foreground/15 p-5 text-center">
-      <Lock className="mx-auto mb-2.5 size-5 text-foreground/45" strokeWidth={1.6} />
+    <div>
       <p className="text-sm text-foreground/72">
         {count > 1
-          ? `${count} personnes ont raconté cet évènement.`
-          : "Une personne a raconté cet évènement."}
+          ? `${count} personnes de la communauté Upcomi ont raconté cet évènement.`
+          : "Une personne de la communauté Upcomi a raconté cet évènement."}
       </p>
-      <button type="button" onClick={onOpenAuth} className="btn-primary btn-small mt-3.5">
+      <button type="button" onClick={onOpenAuth} className="btn-primary btn-small mt-4">
         Voir les retours d&apos;expérience
       </button>
     </div>
