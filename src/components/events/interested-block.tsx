@@ -37,7 +37,7 @@ export function InterestedBlock({
   const label =
     count > 0
       ? `${count} personne${count > 1 ? "s" : ""} intéressée${count > 1 ? "s" : ""}`
-      : "Sois la première à t'intéresser à cet évènement";
+      : "Sois la première personne à t'intéresser à cet évènement";
 
   const handleClick = () => {
     if (count === 0) return;
