@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { AvatarStack } from "@/components/events/person-avatar";
-import { PeopleSheet } from "@/components/events/people-sheet";
 import { useInterestedPeople } from "@/components/events/interested-people-context";
+import { PeopleSheet, type PeopleSheetRow } from "@/components/social/people-sheet";
 import { trackAnalyticsEvent } from "@/lib/analytics";
+import {
+  getPersonCity,
+  getPersonDisplayName,
+  getPersonLevelLabel,
+} from "@/lib/events/interested-people";
 import { cn } from "@/lib/utils";
 
 /**
@@ -33,6 +38,24 @@ export function InterestedBlock({
   const { user } = useAuth();
   const { openAuthModal } = useAuthModal();
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  const rows = useMemo<PeopleSheetRow[]>(
+    () =>
+      people.map((person) => {
+        const city = getPersonCity(person);
+        const level = getPersonLevelLabel(person);
+        // Ville et niveau sont l'un et l'autre facultatifs : le sous-titre ne
+        // s'affiche qu'avec ce qui existe, et disparaît quand il n'y a ni
+        // l'un ni l'autre.
+        const details = [city, level ? `pratique ${level}` : null].filter(Boolean);
+        return {
+          id: person.uid,
+          name: getPersonDisplayName(person),
+          subtitle: details.length > 0 ? details.join(" · ") : null,
+        };
+      }),
+    [people]
+  );
 
   const label =
     count > 0
@@ -79,7 +102,7 @@ export function InterestedBlock({
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         title={`Qui est intéressée par ${eventName} ?`}
-        people={people}
+        people={rows}
       />
     </div>
   );

@@ -63,7 +63,7 @@ export function MyProfile({ initialValues }: { initialValues: UserProfileFormVal
             </DialogHeader>
 
             <div className="mt-6">
-              <UserProfileForm initialValues={initialValues} />
+              <UserProfileForm initialValues={initialValues} showPrivacyToggle />
             </div>
           </div>
         </DialogContent>

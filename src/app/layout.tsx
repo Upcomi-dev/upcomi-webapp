@@ -10,6 +10,7 @@ import { FavoritesProvider } from "@/components/favorites/favorites-context";
 import { FlyingHeartProvider } from "@/components/favorites/flying-heart";
 import { OnboardingModal } from "@/components/profile/onboarding-modal";
 import { FollowProvider } from "@/components/social/follow-context";
+import { ProfileSettingsProvider } from "@/components/social/profile-settings-context";
 import {
   buildInitialUserProfile,
   hasCompletedOnboarding,
@@ -130,6 +131,7 @@ export default async function RootLayout({
                   rechargement le remet à zéro. Voir
                   `lib/social/mock-social`. */}
               <FollowProvider>
+              <ProfileSettingsProvider>
               <AmbientOrbs />
               <div className="relative z-10 flex min-h-[100dvh] flex-col md:min-h-screen">
                 {children}
@@ -139,6 +141,7 @@ export default async function RootLayout({
                 <OnboardingModal initialValues={initialOnboardingValues} />
               ) : null}
               <AuthModal />
+              </ProfileSettingsProvider>
               </FollowProvider>
               </FlyingHeartProvider>
             </FavoritesProvider>

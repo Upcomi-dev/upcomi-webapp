@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/auth-context";
+import { useProfileSettings } from "@/components/social/profile-settings-context";
 import {
   GENDER_OPTIONS,
   PRACTICE_LEVEL_OPTIONS,
@@ -13,11 +14,23 @@ import {
   normalizeUserProfile,
 } from "@/lib/profile";
 import { saveUserProfile } from "@/lib/profile-mutations";
+import { cn } from "@/lib/utils";
 
 // La première connexion passe par le parcours en étapes
 // (`SignupWizard`) ; ce formulaire ne sert plus qu'à modifier son profil.
 interface UserProfileFormProps {
   initialValues: UserProfileFormValues;
+  /**
+   * Affiche le bascule « Profil privé » du prototype, sous l'e-mail. Absent à
+   * l'onboarding — on ne pose pas cette question avant d'avoir un profil à
+   * cacher — présent depuis « Modifier » sur `/profil`.
+   *
+   * MAQUETTE : le bascule change `ProfileSettingsContext` tout de suite, pas
+   * au clic sur « Enregistrer » — `user_public.is_private` n'existe pas
+   * encore (voir « Le profil privé n'existe pas » dans `docs/upcomi-v2.md`),
+   * il n'y a donc rien à écrire ici, seulement l'état à refléter.
+   */
+  showPrivacyToggle?: boolean;
 }
 
 function areSameProfile(left: UserProfileFormValues, right: UserProfileFormValues) {
@@ -27,9 +40,10 @@ function areSameProfile(left: UserProfileFormValues, right: UserProfileFormValue
   return JSON.stringify(normalizedLeft) === JSON.stringify(normalizedRight);
 }
 
-export function UserProfileForm({ initialValues }: UserProfileFormProps) {
+export function UserProfileForm({ initialValues, showPrivacyToggle = false }: UserProfileFormProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { isPrivate, setIsPrivate } = useProfileSettings();
   const normalizedInitialForm = useMemo(
     () => normalizeUserProfile(initialValues),
     [initialValues]
@@ -258,6 +272,38 @@ export function UserProfileForm({ initialValues }: UserProfileFormProps) {
           {normalizedForm.email || user?.email || "E-mail indisponible"}
         </div>
       </div>
+
+      {showPrivacyToggle && (
+        <div className="flex items-start justify-between gap-4 border-t border-foreground/8 pt-6">
+          <div className="space-y-1">
+            <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/55">
+              Profil privé
+            </span>
+            <p className="text-[13px] leading-6 text-foreground/60">
+              Seules les personnes que tu choisis pourront voir ton profil et les
+              évènements qui t&apos;intéressent.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isPrivate}
+            aria-label="Profil privé"
+            onClick={() => setIsPrivate(!isPrivate)}
+            className={cn(
+              "relative mt-1 h-6 w-11 flex-none rounded-full transition-colors",
+              isPrivate ? "bg-orange" : "bg-foreground/15"
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-[var(--shadow-sm)] transition-transform",
+                isPrivate && "translate-x-5"
+              )}
+            />
+          </button>
+        </div>
+      )}
 
       {error && (
         <p className="rounded-[16px] border border-red-200 bg-red-50/90 px-4 py-3 text-[13px] text-red-700">
