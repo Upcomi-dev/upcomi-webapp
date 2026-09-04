@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { ExternalLink, Heart } from "lucide-react";
+import { ArrowRight, Heart } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
@@ -104,7 +104,11 @@ export function EventActions({
             className={cn("btn-secondary px-4", widthClassName)}
           >
             M&apos;inscrire
-            <ExternalLink className="h-4 w-4" strokeWidth={1.8} />
+            {/* Une flèche, pas l'icône de lien externe : on sait déjà que
+                l'inscription part sur le site de l'organisation, et le
+                pictogramme la faisait lire comme une note de bas de page
+                plutôt que comme l'action principale. */}
+            <ArrowRight className="h-4 w-4" strokeWidth={1.8} />
           </ExternalRegistrationLink>
         )}
         <button

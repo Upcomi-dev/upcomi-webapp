@@ -581,8 +581,16 @@ affiché, même vide.
   vide, qui est une information en soi.
 - Le nom d'icône vient de la base mais est résolu par un **dictionnaire
   explicite** côté code (`MEASURE_ICONS`) : jamais d'import dynamique par clé.
-- « Signaler une mesure » est un `mailto:` vers contact@upcomi.cc, comme dans
-  le proto — pas de formulaire.
+- « Signaler une mesure » ouvre la **popin de remontée**, celle d'« idée, bug
+  ou feedback » en plus court : un seul champ libre, la mesure en quelques
+  mots. Pas de menu déroulant — le type est connu, c'est le bouton cliqué qui
+  le dit — et pas de sujet à saisir, il est construit avec le nom de
+  l'évènement. La remontée part dans `feedback_entries` avec le type « idée »
+  et atterrit dans `/admin`, où l'équipe la rattache au catalogue si elle est
+  retenue : écrire directement dans `event_inclusion_measures` laisserait
+  n'importe qui décorer un évènement de mesures qu'il ne tient pas. Le
+  `mailto:` du proto est abandonné, il ne laissait aucune trace côté Upcomi.
+  `src/components/events/suggest-measure-dialog.tsx`.
 
 **Évolution UI de la fiche** — restructuration fidèle au proto :
 
@@ -670,7 +678,11 @@ contre `localhost:8080`), mobile et desktop :
 
 `EventActions` porte la paire du proto : **« M'inscrire » secondaire** et
 **« Ça m'intéresse » primaire**. L'inscription part sur le site de
-l'organisation — elle ne peut pas être l'engagement demandé en premier.
+l'organisation — elle ne peut pas être l'engagement demandé en premier. Elle
+porte une simple **flèche** et non l'icône de lien externe : le pictogramme la
+faisait lire comme une note de bas de page plutôt que comme une action. « Voir
+le site », dans le bloc organisateur, garde la sienne — là, c'est bien le
+départ vers l'extérieur qui est l'information.
 
 La paire est répétée aux trois endroits du proto : en haut de fiche (masquée en
 desktop, où la colonne de droite fait doublon), dans la colonne de droite en

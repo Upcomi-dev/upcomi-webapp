@@ -6,7 +6,6 @@ import {
   Backpack,
   BedDouble,
   Calendar,
-  CirclePlus,
   Clock,
   Compass,
   Droplet,
@@ -24,8 +23,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { SuggestMeasureDialog } from "@/components/events/suggest-measure-dialog";
 import {
-  buildAddMeasureMailto,
   INCLUSION_MEASURE_GROUPS,
   INCLUSION_MEASURES_COLLAPSE_AT,
   type InclusionMeasure,
@@ -67,7 +66,6 @@ interface InclusionMeasuresProps {
  *
  * Toujours affiché, même vide : l'absence de mesure est elle aussi une
  * information, et c'est souvent elle qui décide de s'inscrire ou non.
- * TODO : brancher sur le formulaire de feedback pour signaler une nouvelel mesure
  */
 export function InclusionMeasures({ eventName, measures }: InclusionMeasuresProps) {
   const [expanded, setExpanded] = useState(false);
@@ -154,13 +152,7 @@ export function InclusionMeasures({ eventName, measures }: InclusionMeasuresProp
         </>
       )}
 
-      <a
-        href={buildAddMeasureMailto(eventName)}
-        className="mt-4 inline-flex items-start gap-1.5 text-[14px] font-semibold hover:underline"
-      >
-        <CirclePlus className="mt-[3px] h-3.5 w-3.5 flex-none" strokeWidth={1.8} />
-        Signaler une mesure qui a été mise en place
-      </a>
+      <SuggestMeasureDialog eventName={eventName} />
 
       <Dialog
         open={openMeasure !== null}
