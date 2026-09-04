@@ -129,26 +129,68 @@ inscrit, statut public). **Non tranché** : le parcours « je suis inscrite →
 partager », et l'évolution de « Mes évènements » — à confirmer avant de les
 programmer ou de les exclure.
 
+> **Revu le 2026-09-04.** Deux choses ont bougé depuis l'arbitrage : la moitié
+> des briques est écrite (voir « État des branches en cours » ci-dessus), et
+> `feat/socle-data` **n'est plus un verrou** — elle est dissoute, voir plus bas.
+
 ```
-feat/calendrier-inscriptions   (T1 — EN COURS, terminé côté code)
-feat/onboarding-v2             (T1 — nouvelles colonnes sur `users`, additif)
-feat/dates-cles                (T1)
-feat/mesures-inclusion         (T1)
-feat/evenements-similaires     (T3 — gratuite, casable ici ou avant)
-feat/personnes-interessees     (T1 — LIVRÉE, voir §9 ; migration additive)
-   ↓ réutilise son bloc et ses lectures :
-feat/score-adequation          (T2 — sa propre petite migration)
-   ↓ bloquant, seule :
-feat/socle-data                (profils publics consultables + entité organisateur)
-   ↓
-feat/organisateur-enrichi      (T3, suite)
-feat/social                    (T4 — suivre, profils)
+Écrites, dans preprod :
+  feat/onboarding-v2            T1 — la branche a repris de l'avance (modération des récits)
+  feat/fiche-evenement-v2       T1 — absorbe feat/dates-cles et feat/mesures-inclusion
+  feat/personnes-interessees    T1 — §9
+
+Écrites, hors preprod :
+  feat/calendrier-inscriptions  T1 — terminée, jamais mergée
+  feat/avantages-evenement      hors plan initial — code promo, dispositions d'inscription
+  feat/partage-experience       affichage des récits — après la modération d'onboarding-v2
+  feat/score-adequation         T2 — terminée mais divergée, à réconcilier avant merge
+
+Pas commencées :
+  feat/evenements-similaires    T3 — zéro migration
+  feat/organisateur-enrichi     T3 — additive, l'entité existe déjà en base
+  feat/social                   T4 — suivre, profils
 ```
 
-Les six premières briques sont parallélisables entre elles dès maintenant.
-`feat/socle-data` reste le seul verrou du plan, mais il n'intervient qu'avant
-la suite de T3 et tout T4 — largement repoussé par rapport à l'ordonnancement
-initial (2.2), ce qui laisse plusieurs semaines de marge avant d'y toucher.
+**Plus aucune brique n'en bloque une autre.** Il ne reste que deux points de
+séquence, tous deux décrits dans « État des branches en cours » : la dépendance
+entre les deux migrations de récits, et la réconciliation de
+`feat/score-adequation` avec `preprod` — un chantier à programmer pour
+lui-même, pas un préalable d'architecture.
+
+#### `feat/socle-data` est dissoute
+
+Le plan la posait comme le verrou unique, au motif qu'il n'existait ni entité
+organisateur ni moyen de lire le profil de quelqu'un d'autre. **La photo du
+schéma de prod dit le contraire** : l'essentiel existe déjà, souvent depuis
+FlutterFlow, et ce qui manque se traite brique par brique.
+
+| Ce que `socle-data` devait apporter | État réel en base |
+|---|---|
+| Entité organisateur | `organisateurs` existe (`nom_orga`, `image`, `nb_events`, `nb_abo`), lisible par tout le monde |
+| Déduplication | `ensure_organisateur()` déduplique sur `lower(btrim(nom_orga))`, sous verrou consultatif, et crée à la volée |
+| Rattachement aux évènements | jointure par nom (`e.organisateur = o.nom_orga`), déjà utilisée par les fonctions existantes |
+| Page organisateur | `get_organizer_details(id)` renvoie déjà nom, image, nombre d'abonnées, évènements passés et à venir |
+| S'abonner à une organisation | `favourite_organisateurs` existe (`user_id`, `orga`, `push_notifications`, `newsletter`) |
+| Profils publics consultables | `user_public` est déjà lisible par `authenticated` (policy « user_public: read all ») |
+| Suivre une personne | `friendships` existe (`follower_id`, `followed_id`, `status`), lisible par tout le monde |
+
+La webapp s'en sert déjà : `/admin` liste les organisateurs et
+`/proposer-un-evenement` appelle `ensure_organisateur()` à chaque proposition
+validée. Il n'y a donc rien à créer ni à dédoublonner.
+
+Ce qu'il reste, et qui ne justifie pas une brique à soi :
+
+- **`feat/organisateur-enrichi` devient additive** : trois `add column` sur
+  `organisateurs` pour la description, l'Instagram et le Strava que le proto
+  affiche, plus une lecture. Pas de migration de données.
+- **Les policies d'écriture manquantes** (`favourite_events`, `admin_users`,
+  et `friendships` le jour où T4 arrive) sont un chantier commun, déjà décrit
+  ci-dessus — pas un préalable d'architecture.
+- **La jointure par nom reste le point faible du modèle** : renommer un
+  organisateur détache ses évènements. `ensure_organisateur()` protège
+  l'écriture, rien ne protège une correction faite à la main dans Studio.
+  Passer à une clé étrangère est un vrai backfill — à faire le jour où ça
+  coince, et surtout pas comme préalable à T3.
 
 Détail par lot :
 
@@ -166,14 +208,18 @@ Détail par lot :
   compatibilité + réponses), indépendante de T1.
 - **T3 — Plus d'infos sur l'évènement** : évènements similaires (zéro
   migration, `collections`/`collection_events` existent déjà) ; bloc
-  organisateur enrichi, qui **dépend de `feat/socle-data`** — `events.organisateur`
-  est du texte libre aujourd'hui, créer la vraie entité et dédupliquer est le
-  chantier le plus délicat du plan (migration de données, pas juste additive).
+  organisateur enrichi, **additif et sans dépendance** — l'entité
+  `organisateurs` existe déjà en base avec sa déduplication et sa fonction de
+  page, il n'y manque que les champs que le proto affiche (description,
+  Instagram, Strava).
 - **T4 — Social** : suivre, profils publics — le bouton « Suivre » que le proto
   pose dans la feuille des personnes intéressées attend cette brique-là, pas
-  celle de §9. **Dépend de `feat/socle-data`** —
-  `users` existe mais aucune policy ne permet aujourd'hui à quelqu'un de lire
-  le profil d'une autre personne ; à ouvrir en RLS avant le reste de T4.
+  celle de §9. **Ne dépend plus d'un socle** : `friendships` existe et est
+  lisible par tout le monde, `user_public` est lisible par les comptes
+  connectés. Ce qui manque est exactement le bloquant de §9 sous un autre nom —
+  `friendships` n'a qu'une policy de `select`, aucune d'`insert` ni de
+  `delete`. `public.users` reste fermée aux autres et doit le rester : ce qu'on
+  montre de quelqu'un passe par `user_public`.
 
 ### 2.2 Ordonnancement de fond (référence, hors urgence court terme)
 
@@ -183,7 +229,7 @@ l'ordre du jour.
 
 ```
 feat/socle-ui               nav, tokens
-feat/socle-data             profils publics + entité organisateur     ← bloquant
+feat/socle-data             DISSOUTE — l'entité et les profils existent (2.1)
    ↓ puis parallélisables :
 feat/recherche
 feat/inscription-publique
@@ -193,7 +239,7 @@ feat/dates-cles
 feat/y-aller
 feat/mesures-inclusion
 feat/evenements-similaires
-   ↓ dépend de socle-data :
+   ↓ ne dépend plus de rien (2.1) :
 feat/organisateur-enrichi
    ↓ dépend d'inscription-publique :
 feat/score-adequation
@@ -223,15 +269,33 @@ Ce qui existe **déjà** et qu'il ne faut pas recréer :
   `auth.users.user_metadata`, fusionnés par `buildInitialUserProfile()`.
 - `collections` / `collection_events`
 - Les fonctions `get_popular_events()` et `get_event_favourite_counts()`
+- **`organisateurs`** (`nom_orga`, `image`, `nb_events`, `nb_abo`), avec sa
+  déduplication `ensure_organisateur()`, sa fonction de page
+  `get_organizer_details()`, son trigger de recomptage
+  `update_nb_events_for_organisateur()`, et `favourite_organisateurs` pour
+  l'abonnement. `events.organisateur` porte le **nom**, et c'est dessus que se
+  fait la jointure.
+- **`friendships`** (`follower_id`, `followed_id`, `status`), lisible par tout
+  le monde.
+- **`users.gender`** — piège, voir ci-dessous.
 
 Ce qui **n'existe pas** :
 
-- Aucune entité organisateur : `events.organisateur` est du **texte libre**.
-  L'enrichir suppose de créer les entités, dédoublonner, rattacher — c'est de la
-  migration de données, le chantier le plus délicat de la V2.
 - Le cycle favoris / inscrite / inscrite-publique ne rentre pas dans le booléen
   `participates`. Ajouter une colonne `status`, backfiller, garder les deux
   synchronisés le temps de migrer les huit points d'appel.
+- Les champs que le proto affiche sur l'organisation : description, Instagram,
+  Strava. Trois `add column` sur `organisateurs`, additifs.
+
+> **⚠️ `users.genre` double `users.gender`.** La colonne `gender` existait déjà
+> en prod (FlutterFlow) quand `20260901103000_onboarding_v2.sql` a ajouté
+> `genre`. Les deux coexistent, et **la webapp écrit dans les deux selon
+> l'écran** : le parcours d'inscription et `/profil` écrivent `genre`
+> (`src/lib/profile-mutations.ts`), l'éditeur d'utilisatrices de `/admin` écrit
+> `gender` (`src/app/admin/actions.ts`). Les lectures (`layout.tsx`,
+> `/profil`) ne regardent que `genre` : une correction faite depuis `/admin`
+> n'a aujourd'hui aucun effet visible. À trancher avant que l'app mobile, qui
+> lit `gender`, ne diverge pour de bon.
 
 ---
 
@@ -802,8 +866,8 @@ c'est une autre famille, qui a ses propres règles dans le proto (`.pill`,
   distance · dénivelé. Le type de vélo est une donnée que la webapp possède et
   qui n'apparaîtrait plus nulle part sur la fiche autrement ; gardé en 3ᵉ tag.
 - **Organisateur** : le proto affiche une description, Instagram et Strava.
-  `events` ne porte aucun de ces champs — ils viendront avec
-  `feat/organisateur-enrichi`, qui dépend de `feat/socle-data`.
+  Ni `events` ni `organisateurs` ne portent ces champs — ils viendront avec
+  `feat/organisateur-enrichi`, qui est additive et ne dépend de rien (voir 2.1).
 
 ### Checklist de mise en prod
 
