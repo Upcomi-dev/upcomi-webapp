@@ -493,6 +493,20 @@ function MapPageContent({
   const showMobileCollections = !detailEvent && !searchQuery.trim() && activeFilterCount === 0 && collections.length > 0;
   const showMobileViewToggle = detailEvent == null;
 
+  /* Une seule carte pour toute la recherche — titre, trois axes, champ libre —
+     comme le `.filter-panel` du proto upcomi-clone. Le sous-bloc « Affiner la
+     sélection » a sauté : une carte dans une carte pour trois boutons. */
+  const renderSearchHero = () => (
+    <section className="hero-mesh grain-overlay overflow-hidden rounded-[30px] border border-white/45 p-4 shadow-soft-xl md:p-5">
+      <h1 className="mb-5 font-serif text-[28px] leading-[1.05] text-foreground md:text-[38px] md:leading-[0.93]">
+        Trouve la prochaine aventure<br className="hidden md:inline" /> qui te ressemble.
+      </h1>
+      {/* MAQUETTE (feat/recherche-v2) — le panneau à trois axes remplace les
+          filtres à plat. Il ne filtre rien : voir `search-panel-v2`. */}
+      <SearchPanelV2 eventTypeOptions={eventTypeOptions} />
+    </section>
+  );
+
   /* ── Panel content renderer ── */
   const renderPanelContent = () => {
     // Detail mode
@@ -514,23 +528,7 @@ function MapPageContent({
     if (panel.mode === "collections" && collections.length > 0 && !searchQuery.trim()) {
       return (
         <>
-          {/* Hero in collections mode */}
-          <section className="hero-mesh grain-overlay overflow-hidden rounded-[30px] border border-white/45 p-5 shadow-soft-xl">
-            <div className="mb-5">
-              <h1 className="font-serif text-[38px] leading-[0.93] text-foreground">
-                Trouve la prochaine aventure<br />qui te ressemble.
-              </h1>
-            </div>
-            <div className="mt-4 rounded-[26px] border border-white/48 bg-white/34 p-4 shadow-[var(--shadow-sm)]">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
-                Affiner la sélection
-              </p>
-              {/* MAQUETTE (feat/recherche-v2) — le panneau à trois axes
-                  remplace les filtres à plat. Il ne filtre rien : voir
-                  `search-panel-v2`. */}
-              <SearchPanelV2 eventTypeOptions={eventTypeOptions} />
-            </div>
-          </section>
+          {renderSearchHero()}
 
           <CollectionsView
             collections={collections}
@@ -544,20 +542,7 @@ function MapPageContent({
     // Filtered mode (or fallback when no collections)
     return (
       <>
-        <section className="hero-mesh grain-overlay overflow-hidden rounded-[30px] border border-white/45 p-5 shadow-soft-xl">
-          <div className="mb-5">
-            <h1 className="font-serif text-[38px] leading-[0.93] text-foreground">
-              Trouve la prochaine aventure<br />qui te ressemble.
-            </h1>
-          </div>
-          <div className="rounded-[26px] border border-white/48 bg-white/34 p-4 shadow-[var(--shadow-sm)]">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
-              Affiner la sélection
-            </p>
-            {/* MAQUETTE (feat/recherche-v2) — voir plus haut. */}
-            <SearchPanelV2 eventTypeOptions={eventTypeOptions} />
-          </div>
-        </section>
+        {renderSearchHero()}
 
         <section className="rounded-[30px] border border-white/45 bg-white/34 p-4 shadow-[var(--shadow-sm)]">
           <div className="mb-4 flex items-end justify-between gap-3">
@@ -612,14 +597,7 @@ function MapPageContent({
     if (showMobileCollections) {
       return (
         <section className="space-y-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
-              Collections
-            </p>
-            <h1 className="font-serif text-[28px] leading-none text-foreground">
-              Trouve ta prochaine aventure
-            </h1>
-          </div>
+          {renderSearchHero()}
 
           <CollectionsView
             collections={collections}
@@ -632,15 +610,12 @@ function MapPageContent({
 
     return (
       <section className="space-y-4">
+        {renderSearchHero()}
+
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
-              Vue liste
-            </p>
-            <h1 className="font-serif text-[28px] leading-none text-foreground">
-              {listEvents.length} événements
-            </h1>
-          </div>
+          <h2 className="font-serif text-[24px] leading-none text-foreground">
+            {listEvents.length} événements
+          </h2>
           <SortControl />
         </div>
 
@@ -795,14 +770,16 @@ function MapPageContent({
           {renderMobileSearchBar()}
         </div>
 
+        {/* En liste, la recherche est le panneau lui-même, en tête de page
+            (comme dans le proto) : la barre flottante ne reste que sur la
+            carte, où il n'y a pas de panneau. */}
         <div
           className={cn(
-            "relative pb-4 pt-[5.5rem]",
+            "relative py-4",
             mobileView === "list" ? "block" : "hidden"
           )}
           aria-hidden={mobileView !== "list"}
         >
-          {renderMobileSearchBar()}
           <div className="space-y-4 px-4">
             {renderMobileListContent()}
           </div>

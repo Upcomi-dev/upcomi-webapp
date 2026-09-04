@@ -163,8 +163,15 @@ export function SearchPanelV2({
     <div className="w-full">
       <div
         className={cn(
-          "gap-2.5",
-          axesEngaged ? "flex flex-col" : "flex flex-col sm:flex-row sm:items-stretch"
+          "flex",
+          axesEngaged
+            ? "flex-col gap-2.5"
+            : // Au repos les trois axes tiennent sur une ligne, à toutes les
+              // largeurs. Sous `md` — donc sur toute la mise en page mobile —
+              // ils sont collés en un seul bloc blanc séparé par des filets,
+              // comme dans le proto : à cette largeur, trois pastilles
+              // séparées, c'est trois fois le même trait de bordure pour rien.
+              "flex-row items-stretch gap-2.5 max-md:gap-0 max-md:overflow-hidden max-md:rounded-[18px] max-md:border max-md:border-white/55 max-md:bg-white/70 max-md:[&>button]:gap-1.5 max-md:[&>button]:rounded-none max-md:[&>button]:border-0 max-md:[&>button]:bg-transparent max-md:[&>button]:px-2.5 max-md:[&>button]:text-[12.5px] max-md:[&>button+button]:border-l max-md:[&>button+button]:border-foreground/12"
         )}
       >
         <AxisButton
@@ -172,6 +179,7 @@ export function SearchPanelV2({
           label={durationLabel}
           active={durations.length > 0}
           open={openAxis === "duration"}
+          large={axesEngaged}
           onClick={() => setOpenAxis("duration")}
         />
         <AxisButton
@@ -179,6 +187,7 @@ export function SearchPanelV2({
           label={distanceLabel}
           active={distanceSteps.length > 0}
           open={openAxis === "distance"}
+          large={axesEngaged}
           onClick={() => setOpenAxis("distance")}
         />
         <AxisButton
@@ -186,14 +195,18 @@ export function SearchPanelV2({
           label={dateLabel}
           active={dateModes.length > 0}
           open={openAxis === "dates"}
+          large={axesEngaged}
           onClick={() => setOpenAxis("dates")}
         />
       </div>
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-        <div className="relative min-w-[220px] flex-1">
+      {/* Champ libre et « Filtres… » sur une même ligne, jamais l'un sous
+          l'autre : à 375 px le champ se réduit plutôt que de passer à la
+          ligne. */}
+      <div className="mt-2.5 flex items-center gap-2.5">
+        <div className="relative min-w-0 flex-1">
           <Search
-            className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/40"
+            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/45"
             aria-hidden="true"
           />
           <input
@@ -202,7 +215,13 @@ export function SearchPanelV2({
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Nom, lieu, organisation…"
             aria-label="Rechercher un évènement"
-            className="w-full rounded-full border border-white/55 bg-white/70 py-3 pl-11 pr-10 text-sm text-foreground outline-none transition-all placeholder:text-foreground/35 focus:border-coral/35 focus:bg-white"
+            className={cn(
+              "w-full rounded-full border border-white/55 bg-white/70 pl-10 font-semibold text-foreground outline-none transition-all placeholder:font-semibold placeholder:text-foreground/40 focus:border-coral/35 focus:bg-white",
+              axesEngaged ? "py-3.5 text-[15px]" : "py-2.5 text-[12.5px]",
+              // La croix n'occupe la droite du champ que s'il y a quelque chose
+              // à effacer : sinon le placeholder entier tient à 375 px.
+              search ? "pr-9" : "pr-4"
+            )}
           />
           {search && (
             <button
@@ -220,7 +239,11 @@ export function SearchPanelV2({
           type="button"
           onClick={() => setAdvancedOpen((open) => !open)}
           aria-expanded={advancedOpen}
-          className="inline-flex h-[46px] flex-none items-center gap-1.5 rounded-full border border-white/55 bg-white/70 px-4 text-[13px] font-semibold text-foreground/65 transition-all hover:border-coral/30 hover:text-coral"
+          className={cn(
+            "inline-flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border border-white/55 bg-white/70 font-semibold text-foreground transition-all hover:border-coral/30 hover:text-coral",
+            axesEngaged ? "px-4 py-3.5 text-[15px]" : "px-3 py-2.5 text-[12.5px]",
+            advancedOpen && "border-coral/45 text-coral"
+          )}
         >
           Filtres…
           {advancedCount > 0 && (
@@ -513,12 +536,15 @@ function AxisButton({
   label,
   active,
   open,
+  large,
   onClick,
 }: {
   icon: typeof Clock;
   label: string;
   active: boolean;
   open: boolean;
+  /** En pile, l'axe prend la taille du champ libre juste en dessous. */
+  large: boolean;
   onClick: () => void;
 }) {
   return (
@@ -526,10 +552,13 @@ function AxisButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex min-h-[46px] flex-1 items-center gap-2 rounded-full border px-4 text-[13px] font-semibold transition-all",
+        "flex min-w-0 flex-1 items-center gap-2 rounded-full border px-4 font-semibold transition-all",
+        large ? "py-3.5 text-[15px]" : "py-3 text-[13px]",
         active || open
           ? "border-coral/45 bg-coral/12 text-coral"
-          : "border-white/55 bg-white/70 text-foreground/65 hover:border-coral/30 hover:text-coral"
+          : // Noir plein même quand rien n'est renseigné : en test utilisateur,
+            // le gris les faisait passer pour des champs désactivés.
+            "border-white/55 bg-white/70 text-foreground hover:border-coral/30 hover:text-coral"
       )}
     >
       <Icon className="h-4 w-4 flex-none" aria-hidden="true" />

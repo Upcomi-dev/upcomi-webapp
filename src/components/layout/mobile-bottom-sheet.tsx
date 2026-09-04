@@ -213,9 +213,7 @@ export function MobileBottomSheet({
           />
         ) : hasFilters ? (
           <div className="space-y-4">
-            <div className="rounded-[20px] border border-white/48 bg-white/34 p-3">
-              <SearchPanelV2 />
-            </div>
+            <SearchPanelV2 />
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-[18px] text-foreground">Résultats</h3>
               <SortControl />
@@ -251,9 +249,7 @@ export function MobileBottomSheet({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-[20px] border border-white/48 bg-white/34 p-3">
-              <SearchPanelV2 />
-            </div>
+            <SearchPanelV2 />
             {collections.length > 0 ? (
               <CollectionsView
                 collections={collections}
