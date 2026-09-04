@@ -26,10 +26,11 @@ export function SimilarEvents({ eventId }: { eventId: number }) {
       <h2 className="mb-3.5 font-serif text-[22px] leading-tight text-foreground">
         Évènements similaires
       </h2>
-      {/* Les marges négatives font filer les cartes jusqu'aux bords de
-          l'écran : sur mobile, un carrousel qui s'arrête à la gouttière ne se
-          lit pas comme quelque chose qui défile. */}
-      <div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 md:-mx-6 md:px-6">
+      {/* Bord à bord à droite seulement (`-mr`), comme les carrousels de la
+          home : la piste garde la gouttière de la page à gauche, si bien que
+          les cartes disparaissent derrière cette marge une fois qu'on fait
+          défiler, au lieu de venir coller au bord de l'écran. */}
+      <div className="scrollbar-hide -mr-4 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 md:-mr-6">
         {/* Pas d'enveloppe autour des cartes : `variant="carousel"` porte déjà
             sa largeur, `flex-none` et `snap-start`. */}
         {events.map((event) => (
