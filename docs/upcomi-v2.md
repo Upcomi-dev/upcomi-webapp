@@ -26,7 +26,7 @@ pas du code source. Son état validé est figé par le tag `spec-v1`.
 | Avantages membres (code promo) | fusionné preprod | livrer + **saisir les codes** |
 | Calendrier des inscriptions | écrit, hors preprod | rebaser, merger |
 | Récits d'expérience (affichage) | écrit, hors preprod | rebaser, merger |
-| Score d'adéquation | écrit, **divergé** | trancher une phrase d'affichage, puis rebaser |
+| Score d'adéquation | écrit, **divergé** | retirer son bloc « personnes intéressées », puis rebaser |
 | Évènements similaires | maquette | trancher la règle de sélection |
 | Fiche organisatrice enrichie | maquette | créer l'écran de saisie |
 | Réseau social & profils | maquette | concevoir les notifications |
@@ -134,16 +134,12 @@ pas du code source. Son état validé est figé par le tag `spec-v1`.
 > **En tant qu'équipe Upcomi**, je veux relire les récits avant publication,
 > **afin de** garantir le ton et la sécurité de l'espace.
 
-### Trois arbitrages produit en attente
+### Deux arbitrages produit en attente
 
 1. **Évènements similaires** : sélection éditoriale par l'équipe, ou proposition
    automatique par proximité ? Deux promesses différentes, deux coûts
    différents.
-2. **Ce qu'on affiche du niveau des autres** : la ville et le niveau qu'elle a
-   déclarés (« Lyon · pratique Confirmée »), ou un palier calculé sur trois
-   crans (« Pratique Intermédiaire ») ? Les deux écrans existent, il faut en
-   garder un — voir §2.2.
-3. **« Mes évènements »** : la page s'appelle encore « Mes favoris » et ne
+2. **« Mes évènements »** : la page s'appelle encore « Mes favoris » et ne
    distingue pas ce qui m'intéresse de ce à quoi je suis inscrite. À redéfinir
    avant l'inscription publique.
 
@@ -172,38 +168,50 @@ valeur promise ci-dessus n'existe pas.
 |---|---|---|
 | `feat/calendrier-inscriptions` | 45 commits | rebaser puis merger. Le bouton « Me prévenir » n'est **pas** dans le périmètre — voir §2.4 |
 | `feat/partage-experience` | 13 commits | rebaser puis merger. Sa migration doit passer **après** celle de la modération |
-| `feat/score-adequation` | 22 commits, **divergée** | une décision d'affichage à trancher, voir ci-dessous |
+| `feat/score-adequation` | 22 commits, **divergée** | retirer le bloc « personnes intéressées » qu'elle double, voir ci-dessous |
 | `worktree-burger-menu-v2` | partie d'un `main` ancien | décider de son sort : elle refait le menu mobile, que `feat/nav-v2` refait aussi. L'une des deux doit disparaître |
 
-#### Le souci avec `feat/score-adequation`, concrètement
+#### `feat/score-adequation` : ce qu'il faut en retirer
 
-Cette branche apporte **deux choses** : le questionnaire d'adéquation (« cet
-évènement est-il à ma portée ? ») et le bloc « qui est intéressé ». Le second a
-été **livré entre-temps par une autre branche**, `feat/personnes-interessees`,
-qui est partie seule dans `preprod`. Résultat : les deux versions du même bloc
-existent, écrites chacune de son côté — sept fichiers en conflit, dont cinq
-créés des deux côtés.
+Cette branche apporte **deux blocs** : le questionnaire d'adéquation (« cet
+évènement est-il à ma portée ? ») et « X personnes intéressées ». Le second a
+été sorti seul en T1 par `feat/personnes-interessees` et fusionné dans
+`preprod` entre-temps. D'où la divergence — cinq fichiers créés des deux côtés.
 
-Ce n'est pas grave, et ce n'est pas un gros chantier. Les deux versions ne
-diffèrent que sur **une décision d'affichage** : dans la liste des personnes
-intéressées, `preprod` montre ce que la personne a déclaré (« Lyon · pratique
-Confirmée ») ; la branche montre un palier calculé sur trois crans (« Pratique
-Intermédiaire »), parce que le questionnaire a besoin de compter les personnes
-d'expérience *comparable* à la mienne.
+**La résolution, c'est bien de retirer le bloc « personnes intéressées » de la
+branche** et de garder celui de `preprod`. Trois de ces fichiers se suppriment
+sèchement (`interested-block.tsx`, `people-sheet.tsx`, `person-avatar.tsx`, plus
+les avatars de `public/`).
 
-**Trancher cette phrase suffit à débloquer le merge.** Le reste s'aligne tout
-seul :
+**Attention aux deux qui restent** : le questionnaire ne se contente pas
+d'afficher les personnes intéressées, il **compte celles qui ont une expérience
+comparable à la mienne** (« 8 personnes avec une expérience similaire sont déjà
+intéressées »). Il a donc besoin, en plus de ce que fait `preprod`, du décompte
+par niveau — que la branche va chercher par une requête à part.
 
-- côté base, la version de `preprod` couvre déjà tout ce dont la branche a
-  besoin (elle recopie le niveau **et** la ville) ; la moitié de la migration de
-  la branche fait double emploi et doit simplement disparaître ;
-- le palier en trois crans se **déduit** du niveau déclaré par une simple table
-  de correspondance, sans rien lire de plus en base : garder l'affichage de
-  `preprod` n'empêche donc pas le questionnaire de compter.
+À reporter sur les fichiers de `preprod`, sans rien changer à ce qu'ils
+affichent déjà :
 
-À faire : trancher l'affichage, garder la version `preprod` des cinq fichiers
-partagés, ne conserver de la migration de la branche que la table des réponses
-au questionnaire, rebaser, merger.
+| Fichier | Geste |
+|---|---|
+| `lib/events/interested-people.ts` | garder la version `preprod` (ville + niveau déclaré), y ajouter le décompte par niveau et le calcul « expérience similaire » |
+| `interested-people-context.tsx` | garder la version `preprod`, exposer le décompte par niveau en plus |
+
+Côté migrations :
+
+- `20260904120000_score_adequation.sql` — **la moitié fait double emploi** avec
+  ce qui est déjà passé dans `preprod` (recopie du niveau, fonctions de lecture
+  des intéressées). Ne garder que la table des réponses au questionnaire.
+- `20260904170000_public_interested_levels.sql` — **à garder telle quelle** :
+  c'est le décompte par niveau, elle n'existe nulle part ailleurs.
+
+Le reste (`compatibility-card`, `compatibility-path`, `lib/compatibility/*`) est
+propre à la branche et ne conflicte avec rien.
+
+> Un point à voir au passage, sans rapport avec le conflit : la branche
+> **change la couleur lila de toute l'app** (`globals.css`) pour l'aligner sur
+> le prototype. Le token est global — les dégradés de repli d'image et `/admin`
+> suivent. C'est voulu, mais ça se voit ailleurs que sur la fiche.
 
 ### 2.3 Maquettes — écrans en place, données en dur
 
@@ -319,7 +327,7 @@ dans cet état — **c'est ce qu'il faut aller regarder avant de livrer.**
 ```
 1. feat/calendrier-inscriptions   (rebase — 45 commits de retard)
 2. feat/partage-experience        (rebase)
-3. feat/score-adequation          (après la décision d'affichage, cf. §2.2)
+3. feat/score-adequation          (après nettoyage du bloc en double, cf. §2.2)
 4. les maquettes, une fois branchées
 5. feat/nav-v2                    (en dernier, et après le calendrier)
 ```
