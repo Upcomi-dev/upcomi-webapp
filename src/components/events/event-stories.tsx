@@ -51,7 +51,7 @@ export function EventStories({ event, stories, storyCount, isPast }: EventStorie
   return (
     <section className="mb-6">
       <h2 className="mb-4 font-serif text-[22px] leading-tight text-foreground">
-        Retours d&apos;expérience
+        Retours d&apos;expérience de la communauté
       </h2>
 
       {isAuthenticated ? (
