@@ -914,6 +914,11 @@ retour restent à faire.
 - Une ligne par récit : avatar ou initiale, prénom, texte libre, bouton « Son
   récit sur Instagram / Strava / … ». Le récit de l'utilisatrice est marqué
   « (toi) ».
+- Le texte est **entre guillemets et en italique** : c'est une parole
+  rapportée, pas la prose de la fiche. Les guillemets sont posés au rendu et
+  non enregistrés avec le texte — ils sont une mise en forme, et un récit qui
+  en contient déjà se retrouverait avec les siens en double. Espaces
+  insécables à l'intérieur, comme le veut la typographie française.
 
 **Bandeau orange de relance** — le `#app-banner` du proto (`ui.js`), monté sous
 la barre de navigation dans `TopNavClient` : dans le flux, sur toutes les pages,
@@ -951,6 +956,26 @@ d'entrée via `useEventStories()`.
 `20260903001000_event_stories.sql` notait « lisible par sa seule autrice tant
 que l'affichage public n'est pas fait » : c'est fait, et la policy de `select`
 n'a pas bougé pour autant.
+
+`supabase/migrations/20260905120000_recits_valides.sql` — **seuls les récits
+validés s'affichent**. Les deux fonctions ci-dessus sont remplacées pour ne
+rendre que `status = 'approved'`.
+
+- **Dépend de `20260905110000_moderation_recits.sql`** (brique
+  `feat/onboarding-v2`, §7), qui crée la colonne `status` et l'écran de
+  relecture dans `/admin`. À appliquer dans cet ordre : l'inverse laisserait ces
+  fonctions chercher une colonne absente.
+- **Une exception : son propre récit reste visible**, quel qu'en soit l'état.
+  Sans elle, écrire un récit le ferait disparaître aussitôt — ce qui se lit
+  comme une panne, pas comme une relecture. Il n'est montré qu'à son autrice,
+  qui n'apprend rien qu'elle ne vienne d'écrire, et la fiche le marque
+  « En attente de relecture ». Le bloc reste donc affiché quand le seul récit
+  lisible est le sien, alors que le compteur public est à zéro.
+- **Le compteur, lui, ne compte que les récits validés**, sans exception : il
+  est ouvert à `anon` et sert à annoncer ce qu'on gagne à créer un compte. Y
+  compter un récit en attente promettrait une lecture qui n'existe pas encore.
+- **Réécrire un récit le renvoie en relecture** (`saveEventStory()`) : ce qui a
+  été relu n'est plus ce qui serait affiché.
 
 ### Décisions prises
 

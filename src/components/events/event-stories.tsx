@@ -46,7 +46,11 @@ export function EventStories({ event, stories, storyCount, isPast }: EventStorie
   // évènement terminé, c'est exactement ce que relance le bandeau orange.
   const canContribute = isAuthenticated && isPast && isParticipating(event.id);
 
-  if (storyCount === 0 && !canContribute) return null;
+  // `storyCount` ne compte que les récits validés ; `stories` porte en plus le
+  // sien, en attente de relecture. Sans ce second test, écrire un récit sur un
+  // évènement à venir ferait disparaître le bloc entier — la personne ne
+  // reverrait jamais ce qu'elle vient d'écrire.
+  if (storyCount === 0 && stories.length === 0 && !canContribute) return null;
 
   return (
     <section className="mb-6">
@@ -106,11 +110,23 @@ function StoryRow({ story, isOwn }: { story: EventStory; isOwn: boolean }) {
         <div className="text-sm font-semibold text-foreground">
           {authorName}
           {isOwn && <span className="ml-1.5 font-normal text-foreground/45">(toi)</span>}
+          {/* Son propre récit est le seul qui remonte avant d'être relu : sans
+              cette mention, il se lirait comme déjà publié. */}
+          {isOwn && story.status !== "approved" && (
+            <span className="ml-2 rounded-full bg-orange-light px-2 py-0.5 text-[11px] font-semibold text-orange-dark">
+              En attente de relecture
+            </span>
+          )}
         </div>
 
+        {/* Guillemets et italique : c'est une parole rapportée, pas la prose
+            de la fiche. Les guillemets sont posés ici et non enregistrés avec
+            le texte — ils sont une mise en forme, et un récit qui en contient
+            déjà se retrouverait avec les siens en double. Espaces insécables
+            à l'intérieur, comme le veut la typographie française. */}
         {text && (
-          <p className="mt-1 whitespace-pre-line text-[14px] leading-[1.65] text-foreground/72">
-            {text}
+          <p className="mt-1 whitespace-pre-line text-[14px] italic leading-[1.65] text-foreground/72">
+            {`\u00AB\u202F${text}\u202F\u00BB`}
           </p>
         )}
 

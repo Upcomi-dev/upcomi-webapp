@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { EventStoryStatus } from "@/lib/types/database";
 
 /**
  * Un récit tel qu'il s'affiche sur la fiche : le prénom de son autrice, son
@@ -10,6 +11,11 @@ export interface EventStory {
   story: string | null;
   storyUrl: string | null;
   createdAt: string;
+  /**
+   * En pratique `approved`, sauf pour son propre récit : la fonction SQL ne
+   * rend les autres qu'une fois relus.
+   */
+  status: EventStoryStatus;
   authorName: string | null;
   authorAvatarUrl: string | null;
 }
@@ -19,6 +25,7 @@ interface EventStoryRow {
   story: string | null;
   story_url: string | null;
   created_at: string;
+  status: EventStoryStatus;
   author_name: string | null;
   author_avatar_url: string | null;
 }
@@ -27,7 +34,8 @@ interface EventStoryRow {
 export const ANONYMOUS_STORY_AUTHOR = "Un·e participant·e";
 
 /**
- * Les récits d'un évènement, du plus récent au plus ancien.
+ * Les récits **validés** d'un évènement, du plus récent au plus ancien — plus
+ * le sien, quel que soit son état de relecture.
  *
  * La fonction n'est exécutable que par `authenticated` : appelée sans session,
  * elle répond « permission denied ». C'est un cas normal, pas une panne — on
@@ -48,13 +56,14 @@ export async function fetchEventStories(
     story: row.story,
     storyUrl: row.story_url,
     createdAt: row.created_at,
+    status: row.status,
     authorName: row.author_name,
     authorAvatarUrl: row.author_avatar_url,
   }));
 }
 
 /**
- * Combien de récits sur cet évènement, sans les lire. C'est ce que la fiche
+ * Combien de récits validés sur cet évènement, sans les lire. C'est ce que la fiche
  * annonce aux personnes déconnectées, pour qui `fetchEventStories` ne renvoie
  * rien.
  */

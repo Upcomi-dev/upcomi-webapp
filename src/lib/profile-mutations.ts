@@ -169,12 +169,17 @@ export async function saveEventStory(
     return { error: null, saved: false };
   }
 
+  // Toute écriture repasse le récit en relecture, y compris la réécriture d'un
+  // récit déjà publié : ce qui a été relu n'est plus ce qui serait affiché.
   const { error } = await supabase.from("user_event_stories").upsert(
     {
       user_id: user.id,
       event_id: draft.eventId,
       story_url: storyUrl,
       story,
+      status: "pending",
+      reviewed_at: null,
+      reviewed_by: null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,event_id" }
