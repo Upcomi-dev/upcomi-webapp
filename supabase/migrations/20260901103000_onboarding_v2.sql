@@ -1,30 +1,17 @@
 -- Onboarding V2 — brique `feat/onboarding-v2` (T1).
 --
--- Deux ajouts, tous les deux additifs (voir docs/upcomi-v2.md §3) : aucune
--- colonne existante n'est renommée, supprimée ni retypée, et `events` n'est
--- pas touchée (la clé étrangère vit dans la table enfant).
+-- Additif (voir docs/upcomi-v2.md §3) : aucune colonne existante n'est
+-- renommée, supprimée ni retypée, et `events` n'est pas touchée (la clé
+-- étrangère vit dans la table enfant).
 --
---   1. `users.genre` — déclaré à l'étape « identité » du parcours, facultatif.
---   2. `user_recommended_events` — les événements que l'utilisatrice recommande
+--   1. `user_recommended_events` — les événements que l'utilisatrice recommande
 --      à la communauté, saisis à l'avant-dernière étape du parcours.
-
--- 1. Genre ------------------------------------------------------------------
 --
--- Volontairement sans contrainte `check` : la liste proposée par l'UI
--- (Féminin / Masculin / Autre / Je préfère ne pas répondre) est amenée à
--- bouger, et la faire évoluer coûterait une migration non additive à chaque
--- fois. La normalisation se fait côté application (`src/lib/profile.ts`).
---
--- Nullable et sans valeur par défaut : ne pas répondre est un choix légitime
--- et doit rester distinct de « Je préfère ne pas répondre ».
+-- Le genre, déclaré à l'étape « identité » du parcours, réutilise la colonne
+-- `users.gender` déjà existante (utilisée par l'admin) plutôt que d'en créer
+-- une nouvelle : voir `src/lib/profile.ts`.
 
-alter table public.users
-  add column if not exists genre text;
-
-comment on column public.users.genre is
-  'Genre déclaré à l''inscription. Facultatif, texte libre côté base, normalisé par l''application.';
-
--- 2. Événements recommandés --------------------------------------------------
+-- 1. Événements recommandés --------------------------------------------------
 --
 -- Table dédiée plutôt qu'un drapeau sur `favourite_events` : « je recommande
 -- cet événement à la communauté » n'est ni « je l'ai mis en favori » ni « j'y

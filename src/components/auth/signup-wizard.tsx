@@ -788,7 +788,7 @@ function PillGroup({
 }
 
 // Facultatif de bout en bout : recliquer sur la réponse déjà sélectionnée la
-// retire, et ne rien choisir laisse la colonne `users.genre` à `null`.
+// retire, et ne rien choisir laisse la colonne `users.gender` à `null`.
 function GenderField({
   value,
   disabled,

@@ -428,11 +428,15 @@ pas encore ici.
 
 `supabase/migrations/20260901103000_onboarding_v2.sql` :
 
-- `users.genre`, texte nullable, sans contrainte `check` — la liste de l'UI est
-  amenée à bouger et la contraindre coûterait une migration non additive à
-  chaque évolution.
 - `user_recommended_events` (`user_id`, `event_id`, `created_at`), avec RLS,
   `revoke`/`grant` et les trois policies dans le même fichier.
+
+Pas d'ajout de colonne pour le genre : `users.gender` existait déjà (utilisée
+par l'admin) avant `feat/onboarding-v2`. Une première version de cette brique
+avait introduit une colonne `genre` séparée — jamais appliquée en prod, ce qui
+faisait échouer `layout.tsx`/`/profil`/la modale profil avec « Could not find
+the 'genre' column of 'users' in the schema cache ». Reconcilié en réutilisant
+`gender` partout (`src/lib/profile.ts`, `src/lib/profile-mutations.ts`).
 
 `supabase/migrations/20260903001000_event_stories.sql` :
 
@@ -449,10 +453,6 @@ pas encore ici.
   choisis sont **déjà couverts**, par n'importe qui. Elle ne renvoie que des
   identifiants d'événements — jamais un récit ni son autrice — et n'est
   exécutable que par `authenticated`.
-
-**À appliquer en base avant de merger le code** : `layout.tsx`, `/profil` et la
-modale profil sélectionnent désormais la colonne `genre`. Tant qu'elle n'existe
-pas, la requête échoue silencieusement et le profil remonte vide.
 
 ### Décisions prises
 

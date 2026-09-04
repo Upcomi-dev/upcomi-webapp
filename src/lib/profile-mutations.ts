@@ -52,7 +52,7 @@ export async function saveUserProfile(
         ville: profile.city || null,
         pref1: profile.practiceTypes.length > 0 ? profile.practiceTypes : null,
         pref2: profile.practiceLevel || null,
-        genre: profile.gender || null,
+        gender: profile.gender || null,
         updated_at: now,
       },
       { onConflict: "uid" }
