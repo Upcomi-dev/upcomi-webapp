@@ -9,40 +9,38 @@
  */
 
 /**
- * Le vocabulaire des types de vélo. Fermé et validé à l'écriture — le parcours
- * d'une proposition d'évènement rejette toute autre valeur, et
- * `events.bike_type` est construit en joignant ces valeurs par des virgules
- * (voir `src/app/proposer-un-evenement/actions.ts`).
+ * Le vocabulaire des types de vélo, fermé et validé à l'écriture : le parcours
+ * de proposition d'évènement rejette toute autre valeur
+ * (`src/app/proposer-un-evenement/actions.ts`).
  */
 export const BIKE_TYPES = ["Route", "Gravel", "VTT"] as const;
 
 export type BikeType = (typeof BIKE_TYPES)[number];
 
 /**
- * Lit un champ de type de vélo : « Gravel », « Route, Gravel »…
+ * Le type de vélo d'un parcours, tel qu'il est stocké : **une** valeur du
+ * vocabulaire dans `sous_events.bikeType`, ou rien.
  *
- * Appartenance exacte au vocabulaire, jamais de recherche de sous-chaîne. Le
- * prototype testait `/gravel|mixte/` sur du texte libre : « mixte » n'existe
- * pas dans cette base, et une regex accepte n'importe quoi qui contient le mot
- * — c'est exactement ce qu'on ne veut pas d'un champ dont les valeurs sont
- * connues d'avance.
+ * Comparaison exacte, sans découpage ni recherche de sous-chaîne. Tout ce qui
+ * n'est pas dans le vocabulaire est traité comme absent — on ne devine pas :
+ * une donnée qu'on ne sait pas lire n'est pas une donnée.
  */
-export function parseBikeTypes(value: string | null | undefined): BikeType[] {
-  if (!value) return [];
-
-  const found = value
-    .split(",")
-    .map((part) => part.trim().toLocaleLowerCase("fr-FR"))
-    .filter(Boolean);
-
-  return BIKE_TYPES.filter((type) => found.includes(type.toLocaleLowerCase("fr-FR")));
+export function toBikeType(value: string | null | undefined): BikeType | null {
+  const trimmed = value?.trim().toLocaleLowerCase("fr-FR");
+  if (!trimmed) return null;
+  return BIKE_TYPES.find((type) => type.toLocaleLowerCase("fr-FR") === trimmed) ?? null;
 }
 
-/** Un parcours de l'évènement, réduit à ce dont le questionnaire a besoin. */
+/**
+ * Un parcours de l'évènement, réduit à ce dont le questionnaire a besoin.
+ *
+ * Tout vient de colonnes typées de `sous_events` : un type de vélo, une
+ * distance en kilomètres, un dénivelé en mètres. Rien n'est déduit d'un champ
+ * de texte libre.
+ */
 export interface CompatRoute {
   name: string;
-  /** Types de vélo du parcours, déjà lus (voir `parseBikeTypes`). */
-  bikeTypes: BikeType[];
+  bikeType: BikeType | null;
   distanceKm: number | null;
   elevationM: number | null;
 }
@@ -208,11 +206,11 @@ export function getItineraryQuestion(eventName: string, routes: CompatRoute[]): 
 }
 
 function matchesGravel(route: CompatRoute) {
-  return route.bikeTypes.includes("Gravel");
+  return route.bikeType === "Gravel";
 }
 
 function matchesVtt(route: CompatRoute) {
-  return route.bikeTypes.includes("VTT");
+  return route.bikeType === "VTT";
 }
 
 /**

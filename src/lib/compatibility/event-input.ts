@@ -1,5 +1,5 @@
 import { getDateKey } from "@/lib/utils/event-dates";
-import { parseBikeTypes, type CompatRoute } from "@/lib/compatibility/questions";
+import { toBikeType, type CompatRoute } from "@/lib/compatibility/questions";
 import type { CompatEventInput } from "@/lib/compatibility/scoring";
 import type { Event, SousEvent } from "@/lib/types/database";
 
@@ -28,28 +28,33 @@ function getDurationDays(dateEvent: string | null, dateFin: string | null): numb
 /**
  * L'évènement, réduit à ce dont le score d'adéquation a besoin.
  *
- * Les « parcours » du prototype sont ici les `sous_events`. Le type de vélo est
- * celui du parcours quand il est exploitable, sinon celui de l'évènement : un
- * `sous_events.bikeType` vide ou hors vocabulaire ne doit pas effacer la liste
- * de l'évènement, qui est souvent la mieux remplie des deux.
+ * **Uniquement des colonnes typées.** Les « parcours » du prototype sont ici
+ * les `sous_events`, qui portent un type de vélo pris dans un vocabulaire
+ * fermé, une distance en kilomètres et un dénivelé en mètres — trois colonnes
+ * dédiées, pas trois façons de lire une phrase. La durée vient des deux dates.
+ *
+ * Rien n'est déduit de `events.bike_type` ni de `events.distance` : le premier
+ * est la jonction par virgules des types de ses parcours, le second un champ
+ * libre où « 250 / 500 / 800 km » décrit trois parcours au choix. Les lire
+ * demandait de découper du texte pour retrouver ce que `sous_events` porte
+ * déjà proprement.
+ *
+ * Un évènement sans parcours n'a donc ni terrain, ni distance, ni dénivelé : le
+ * questionnaire se limite au socle commun et les critères correspondants
+ * disparaissent. C'est le comportement voulu — une donnée absente ne se devine
+ * pas.
  */
 export function buildCompatEvent(event: Event, sousEvents: SousEvent[]): CompatEventInput {
-  const eventBikeTypes = parseBikeTypes(event.bike_type);
-  const routes: CompatRoute[] = sousEvents.map((se, index) => {
-    const routeBikeTypes = parseBikeTypes(se.bikeType);
-    return {
-      name: se.nom?.trim() || `Parcours ${index + 1}`,
-      bikeTypes: routeBikeTypes.length > 0 ? routeBikeTypes : eventBikeTypes,
-      distanceKm: se.distance,
-      elevationM: se.elevation,
-    };
-  });
+  const routes: CompatRoute[] = sousEvents.map((se, index) => ({
+    name: se.nom?.trim() || `Parcours ${index + 1}`,
+    bikeType: toBikeType(se.bikeType),
+    distanceKm: se.distance,
+    elevationM: se.elevation,
+  }));
 
   return {
     name: event.nomEvent || "cet évènement",
-    description: event.description,
     durationDays: getDurationDays(event.dateEvent, event.dateFin),
-    distance: event.distance,
     routes,
   };
 }

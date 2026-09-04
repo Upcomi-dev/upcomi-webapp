@@ -819,24 +819,35 @@ la compter.
   enchaîner deux sorties sur deux jours », « à rouler sur la journée complète »)
   plutôt que de renvoyer à un kilométrage : c'est du temps en selle qui manque,
   pas des kilomètres.
-- **Le terrain se lit dans un vocabulaire fermé, jamais par une regex.**
-  `Route | Gravel | VTT` est validé à l'écriture (`BIKE_TYPES` du parcours de
-  proposition), et `events.bike_type` est la jonction par virgules des types de
-  ses parcours. `parseBikeTypes()` découpe et compare par appartenance exacte.
-  Le `/gravel|mixte/` du proto acceptait « Gravelotte » et « Parcours mixte », et
-  son `mixte` n'existe dans aucun des deux champs — c'est le double match
-  Gravel + VTT qui produit le cas mixte. Sur les valeurs présentes en base, les
-  deux lectures donnent le même résultat : le changement ne ferme qu'une porte.
+- **Le score ne lit que des colonnes typées.** Tout vient de `sous_events` —
+  `bikeType` (une valeur d'un vocabulaire fermé), `distance` (smallint, en km),
+  `elevation` (bigint, en m) — et des deux dates de `events`. Trois colonnes
+  dédiées, pas trois façons de lire une phrase.
+
+  Ce qui a été retiré, et pourquoi :
+
+  | Lecture du proto | Problème | Remplacée par |
+  |---|---|---|
+  | `/gravel\|mixte/` sur le type de vélo | accepte « Gravelotte », et le mot « mixte » n'existe dans aucun champ | `toBikeType()` : égalité exacte avec `Route \| Gravel \| VTT` |
+  | `events.bike_type` en repli | jonction par virgules des types des parcours — du texte à redécouper pour retrouver ce que `sous_events` porte déjà | supprimé |
+  | `events.distance` en repli | champ libre où « 250 / 500 / 800 km » décrit trois parcours | `sous_events.distance`, un entier |
+  | `/autonomie/` sur nom + description | devine un format à partir d'une phrase | supprimé (le champ n'était lu nulle part) |
+  | km ÷ 18 pour la durée | déduit un délai d'un kilométrage | `dateEvent` / `dateFin` |
+
+  Corollaire assumé : **un évènement sans `sous_events` n'a ni terrain, ni
+  distance, ni dénivelé.** Le questionnaire se limite alors au socle commun et
+  les critères correspondants disparaissent. Une donnée absente ne se devine
+  pas.
+
 - **Les deux questions de terrain sont posées** : la donnée VTT est du même
   vocabulaire, et de la même qualité, que la donnée gravel.
 
-  > **À vérifier en prod.** En base locale, `sous_events.bikeType` ne porte
-  > qu'une seule valeur — `Gravel`, sur 94 lignes sur 94. Comme le type du
-  > parcours prime sur celui de l'évènement, **57 évènements dont
-  > `events.bike_type` vaut « Route »** se voient poser la question gravel. Si
-  > la prod présente la même uniformité, il faut inverser la priorité (ou
-  > n'utiliser que `events.bike_type`) avant d'activer le bloc. La requête :
-  > `select count(distinct "bikeType") from sous_events;`
+  > **À vérifier en prod — problème de données, pas de lecture.** En base
+  > locale, `sous_events.bikeType` ne porte qu'une seule valeur : `Gravel`, sur
+  > 94 lignes sur 94. **57 évènements dont `events.bike_type` vaut « Route »**
+  > se voient donc poser la question gravel. Aucune façon de lire le champ ne
+  > corrige ça — il faut que la colonne soit remplie. La requête qui tranche :
+  > `select "bikeType", count(*) from sous_events group by 1;`
 
 - **Le questionnaire n'écrase pas `pref2`** : la déclaration d'onboarding et la
   mesure fine coexistent. Proposer « ton niveau déclaré ne correspond plus, on

@@ -46,11 +46,8 @@ export function getProfileScore(answers: CompatAnswers | null | undefined): numb
 
 export interface CompatEventInput {
   name: string;
-  description: string | null;
   /** Durée de l'évènement en jours, départ et arrivée inclus. */
   durationDays: number | null;
-  /** Kilométrage annoncé sur l'évènement, champ libre (« 180 », « 250 / 500 »). */
-  distance: string | null;
   routes: CompatRoute[];
 }
 
@@ -67,21 +64,6 @@ export interface EventCompatProfile {
    * jours d'affilée). Voir `getDurationTier`.
    */
   durationTier: number;
-}
-
-/**
- * `events.distance` est un champ libre : « 180 », « 180 km », mais aussi
- * « 250 / 500 / 800 km », qui décrit trois parcours au choix. Dans ce dernier
- * cas aucune valeur ne vaut pour l'évènement — on ne retient donc une distance
- * que si le champ n'en porte qu'une, comme pour le rythme « km par jour » de
- * la timeline (voir `event-key-dates.ts`).
- */
-function parseSingleDistance(distance: string | null): number | null {
-  if (!distance) return null;
-  const matches = distance.match(/\d+(?:[.,]\d+)?/g);
-  if (!matches || matches.length !== 1) return null;
-  const value = Number.parseFloat(matches[0].replace(",", "."));
-  return Number.isFinite(value) && value > 0 ? value : null;
 }
 
 /** Vitesse moyenne, seulement pour estimer la durée d'un évènement d'un jour. */
@@ -133,17 +115,15 @@ export function getEventCompatProfile(
   const denivele =
     elevationPerDay > 3500 ? 4 : elevationPerDay > 2000 ? 3 : elevationPerDay > 1000 ? 2 : 1;
 
-  // Appartenance au vocabulaire des types de vélo, jamais une recherche de
-  // sous-chaîne : les valeurs sont connues d'avance (voir `parseBikeTypes`).
-  const bikeTypes = route?.bikeTypes ?? [];
-  const isGravel = bikeTypes.includes("Gravel");
-  const isVtt = bikeTypes.includes("VTT");
+  // `sous_events.bikeType` porte une valeur du vocabulaire, ou rien.
+  const isGravel = route?.bikeType === "Gravel";
+  const isVtt = route?.bikeType === "VTT";
   // Le champ dit quel terrain, pas à quel point il est engagé : un parcours
   // gravel ou VTT est donc considéré « intermédiaire », faute de mieux.
   const terrainTier = 2;
 
-  const km = route?.distanceKm ?? parseSingleDistance(event.distance) ?? 0;
-  const kmPerDay = Math.round(km / days) || 0;
+  // `sous_events.distance` est un smallint en kilomètres : rien à interpréter.
+  const kmPerDay = Math.round((route?.distanceKm ?? 0) / days) || 0;
 
   return {
     denivele,
