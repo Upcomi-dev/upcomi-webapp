@@ -754,11 +754,16 @@ avec elle.
 
 **« X personnes intéressées », avec ses visages, à côté des actions.**
 « Intéressée » = a mis l'évènement en favori, ce qu'écrit le bouton « Ça
-m'intéresse ». Le bloc est aux trois endroits du prototype : au-dessus de la
-paire « M'inscrire » / « Ça m'intéresse » en haut de fiche, dans la colonne de
-droite en desktop, et dans la barre collante en mobile
-(`registered-count-label`). Même composant, une variante `compact` pour les
-deux emplacements étroits.
+m'intéresse ». Le bloc suit partout la paire « M'inscrire » / « Ça m'intéresse »
+et ne se montre jamais sans elle : en haut de fiche et dans la barre collante en
+mobile (`registered-count-label`), dans la colonne de droite en desktop. Même
+composant, une variante `compact` pour les deux emplacements étroits.
+
+> Le bloc du haut porte donc le `lg:hidden` de la paire qu'il accompagne. Sans
+> lui — c'est l'état d'où il a été repris — le compteur s'affichait **deux fois
+> sur le même écran** en desktop : une fois pleine largeur au-dessus des deux
+> colonnes, sans ses boutons puisqu'ils sont masqués là, et une fois dans la
+> colonne de droite.
 
 **La feuille des personnes**, ouverte en cliquant sur le compteur : une ligne
 par personne — son nom, puis « ville · pratique niveau ». Sans compte, le clic
