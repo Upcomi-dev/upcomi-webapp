@@ -42,6 +42,81 @@ uniquement à brancher les boutons vers les nouvelles pages.
 > fonction par flag. Au-delà de deux ou trois briques flaguées, il faudra un
 > `isFeatureEnabled(key)` générique et un écran d'interrupteurs dans `/admin`.
 
+### État des branches en cours (2026-09-04)
+
+Chaque branche se documente elle-même, et le fait **sur sa branche** : sa
+section n'arrive dans ce document qu'avec le merge — d'où la colonne
+« Section », qui dit où lire. Ce qui suit est le reste : ce qu'aucune branche ne
+peut porter seule, parce que ça se joue **entre** elles.
+
+| Branche | Ce qu'elle porte | Section | Migration |
+|---|---|---|---|
+| `feat/calendrier-inscriptions` | Calendrier des inscriptions | §6 | aucune |
+| `feat/fiche-evenement-v2` | Dates clés, mesures d'inclusion, UI | §8 | `20260902101500` |
+| `feat/onboarding-v2` | Parcours d'inscription, récits, modération | §7 (modération : sur la branche) | `20260901103000`, `20260903001000`, `20260905110000` |
+| `feat/avantages-evenement` | Code promo, dispositions d'inscription | §10, sur la branche | `20260905100000` |
+| `feat/partage-experience` | Affichage des récits | §11, sur la branche | `20260904000000`, `20260905120000` |
+| `feat/score-adequation` | Score d'adéquation | §9, sur la branche | `20260904120000`, `20260904170000` |
+
+Toutes partent de `preprod` et sont à jour, **sauf `feat/score-adequation`** —
+voir ci-dessous.
+
+> **Collision de numérotation à prévoir** : `feat/score-adequation` numérote sa
+> section §9, place que `feat/personnes-interessees` occupe déjà ici. Les deux
+> branches se disputent aussi le même bloc (voir plus bas) : c'est le même
+> chantier de réconciliation, le document suit le code.
+
+#### Ordre d'application des migrations
+
+Les fichiers sont indépendants et rejouables, à **une** exception près :
+
+```
+20260905110000_moderation_recits.sql   (feat/onboarding-v2)
+        ↓ crée user_event_stories.status
+20260905120000_recits_valides.sql      (feat/partage-experience)
+```
+
+La seconde filtre l'affichage sur `status = 'approved'` : jouée en premier, elle
+cherche une colonne qui n'existe pas encore. C'est la seule dépendance entre
+branches du plan.
+
+#### ⚠️ `feat/score-adequation` a divergé de `preprod`
+
+Les deux portent **chacune leur implémentation du bloc « qui est intéressé »** :
+la branche l'a écrit pour son propre besoin (paliers d'expérience) avant que
+`feat/personnes-interessees` (§9) ne soit sortie seule et fusionnée dans
+`preprod`. Merger `preprod` dans la branche donne **7 fichiers en conflit, dont
+5 en add/add** (`interested-block`, `interested-people-context`, `people-sheet`,
+`person-avatar`, `lib/events/interested-people`).
+
+Ce n'est pas un conflit de texte à trancher ligne à ligne : il faut décider
+quelle lecture survit — celle de `preprod` (niveau et ville affichés tels que
+déclarés) ou celle de la branche (repliage en trois paliers) — et rebrancher le
+questionnaire dessus. C'est un chantier à programmer pour lui-même, pas un
+préalable qu'on règle en passant. **Tant qu'il n'est pas fait, la branche ne
+peut pas être fusionnée.**
+
+#### Deux policies RLS à vérifier en prod avant de livrer
+
+Relevées en base **locale**, sur deux tables qu'aucune de ces briques n'a
+créées. Rien n'a été ajouté à une migration dans un cas comme dans l'autre :
+corriger à l'aveugle la RLS d'une table partagée avec l'app mobile serait pire
+que le problème. Soit les policies ont été posées dans le dashboard après le
+dump dont vient la baseline, soit la prod est réellement dans cet état — c'est
+ce qu'il faut aller regarder.
+
+1. **`public.favourite_events` n'a aucune policy d'écriture** — détail et
+   commandes de déblocage en §9. Bloque « Ça m'intéresse ».
+2. **`public.admin_users` a la RLS activée et aucune policy.** `assertAdmin()`
+   lit sa propre ligne en tant qu'`authenticated` : sans policy elle ne voit
+   rien, et `/admin` renvoie tout le monde à l'accueil. Pour débloquer en
+   local :
+
+   ```sql
+   create policy "Own admin row is readable" on public.admin_users
+     for select to authenticated using ((select auth.uid()) = user_id);
+   ```
+
 ---
 
 ## 2. Découpage en briques
