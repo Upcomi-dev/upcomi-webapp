@@ -1,28 +1,38 @@
 # Upcomi V2 — dossier de passation
 
-Ce document est le point d'entrée unique pour reprendre le chantier V2 : ce
-qu'on construit, où en est le code, ce qu'il reste à faire, et comment
-travailler sur le projet.
+*État au 4 septembre 2026.*
+
+Point d'entrée unique pour reprendre le chantier V2 : ce qu'on construit (§1),
+où en est le code (§2), comment livrer (§3-4), et comment travailler sur le
+projet (§5-7).
 
 Le prototype de référence est le dépôt `upcomi-clone` (HTML/CSS/JS statique,
 données mock). Il n'est **jamais** fusionné ici : c'est un cahier des charges,
 pas du code source. Son état validé est figé par le tag `spec-v1`.
+
+Pour vérifier que l'état décrit ici est toujours le bon :
+
+```bash
+git fetch --all
+git rev-list --left-right --count main...preprod     # ce qui attend d'être livré
+git branch -a --format='%(refname:short) | %(committerdate:short)'
+```
 
 ---
 
 ## 0. En un coup d'œil
 
 > ### ⚠️ Rien de la V2 n'est en production.
-> `main` est **42 commits derrière `preprod`**. Tout ce qui est marqué
-> « fusionné » ci-dessous l'est dans `preprod` seulement. La première livraison
-> sera donc un batch : toutes les migrations d'un coup, et deux policies RLS à
-> vérifier avant (§4).
+> `main` n'a reçu **aucun commit V2** : tout ce qui est marqué « fusionné »
+> ci-dessous l'est dans `preprod` seulement. La première livraison sera donc un
+> batch — toutes les migrations d'un coup, et deux droits d'accès à vérifier
+> avant (§4).
 
 | Chantier | État | Prochaine action |
 |---|---|---|
 | Inscription & profil | fusionné preprod | livrer |
 | Fiche évènement (dates clés, inclusion, UI) | fusionné preprod | livrer + **saisir les mesures** |
-| Qui est intéressé | fusionné preprod | livrer, après vérif RLS |
+| Qui est intéressé | fusionné preprod | livrer, après vérif des droits (§4) |
 | Avantages membres (code promo) | fusionné preprod | livrer + **saisir les codes** |
 | Calendrier des inscriptions | écrit, hors preprod | rebaser, merger |
 | Récits d'expérience (affichage) | écrit, hors preprod | rebaser, merger |
@@ -35,6 +45,19 @@ pas du code source. Son état validé est figé par le tag `spec-v1`.
 | Alertes d'ouverture d'inscription | **non commencé** | tout |
 | Inscription publique | **non commencé** | tout |
 | Centre de notifications | **non commencé** | tout |
+
+### Par où commencer
+
+1. **Aller regarder la prod** — les deux droits d'accès du §4. Tant qu'ils ne
+   sont pas vérifiés, « Ça m'intéresse » et `/admin` peuvent être cassés en
+   production sans qu'on le sache.
+2. **Livrer ce qui dort dans `preprod`** (§2.1). C'est quatre briques finies,
+   relues, qui n'apportent aujourd'hui zéro valeur parce qu'elles ne sont pas
+   sorties.
+3. **Ouvrir les écrans de saisie `/admin`** (§2.4). Sans eux, trois des quatre
+   briques livrées restent invisibles faute de contenu.
+
+Ensuite seulement, reprendre les branches en attente dans l'ordre du §4.
 
 ---
 
@@ -87,8 +110,8 @@ pas du code source. Son état validé est figé par le tag `spec-v1`.
 > donné avant mon inscription.
 
 > **En tant que cycliste**, je veux savoir qui organise — qui elles sont, ce
-> qu'elles font le reste de l'année, où les suivre —, **afin de** distinguer un
-> collectif engagé d'un simple prestataire.
+> qu'elles font le reste de l'année, où voir leurs sorties passées —, **afin
+> de** distinguer un collectif engagé d'un simple prestataire.
 
 > **En tant que cycliste concernée par l'accueil**, je veux voir concrètement
 > ce qui est prévu pour moi (mixité, accompagnement, matériel, garde
@@ -164,38 +187,35 @@ valeur promise ci-dessus n'existe pas.
 
 ### 2.2 Écrit et fonctionnel, hors `preprod`
 
-| Branche | Retard sur `preprod` | À faire avant merge |
-|---|---|---|
-| `feat/calendrier-inscriptions` | 45 commits | rebaser puis merger. Le bouton « Me prévenir » n'est **pas** dans le périmètre — voir §2.4 |
-| `feat/partage-experience` | 13 commits | rebaser puis merger. Sa migration doit passer **après** celle de la modération |
-| `feat/score-adequation` | 22 commits, **divergée** | retirer le bloc « personnes intéressées » qu'elle double, voir ci-dessous |
-| `worktree-burger-menu-v2` | partie d'un `main` ancien | décider de son sort : elle refait le menu mobile, que `feat/nav-v2` refait aussi. L'une des deux doit disparaître |
+Toutes ont pris du retard sur `preprod` et demandent un rebase.
+
+| Branche | À faire avant merge |
+|---|---|
+| `feat/calendrier-inscriptions` | rebaser puis merger. Le bouton « Me prévenir » n'est **pas** dans le périmètre — voir §2.4 |
+| `feat/partage-experience` | rebaser puis merger. Sa migration doit passer **après** celle de la modération (§4) |
+| `feat/score-adequation` | retirer le bloc « personnes intéressées » qu'elle double, voir ci-dessous |
+| `worktree-burger-menu-v2` | décider de son sort. Partie d'un `main` ancien, jamais documentée, elle refait le menu mobile — que `feat/nav-v2` refait aussi. L'une des deux doit disparaître |
 
 #### `feat/score-adequation` : ce qu'il faut en retirer
 
 Cette branche apporte **deux blocs** : le questionnaire d'adéquation (« cet
 évènement est-il à ma portée ? ») et « X personnes intéressées ». Le second a
 été sorti seul en T1 par `feat/personnes-interessees` et fusionné dans
-`preprod` entre-temps. D'où la divergence — cinq fichiers créés des deux côtés.
+`preprod` entre-temps — d'où cinq fichiers créés des deux côtés.
 
-**La résolution, c'est bien de retirer le bloc « personnes intéressées » de la
-branche** et de garder celui de `preprod`. Trois de ces fichiers se suppriment
-sèchement (`interested-block.tsx`, `people-sheet.tsx`, `person-avatar.tsx`, plus
-les avatars de `public/`).
+**La résolution, c'est de retirer le bloc « personnes intéressées » de la
+branche** et de garder celui de `preprod`. Trois fichiers se suppriment
+sèchement : `interested-block.tsx`, `people-sheet.tsx`, `person-avatar.tsx`
+(plus les avatars de `public/`, ajoutés des deux côtés).
 
-**Attention aux deux qui restent** : le questionnaire ne se contente pas
-d'afficher les personnes intéressées, il **compte celles qui ont une expérience
-comparable à la mienne** (« 8 personnes avec une expérience similaire sont déjà
-intéressées »). Il a donc besoin, en plus de ce que fait `preprod`, du décompte
-par niveau — que la branche va chercher par une requête à part.
-
-À reporter sur les fichiers de `preprod`, sans rien changer à ce qu'ils
-affichent déjà :
-
-| Fichier | Geste |
-|---|---|
-| `lib/events/interested-people.ts` | garder la version `preprod` (ville + niveau déclaré), y ajouter le décompte par niveau et le calcul « expérience similaire » |
-| `interested-people-context.tsx` | garder la version `preprod`, exposer le décompte par niveau en plus |
+**Les deux autres demandent un report.** Le questionnaire ne se contente pas
+d'afficher les personnes intéressées : il **compte celles qui ont une
+expérience comparable à la mienne** (« 8 personnes avec une expérience
+similaire sont déjà intéressées »). Il lui faut donc, en plus de ce que fait
+`preprod`, le décompte par niveau — que la branche va chercher par une requête
+à part. Sur `lib/events/interested-people.ts` et `interested-people-context.tsx`,
+partir de la version `preprod` (l'affichage ne change pas) et y ajouter ce
+décompte.
 
 Côté migrations :
 
@@ -203,15 +223,15 @@ Côté migrations :
   ce qui est déjà passé dans `preprod` (recopie du niveau, fonctions de lecture
   des intéressées). Ne garder que la table des réponses au questionnaire.
 - `20260904170000_public_interested_levels.sql` — **à garder telle quelle** :
-  c'est le décompte par niveau, elle n'existe nulle part ailleurs.
+  c'est le décompte par niveau, il n'existe nulle part ailleurs.
 
 Le reste (`compatibility-card`, `compatibility-path`, `lib/compatibility/*`) est
 propre à la branche et ne conflicte avec rien.
 
-> Un point à voir au passage, sans rapport avec le conflit : la branche
-> **change la couleur lila de toute l'app** (`globals.css`) pour l'aligner sur
-> le prototype. Le token est global — les dégradés de repli d'image et `/admin`
-> suivent. C'est voulu, mais ça se voit ailleurs que sur la fiche.
+> À voir au passage, sans rapport avec le conflit : la branche **change la
+> couleur lila de toute l'app** (`globals.css`) pour l'aligner sur le prototype.
+> Le token est global — les dégradés de repli d'image et `/admin` suivent. C'est
+> voulu, mais ça se voit ailleurs que sur la fiche.
 
 ### 2.3 Maquettes — écrans en place, données en dur
 
@@ -265,25 +285,23 @@ feat/<brique>  →  preprod  →  main  →  prod
 **Point à trancher** : merger `preprod` dans `main` livre *tout* d'un coup. Pour
 livrer brique par brique, il faudrait cherry-picker.
 
-**Chaque branche non fusionnée documente sa brique dans ce fichier, sur sa
-branche.** Au merge, ce fichier entre en conflit : garder la structure de
-`preprod` et y insérer la section de la branche.
+**Chaque branche documente sa brique dans ce fichier, sur sa branche** (§8). Au
+merge, ce fichier entre donc en conflit : garder la structure de `preprod` et y
+insérer la section de la branche.
 
 ### Feature flags
 
 Table `app_features`, lue par `src/lib/features.ts`. Merger dans `main`
 déclenche le déploiement ; le flag découple « le code est en prod » de
-« l'utilisatrice le voit ». Aucune brique V2 n'en utilise aujourd'hui.
-
-> Limite connue : `isEventProposalFeatureEnabled()` est codée en dur, une
-> fonction par flag. Au-delà de deux ou trois briques flaguées, il faudra un
-> `isFeatureEnabled(key)` générique et un écran d'interrupteurs dans `/admin`.
+« l'utilisatrice le voit ». **Aucune brique V2 n'en utilise aujourd'hui** :
+elles dégradent proprement quand leur contenu n'est pas saisi, ce qui rend le
+flag inutile. Voir §4.5 pour la limite du système actuel.
 
 ---
 
 ## 4. Séquence de livraison
 
-### Avant tout : deux droits d'accès à vérifier en production
+### 4.1 Avant tout : trois droits d'accès à vérifier en production
 
 Relevés en base **locale**, sur des tables qu'aucune brique V2 n'a créées. Rien
 n'a été corrigé : modifier à l'aveugle les droits d'une table partagée avec
@@ -294,7 +312,7 @@ dans cet état — **c'est ce qu'il faut aller regarder avant de livrer.**
 1. **`public.favourite_events` n'a aucune règle d'écriture.** Le bouton « Ça
    m'intéresse » écrit pourtant en direct depuis le navigateur : en local, il
    répond 403. Bloque le bloc « qui est intéressé » *et* le score d'adéquation.
-   Pour débloquer en local :
+   Déblocage local :
 
    ```sql
    create policy "Own favourites insert" on public.favourite_events
@@ -306,10 +324,6 @@ dans cet état — **c'est ce qu'il faut aller regarder avant de livrer.**
      with check ((select auth.uid()) = user_id);
    ```
 
-   Second point, plus ancien : `favourite_events` a `grant all … to anon` et une
-   policy de `select` sans clause `to`. Avec la clé publique, n'importe qui peut
-   énumérer qui a mis quoi en favori. Lecture seule, mais à traiter.
-
 2. **`public.admin_users` a la RLS activée et aucune policy.** `assertAdmin()`
    lit sa propre ligne : sans policy, `/admin` renvoie tout le monde à
    l'accueil. Déblocage local :
@@ -319,22 +333,34 @@ dans cet état — **c'est ce qu'il faut aller regarder avant de livrer.**
      for select to authenticated using ((select auth.uid()) = user_id);
    ```
 
-3. **Le suivi (`friendships`) n'a qu'un droit de lecture.** Même problème, il
-   tombera le jour où le social se branche.
+3. **Le suivi (`friendships`) n'a qu'un droit de lecture.** Même problème,
+   dormant : il tombera le jour où le social se branche (§2.3).
 
-### Ordre de merge
+### 4.2 Livrer ce qui est dans `preprod`
+
+C'est la première livraison V2, et elle part d'un coup :
+
+1. Vérifier les droits ci-dessus.
+2. Appliquer les migrations `preprod` non encore passées en prod, dans l'ordre
+   des horodatages. Elles sont toutes additives et rejouables.
+3. Merger `preprod` dans `main` — le déploiement se déclenche.
+4. Saisir le contenu : mesures d'inclusion, codes promo, dispositions
+   d'inscription (en SQL tant que les écrans `/admin` n'existent pas).
+
+Il n'y a **aucune CI** : la liste de ce qui est déjà passé en prod se tient à la
+main. La commencer maintenant, avec ce premier batch.
+
+### 4.3 Ordre de merge des branches en attente
 
 ```
-1. feat/calendrier-inscriptions   (rebase — 45 commits de retard)
-2. feat/partage-experience        (rebase)
-3. feat/score-adequation          (après nettoyage du bloc en double, cf. §2.2)
+1. feat/calendrier-inscriptions   (rebase)
+2. feat/partage-experience        (rebase — sa migration après celle de la modération)
+3. feat/score-adequation          (après nettoyage du bloc en double, §2.2)
 4. les maquettes, une fois branchées
 5. feat/nav-v2                    (en dernier, et après le calendrier)
 ```
 
-### Ordre des migrations
-
-Les fichiers sont indépendants et rejouables, à deux exceptions près :
+### 4.4 La seule dépendance entre migrations
 
 ```
 20260905110000_moderation_recits.sql   (dans preprod)
@@ -343,23 +369,23 @@ Les fichiers sont indépendants et rejouables, à deux exceptions près :
 ```
 
 La seconde ne montre que les récits validés : jouée en premier, elle cherche une
-colonne absente.
+colonne qui n'existe pas encore. Tout le reste est indépendant et rejouable —
+sauf ce qu'il faut retirer de `feat/score-adequation` avant son rebase (§2.2).
 
-Et au rebase de `feat/score-adequation` : sa migration redéfinit
-`sync_user_public()` **sans** la ville et porte un horodatage antérieur à celle
-de `feat/personnes-interessees`, déjà dans `preprod`. Sur une base neuve l'ordre
-les départage ; sur la prod, l'appliquer ensuite ferait perdre la recopie de la
-ville. Sa partie « niveau » fait double emploi et doit disparaître.
+### 4.5 Dettes connues, à traiter quand elles gênent
 
-### Dette connue à trancher
-
-**`users.genre` double `users.gender`.** `gender` existait en prod
-(FlutterFlow) quand `genre` a été ajoutée. Les deux coexistent et **la webapp
-écrit dans les deux selon l'écran** : l'inscription et `/profil` écrivent
-`genre`, l'éditeur d'utilisatrices de `/admin` écrit `gender`. Les lectures ne
-regardent que `genre` — une correction faite depuis `/admin` n'a aucun effet
-visible. À trancher avant que l'app mobile, qui lit `gender`, ne diverge pour de
-bon.
+- **La jointure évènement → organisatrice se fait par le nom** : renommer une
+  organisatrice détache ses évènements (§6). Passer à une clé étrangère est un
+  vrai backfill — le jour où ça coince.
+- **`favourite_events` est énumérable avec la clé publique** (`grant all … to
+  anon`, policy de `select` sans clause `to`) : n'importe qui peut lire qui a
+  mis quoi en favori. Lecture seule, mais à traiter.
+- **Les feature flags sont codés en dur**, une fonction par flag
+  (`isEventProposalFeatureEnabled()`). Au-delà de deux ou trois briques
+  flaguées, il faudra un `isFeatureEnabled(key)` générique et un écran
+  d'interrupteurs dans `/admin`.
+- **Le socle de la base n'est pas versionné** (§7) : `supabase db reset` ne
+  reconstruit pas une base exploitable.
 
 ---
 
@@ -405,10 +431,8 @@ migration en base  →  merge du code  →  activation du flag
 ```
 
 Toujours la base avant le code : une colonne inutilisée ne gêne personne, du
-code cherchant une table absente plante.
-
-Il n'y a **aucune CI** dans ce projet — les migrations sont appliquées à la
-main. Tenir une checklist de ce qui est déjà passé en prod.
+code cherchant une table absente plante. Les migrations sont appliquées **à la
+main**, sans CI — d'où la checklist du §4.2.
 
 ### Migrations touchant des données existantes
 
@@ -447,6 +471,9 @@ session avant chaque requête.
 | Propositions d'évènement | `event_submission_contacts` | admin |
 | Feedback | `feedback_entries` | server |
 | Images | bucket storage via `/api/storage` | admin |
+| *V2* — mesures d'inclusion | `inclusion_measures`, `event_inclusion_measures` | server |
+| *V2* — récits | `user_event_stories` | server (via fonctions SQL) |
+| *V2* — recommandations d'inscription | `user_recommended_events` | server |
 
 > **La jointure évènement → organisatrice se fait par le nom**
 > (`events.organisateur = organisateurs.nom_orga`). Renommer une organisatrice
@@ -527,19 +554,26 @@ puis `supabase migration up`. Une migration n'est poussée en prod qu'après avo
 
 ## 8. Où lire le détail
 
-Le détail brique par brique — ce qui est livré, les décisions prises, la
-checklist de branchement — vit **sur la branche concernée**, dans ce même
-fichier. Pour le lire sans changer de branche :
+Chaque branche non fusionnée documente sa brique **dans ce fichier, sur sa
+branche** : ce qui est livré, les décisions prises et pourquoi, la checklist de
+branchement. C'est là qu'il faut aller avant de toucher à une branche.
 
 ```bash
 git show feat/social:docs/upcomi-v2.md
 ```
 
-Branches concernées : `feat/calendrier-inscriptions`,
-`feat/partage-experience`, `feat/score-adequation`,
-`feat/evenements-similaires`, `feat/organisateur-enrichi`, `feat/social`,
-`feat/recherche-v2`, `feat/nav-v2`.
+Concerne : `feat/calendrier-inscriptions`, `feat/partage-experience`,
+`feat/score-adequation`, `feat/evenements-similaires`,
+`feat/organisateur-enrichi`, `feat/social`, `feat/recherche-v2`,
+`feat/nav-v2`.
 
-Pour les quatre briques déjà fusionnées dans `preprod`, le journal détaillé des
-décisions est dans l'historique git de ce fichier (`git log -p docs/upcomi-v2.md`,
-avant la refonte de ce document).
+Pour les quatre briques déjà dans `preprod`, le journal détaillé de leurs
+décisions est la version de ce document qui précède sa refonte en dossier de
+passation :
+
+```bash
+git show 74fbde9:docs/upcomi-v2.md
+```
+
+Il n'a pas été repris ici — c'est de l'archéologie utile le jour où l'on se
+demande *pourquoi* un choix a été fait, pas pour reprendre le chantier.
