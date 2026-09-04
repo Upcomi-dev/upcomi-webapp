@@ -121,6 +121,24 @@ export interface FeedbackEntry {
   updated_at: string;
 }
 
+/**
+ * État de modération d'un récit. `pending` par défaut : rien n'est affiché sur
+ * une fiche évènement avant d'avoir été relu.
+ */
+export type EventStoryStatus = "pending" | "approved" | "rejected";
+
+export interface UserEventStory {
+  user_id: string;
+  event_id: number;
+  story: string | null;
+  story_url: string | null;
+  status: EventStoryStatus;
+  created_at: string;
+  updated_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
 export interface Collection {
   id: string;
   name: string;

@@ -49,7 +49,7 @@ export function EventStoryForm({
         />
       </Field>
 
-      <Field label="Quelques mots (facultatif)" htmlFor="signup-story">
+      <Field label="Ton récit en quelques mots (facultatif)" htmlFor="signup-story">
         <textarea
           id="signup-story"
           value={story}
@@ -60,6 +60,13 @@ export function EventStoryForm({
           placeholder="Le parcours, l'ambiance, ce que tu aurais aimé savoir avant de partir…"
           className={`${FIELD_INPUT_CLASS} resize-y leading-6`}
         />
+        {/* Le compteur reste discret et n'alerte pas : le champ ne laisse pas
+            dépasser, il n'y a donc pas d'erreur à annoncer. Il dit seulement
+            combien il reste de place, ce que « en quelques mots » ne chiffre
+            pas. */}
+        <p className="mt-1 text-right text-[12px] tabular-nums text-foreground/40">
+          {story.length} / {EVENT_STORY_MAX_LENGTH}
+        </p>
       </Field>
     </div>
   );

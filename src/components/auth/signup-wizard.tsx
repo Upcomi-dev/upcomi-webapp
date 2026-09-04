@@ -78,9 +78,9 @@ const STEP_TITLES: Record<SignupWizardStep, { title: string; description?: strin
     description: "Si oui, indique ceux que tu recommandes à la communauté.",
   },
   recits: {
-    title: "As-tu écris un récit ou pris des photos de l'événement ?",
+    title: "As-tu écrit un récit ou pris des photos de l'événement ?",
     description:
-      "Pour aider les autres membres de la communauté, ajoute un lien vers Instagram, Strava ou ton blog pour ajouter ton récit ou tes photos à l'événement.",
+      "Pour aider les autres membres de la communauté, ajoute un lien vers Instagram, Strava ou ton blog pour ajouter ton récit ou tes photos à l'événement. L'équipe le relit avant qu'il n'apparaisse sur la fiche.",
   },
   confirmation: { title: "C'est tout bon !" },
 };
