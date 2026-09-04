@@ -343,7 +343,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
             des boutons d'inscription : c'est un argument à lire avant de
             décider, pas une récompense à découvrir en bas de fiche. Il ne
             s'affiche que si un code est saisi. */}
-        <EventPromoCode eventId={event.id} promo={promoCode} className="mb-3.5" />
+        <EventPromoCode eventId={event.id} promo={promoCode} className="my-4" />
 
         {/* Qui est intéressé — juste au-dessus de « M'inscrire » et « Ça
             m'intéresse », comme dans le proto : l'intérêt social se montre au
