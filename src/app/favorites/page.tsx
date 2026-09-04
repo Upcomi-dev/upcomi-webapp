@@ -1,13 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronLeft } from "lucide-react";
 import type { Event } from "@/lib/types/database";
 import { getEventTypeColor } from "@/lib/types/database";
 import { withReturnTo } from "@/lib/utils/navigation";
 import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { FavouriteButton } from "@/components/events/favourite-button";
-import { AppLogo } from "@/components/layout/app-logo";
+import { TopNav } from "@/components/layout/top-nav";
 import { formatDateValue, isEventPast } from "@/lib/utils/event-dates";
 import { getAppStorageImage } from "@/lib/storage/urls";
 import {
@@ -62,16 +61,12 @@ export default async function FavoritesPage({ searchParams }: FavoritesPageProps
 
   return (
     <div className="min-h-screen bg-[#f5efe6]">
-      <header className="flex h-14 items-center justify-between border-b border-[rgba(255,255,255,0.55)] bg-white px-4" style={{ boxShadow: "var(--shadow-sm)" }}>
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-sm font-medium text-[#7C7C7C] hover:text-[#2c1e14] transition-colors"
-        >
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-          Retour à la carte
-        </Link>
-        <AppLogo href="/" imageClassName="h-7 w-auto" />
-      </header>
+      {/* L'en-tête commun remplace la barre « Retour à la carte » propre à
+          cette page. « Mes évènements » est l'une des quatre entrées de la
+          navigation : y arriver et perdre la navigation la rendrait inutile —
+          et il n'y a plus de retour à faire quand on peut repartir d'un clic
+          vers n'importe lequel des quatre espaces. */}
+      <TopNav />
 
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

@@ -8,6 +8,7 @@ import { AuthModal } from "@/components/auth/auth-modal";
 import { AuthProvider } from "@/components/auth/auth-context";
 import { FavoritesProvider } from "@/components/favorites/favorites-context";
 import { FlyingHeartProvider } from "@/components/favorites/flying-heart";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { OnboardingModal } from "@/components/profile/onboarding-modal";
 import {
   buildInitialUserProfile,
@@ -133,6 +134,10 @@ export default async function RootLayout({
                 <OnboardingModal initialValues={initialOnboardingValues} />
               ) : null}
               <AuthModal />
+              {/* La barre du bas est propre au mobile (`md:hidden`) et vaut
+                  pour toutes les pages : la navigation ne dépend pas de
+                  l'écran où l'on se trouve. */}
+              <BottomNav />
               </FlyingHeartProvider>
             </FavoritesProvider>
           </AuthModalProvider>

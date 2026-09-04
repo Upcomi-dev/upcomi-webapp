@@ -26,6 +26,7 @@ import { EventDetailPanel } from "@/components/events/event-detail-panel";
 import { PastEventsToggle } from "@/components/events/past-events-toggle";
 import { SortControl } from "@/components/events/sort-control";
 import { TopNavClient } from "@/components/layout/top-nav-client";
+import { BOTTOM_NAV_HEIGHT } from "@/components/layout/bottom-nav";
 import { CollectionsView } from "@/components/collections/collections-view";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trackAnalyticsEvent } from "@/lib/analytics";
@@ -816,7 +817,9 @@ function MapPageContent({
             type="button"
             onClick={() => setMobileView(mobileView === "list" ? "map" : "list")}
             className="fixed left-1/2 z-20 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-coral px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white shadow-[0_12px_30px_rgba(235,95,59,0.32)]"
-            style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
+            // Au-dessus de la barre de navigation, qui occupe désormais le
+            // bas de l'écran : sans ce décalage, le bouton passe dessous.
+            style={{ bottom: `calc(0.75rem + ${BOTTOM_NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}
           >
             {mobileView === "list" ? <MapIcon className="h-4 w-4" /> : <List className="h-4 w-4" />}
             <span>{mobileView === "list" ? "Carte" : "Liste"}</span>

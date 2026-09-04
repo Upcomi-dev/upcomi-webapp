@@ -6,6 +6,7 @@ import { CollectionsView } from "@/components/collections/collections-view";
 import { EventCard } from "@/components/events/event-card";
 import { EventDetailPanel } from "@/components/events/event-detail-panel";
 import { SortControl } from "@/components/events/sort-control";
+import { BOTTOM_NAV_HEIGHT } from "@/components/layout/bottom-nav";
 import { InlineFilters } from "@/components/events/event-filters";
 
 type SnapLevel = "peek" | "half" | "full";
@@ -25,7 +26,6 @@ interface MobileBottomSheetProps {
 }
 
 const PEEK_HEIGHT = 148;
-const BOTTOM_NAV_HEIGHT = 0;
 
 export function MobileBottomSheet({
   collections,

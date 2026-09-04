@@ -1176,3 +1176,105 @@ Vérifié en local avec la clé publique : `select` sur `event_promo_codes` renv
 2. Merger le code (aucun feature flag : sans saisie, le bandeau ne s'affiche pas
    et la timeline est inchangée).
 3. Saisir les codes promo et les dispositions évènement par évènement.
+
+---
+
+## 16. Brique `feat/nav-v2` (T6) — MAQUETTE
+
+**Cette branche est une maquette**, mais c'est la moins « maquette » des cinq :
+la navigation n'a pas de données à lire, elle marche donc vraiment. Ce qui reste
+à faire n'est pas un branchement, ce sont des **décisions** — et une route qui
+n'existe pas encore. Voir §12 pour la convention de numérotation.
+
+C'est aussi celle qui touche le plus de fichiers existants : à fusionner en
+dernier.
+
+### Le modèle : quatre espaces, partout les mêmes
+
+`src/components/layout/main-nav-items.tsx` définit les entrées une fois pour les
+trois surfaces qui les affichent — en-tête desktop, barre du bas mobile, menu
+latéral :
+
+| Entrée | Route |
+|---|---|
+| Évènements | `/` |
+| Calendrier des inscriptions | `/calendrier-des-inscriptions` |
+| Mes évènements | `/favorites` |
+| Mon profil | `/profil` (compte connecté) |
+
+**Une entrée qu'on ne trouve que sur un écran n'existe pas vraiment** : les
+trois surfaces affichent les quatre mêmes, jamais un sous-ensemble. Seule la
+barre du bas abrège (« Calendrier », « Profil »).
+
+« Proposer un évènement » et le feedback **n'en font pas partie** : ce sont des
+actions, pas des espaces où l'on navigue. Elles restent dans les actions de
+l'en-tête, à droite, séparées de la navigation.
+
+### Ce qui est livré
+
+- `src/components/layout/main-nav-items.tsx` — le modèle partagé.
+- `src/components/layout/bottom-nav.tsx` — **réécrit et enfin monté**.
+- `src/components/layout/top-nav-client.tsx` — les quatre entrées sur desktop,
+  les mêmes dans le menu latéral.
+- `src/app/layout.tsx` — la barre du bas, pour toutes les pages.
+- `src/app/favorites/page.tsx` — passe à l'en-tête commun.
+- Trois décalages pour laisser sa place à la barre du bas :
+  `mobile-bottom-sheet.tsx`, `sticky-action-bar.tsx`, et le bouton
+  Carte/Liste de `map-page-client.tsx`.
+
+### Trois choses relevées en construisant
+
+1. **`BottomNav` existait et n'était monté nulle part.** Du code mort depuis
+   un moment : trois entrées (Carte / Favoris / Profil) dont deux ouvraient une
+   feuille au lieu de naviguer. Réécrit sur le modèle partagé et monté.
+
+2. **`MobileBottomSheet` gardait sa place au chaud** : `BOTTOM_NAV_HEIGHT = 0`,
+   avec les calculs déjà écrits autour. La constante vit maintenant dans
+   `bottom-nav.tsx` et le sheet la lit — c'est ce pour quoi ce code avait été
+   écrit.
+
+3. **`/favorites` n'avait pas l'en-tête commun** — ni `/admin`. C'est l'une des
+   quatre entrées : y arriver et perdre la navigation la rendrait inutile. La
+   page passe à `TopNav`, ce qui fait disparaître sa barre « Retour à la
+   carte » — il n'y a plus de retour à faire quand on repart d'un clic vers
+   n'importe lequel des quatre espaces. **`/admin` n'est pas traitée** : c'est
+   un back-office, pas un espace de la navigation publique. À confirmer.
+
+### ⚠️ `/calendrier-des-inscriptions` n'existe pas dans `preprod`
+
+L'entrée « Calendrier des inscriptions » mène à une **404**. La page arrive avec
+`feat/calendrier-inscriptions` (§6), **écrite et jamais fusionnée**.
+
+**Fusionner cette branche-là avant celle-ci**, ou retirer l'entrée. Une
+navigation dont un quart mène nulle part est pire que trois entrées.
+
+### Décisions à confirmer
+
+- **Le popover de favoris disparaît.** « Mes évènements » est une page, pas un
+  survol : c'est le modèle du prototype. `FavoritesDropdown` et
+  `FavoritesSheet` restent dans le dépôt mais n'ont plus d'appelant depuis
+  l'en-tête. **À supprimer si la décision tient.**
+- **Le menu latéral mobile reste**, alors que le prototype n'en a pas : la barre
+  du bas ne porte pas le feedback, « Proposer un évènement » ni les mentions
+  légales. Mobile a donc **et** une barre du bas **et** un menu — c'est le
+  motif courant, mais c'est un écart au proto.
+- **Le nom de l'entrée « Mes évènements » pointe sur `/favorites`**, dont le
+  titre de page reste « Mes favoris ». Deux mots pour la même chose. À unifier
+  — et c'est le point d'entrée de l'évolution de « Mes évènements », que le
+  plan (§2.1) laisse **non tranchée**.
+- **La hauteur de la barre est une constante, pas une mesure**
+  (`BOTTOM_NAV_HEIGHT`). La rangée a une hauteur explicite pour que la
+  constante reste vraie quand un libellé passe sur deux lignes. Ajouter une
+  cinquième entrée ou changer les libellés oblige à la revérifier.
+
+### Checklist de mise en œuvre
+
+1. Fusionner `feat/calendrier-inscriptions` **avant** cette branche.
+2. Trancher le sort du popover de favoris, puis supprimer les composants
+   devenus orphelins.
+3. Trancher « Mes évènements » vs « Mes favoris » — nom, titre de page, et
+   contenu.
+4. Vérifier chaque page qui pose sa propre barre du bas ou son propre en-tête :
+   au moment d'écrire, `/favorites` et `/admin` étaient les deux seules.
+5. Fusionner en dernier des cinq maquettes : c'est celle qui touche le plus de
+   fichiers partagés.
