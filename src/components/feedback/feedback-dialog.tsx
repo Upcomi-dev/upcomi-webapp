@@ -13,11 +13,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { trackAnalyticsEvent } from "@/lib/analytics";
-import { FEEDBACK_KIND_OPTIONS } from "@/lib/feedback";
+import { FEEDBACK_FIELD_CLASS, FEEDBACK_KIND_OPTIONS } from "@/lib/feedback";
 import type { FeedbackKind } from "@/lib/types/database";
 
-const fieldClassName =
-  "w-full rounded-[18px] border border-foreground/10 bg-white/85 px-4 py-3 text-[14px] text-foreground placeholder:text-foreground/35 focus:border-coral/35 focus:outline-none";
+const fieldClassName = FEEDBACK_FIELD_CLASS;
 
 const kindIcons = {
   idea: Lightbulb,

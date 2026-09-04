@@ -69,12 +69,3 @@ export async function fetchEventInclusionMeasures(
     return groupDelta !== 0 ? groupDelta : a.position - b.position;
   });
 }
-
-/** Lien de signalement d'une mesure manquante : un vrai message, pas un formulaire à cocher. */
-export function buildAddMeasureMailto(eventName: string): string {
-  const subject = `Mesure pour ${eventName}`;
-  const body = `Bonjour,\n\nJe voulais signaler que ${eventName} met en place :\n(décris la mesure ici)\n`;
-  return `mailto:contact@upcomi.cc?subject=${encodeURIComponent(
-    subject
-  )}&body=${encodeURIComponent(body)}`;
-}
