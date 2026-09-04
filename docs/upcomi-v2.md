@@ -567,11 +567,15 @@ pas encore ici.
 
 `supabase/migrations/20260901103000_onboarding_v2.sql` :
 
-- `users.genre`, texte nullable, sans contrainte `check` — la liste de l'UI est
-  amenée à bouger et la contraindre coûterait une migration non additive à
-  chaque évolution.
 - `user_recommended_events` (`user_id`, `event_id`, `created_at`), avec RLS,
   `revoke`/`grant` et les trois policies dans le même fichier.
+
+Pas d'ajout de colonne pour le genre : `users.gender` existait déjà (utilisée
+par l'admin) avant `feat/onboarding-v2`. Une première version de cette brique
+avait introduit une colonne `genre` séparée — jamais appliquée en prod, ce qui
+faisait échouer `layout.tsx`/`/profil`/la modale profil avec « Could not find
+the 'genre' column of 'users' in the schema cache ». Reconcilié en réutilisant
+`gender` partout (`src/lib/profile.ts`, `src/lib/profile-mutations.ts`).
 
 `supabase/migrations/20260903001000_event_stories.sql` :
 
@@ -588,10 +592,6 @@ pas encore ici.
   choisis sont **déjà couverts**, par n'importe qui. Elle ne renvoie que des
   identifiants d'événements — jamais un récit ni son autrice — et n'est
   exécutable que par `authenticated`.
-
-**À appliquer en base avant de merger le code** : `layout.tsx`, `/profil` et la
-modale profil sélectionnent désormais la colonne `genre`. Tant qu'elle n'existe
-pas, la requête échoue silencieusement et le profil remonte vide.
 
 ### Décisions prises
 
@@ -636,9 +636,59 @@ pas, la requête échoue silencieusement et le profil remonte vide.
 - **« Ajouter → » valide même les champs vides**, sans second bouton
   « Passer » : le récit est facultatif de bout en bout et le proto note qu'un
   bouton suffit alors. Rien n'est écrit si les deux champs sont vides.
+- **Le texte est plafonné à 200 caractères** (`EVENT_STORY_MAX_LENGTH`), et le
+  champ le dit deux fois : « Ton récit **en quelques mots** » en libellé, et un
+  compteur discret sous le champ. C'est un extrait affiché à côté d'un lien
+  vers le récit complet — l'histoire entière vit sur Instagram, Strava ou un
+  blog, elle n'a pas à être retapée ici. La contrainte en base reste à 1500 :
+  la resserrer retirerait de la place à des récits déjà écrits, ce que la règle
+  additive interdit (§3). C'est le champ qui ne laisse pas dépasser.
+- **Un récit est relu avant d'être affiché** — voir ci-dessous.
 - **Le lien est complété s'il manque le protocole** (`instagram.com/p/…` →
   `https://…`), repris du proto ; une adresse qui reste invalide affiche une
   erreur au lieu d'être écrite.
+
+### Modération des récits
+
+Migration `20260905110000_moderation_recits.sql` : `user_event_stories.status`
+(`pending` par défaut, puis `approved` / `rejected`), plus `reviewed_at` et
+`reviewed_by`. Additive — trois colonnes et une policy en plus, rien de
+retouché.
+
+Un récit est du texte libre publié sur la fiche d'un évènement à côté du prénom
+de son autrice : il ne peut pas paraître sans avoir été lu. D'où :
+
+- **`pending` par défaut, y compris pour les récits déjà saisis.** Rien n'était
+  affiché publiquement jusqu'ici, personne ne perd donc une publication —
+  et les approuver en masse reviendrait à publier sans avoir lu.
+- **Toute réécriture repasse en relecture**, même celle d'un récit publié : ce
+  qui a été relu n'est plus ce qui serait affiché. `saveEventStory()` remet
+  `status` à `pending` et efface la trace de relecture.
+- **Une rubrique « Récits » dans `/admin`** (`admin-stories-client.tsx`), entre
+  « Utilisateurs » et « Retours ». Elle s'ouvre sur « En attente » et non sur
+  « Tous » : c'est la seule vue qui demande une action. Le compteur de l'onglet
+  et la carte d'accès rapide comptent les récits à relire, pas le total.
+- **Les admins lisent la table via une policy**, pas via la clé secrète — même
+  motif que `20260422_admin_full_crud_rls.sql` : `/admin` interroge la base en
+  tant que l'admin connectée. La policy de `select` de l'autrice n'est pas
+  touchée.
+- L'évènement et l'autrice sont **recomposés côté page** depuis les listes que
+  `/admin` charge déjà : `user_event_stories.user_id` pointe sur `auth.users` et
+  non sur `public.users`, PostgREST ne sait pas les embarquer.
+
+**Ordre d'application** : cette migration passe avant celle de
+`feat/partage-experience` (`20260905120000_recits_valides.sql`), qui filtre
+l'affichage sur `status = 'approved'`. L'inverse laisserait sa fonction chercher
+une colonne absente.
+
+> **Relevé en local, sans rapport avec cette brique** : `public.admin_users` a
+> la RLS activée et **aucune policy** dans la base locale — `assertAdmin()` ne
+> voit alors jamais sa propre ligne et `/admin` renvoie tout le monde à
+> l'accueil. Comme pour `favourite_events` (§9), soit la policy a été ajoutée
+> dans le dashboard après le dump, soit la prod est dans cet état. Rien n'a été
+> ajouté à une migration ; pour débloquer en local :
+> `create policy "Own admin row is readable" on public.admin_users for select
+> to authenticated using ((select auth.uid()) = user_id);`
 
 ### Google, et la reprise du parcours
 

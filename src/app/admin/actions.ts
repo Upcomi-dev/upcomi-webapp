@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { isFeedbackStatus } from "@/lib/feedback";
+import { isEventStoryStatus } from "@/lib/stories-moderation";
 import { assertAdmin } from "@/lib/auth/assert-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -455,6 +456,41 @@ export async function deleteAdminUser(uid: string) {
   if (publicProfileError) throw new Error(publicProfileError.message);
 
   const { error } = await adminSupabase.auth.admin.deleteUser(uid);
+
+  if (error) throw new Error(error.message);
+  revalidateAdminViews();
+}
+
+/**
+ * Publier ou refuser un récit. La clé est le couple (autrice, évènement) : la
+ * table n'a pas d'identifiant propre, une personne n'écrit qu'un récit par
+ * évènement.
+ *
+ * `reviewed_at` / `reviewed_by` gardent la trace de la relecture — un récit
+ * repassé « en attente » perd la sienne, il n'a plus été relu.
+ */
+export async function updateEventStoryStatus(
+  userId: string,
+  eventId: number,
+  status: string
+) {
+  const { user, supabase } = await assertAdmin();
+
+  if (!isEventStoryStatus(status)) {
+    throw new Error("Le statut du récit est invalide.");
+  }
+
+  const reviewed = status !== "pending";
+
+  const { error } = await supabase
+    .from("user_event_stories")
+    .update({
+      status,
+      reviewed_at: reviewed ? new Date().toISOString() : null,
+      reviewed_by: reviewed ? user.id : null,
+    })
+    .eq("user_id", userId)
+    .eq("event_id", eventId);
 
   if (error) throw new Error(error.message);
   revalidateAdminViews();

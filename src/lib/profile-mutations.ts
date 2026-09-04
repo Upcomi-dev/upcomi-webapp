@@ -3,8 +3,19 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { normalizeUserProfile, type UserProfileFormValues } from "@/lib/profile";
 
-/** Doivent rester alignés sur les contraintes de `user_event_stories`. */
-export const EVENT_STORY_MAX_LENGTH = 1500;
+/**
+ * Un récit se donne **en quelques mots** : deux cents caractères, la longueur
+ * d'un message, pas d'un article. C'est un extrait affiché sur la fiche à côté
+ * d'un lien vers le récit complet — l'histoire entière vit sur Instagram, Strava
+ * ou un blog, elle n'a pas à être retapée ici.
+ *
+ * Plus strict que la contrainte de `user_event_stories` (1500), volontairement :
+ * la resserrer en base retirerait de la place à des récits déjà écrits, ce que
+ * la règle additive interdit (docs/upcomi-v2.md §3). Le champ, lui, ne laisse
+ * jamais dépasser.
+ */
+export const EVENT_STORY_MAX_LENGTH = 200;
+/** Aligné sur la contrainte de `user_event_stories`. */
 export const EVENT_STORY_URL_MAX_LENGTH = 2048;
 
 interface SaveUserProfileOptions {
@@ -41,7 +52,7 @@ export async function saveUserProfile(
         ville: profile.city || null,
         pref1: profile.practiceTypes.length > 0 ? profile.practiceTypes : null,
         pref2: profile.practiceLevel || null,
-        genre: profile.gender || null,
+        gender: profile.gender || null,
         updated_at: now,
       },
       { onConflict: "uid" }
@@ -169,12 +180,17 @@ export async function saveEventStory(
     return { error: null, saved: false };
   }
 
+  // Toute écriture repasse le récit en relecture, y compris la réécriture d'un
+  // récit déjà publié : ce qui a été relu n'est plus ce qui serait affiché.
   const { error } = await supabase.from("user_event_stories").upsert(
     {
       user_id: user.id,
       event_id: draft.eventId,
       story_url: storyUrl,
       story,
+      status: "pending",
+      reviewed_at: null,
+      reviewed_by: null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,event_id" }

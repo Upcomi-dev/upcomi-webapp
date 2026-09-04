@@ -35,7 +35,7 @@ export interface UserProfileRow {
   ville?: string | null;
   pref1?: string[] | null;
   pref2?: string | null;
-  genre?: string | null;
+  gender?: string | null;
 }
 
 export interface UserProfileFormValues {
@@ -122,7 +122,7 @@ export function buildInitialUserProfile(
       getMetadataString(metadata, ["practice_level"]) ||
       "",
     gender:
-      profile?.genre?.trim() ||
+      profile?.gender?.trim() ||
       getMetadataString(metadata, ["gender", "genre"]) ||
       "",
   });
