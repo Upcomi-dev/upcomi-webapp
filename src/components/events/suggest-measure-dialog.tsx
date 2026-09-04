@@ -97,9 +97,9 @@ export function SuggestMeasureDialog({ eventName }: { eventName: string }) {
                     Signaler une mesure
                   </DialogTitle>
                   <DialogDescription className="mt-2 max-w-lg text-[14px] leading-6 text-foreground/58">
-                    Une mesure mise en place par{" "}
+                    Tu peux indiquer une mesure mise en place par{" "}
                     <span className="font-semibold text-foreground/72">{eventName}</span>{" "}
-                    et absente de la fiche ? L&apos;équipe la retrouvera dans l&apos;admin.
+                    et absente de la fiche.
                   </DialogDescription>
                 </div>
               </div>
