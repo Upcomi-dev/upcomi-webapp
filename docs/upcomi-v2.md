@@ -61,6 +61,7 @@ feat/dates-cles                (T1)
 feat/mesures-inclusion         (T1)
 feat/evenements-similaires     (T3 — gratuite, casable ici ou avant)
 feat/personnes-interessees     (T1 — LIVRÉE, voir §9 ; migration additive)
+feat/avantages-evenement       (T1 — code promo + dispositions d'inscription, voir §10)
    ↓ réutilise son bloc et ses lectures :
 feat/score-adequation          (T2 — sa propre petite migration)
    ↓ bloquant, seule :
@@ -892,3 +893,86 @@ section 3 interdit.
 3. Merger le code (aucun feature flag : le bloc est visible au déploiement, et
    dégrade proprement — « sois la première personne à t'intéresser » quand
    personne ne l'est encore).
+
+---
+
+## 10. Brique `feat/avantages-evenement` — code promo et dispositions d'inscription
+
+Trois informations **propres à un évènement**, à côté du catalogue de mesures
+d'inclusion : un code promo réservé aux membres, des délais d'inscription
+allongés et des places réservées pour les femmes et minorités de genre.
+
+La distinction avec `inclusion_measures` (§8) est la raison d'être de la
+brique : le catalogue porte des libellés **partagés**, écrits une fois et
+rattachés par une simple liaison. Ici la valeur n'existe que pour un
+évènement — un code ne se partage pas entre organisations — et elle s'affiche
+là où elle sert, pas dans le bloc vert.
+
+### Ce qui est livré
+
+**Le bandeau code promo**, pleine largeur, entre la ligne de synthèse et le
+bloc d'intérêt : « Profite du code promo exclusif réservé aux membres », puis le
+code en gras. C'est un argument à lire avant de décider, pas une récompense à
+trouver en bas de fiche.
+
+- Sans compte, le code **n'est pas dans la page** : le bandeau propose « Créer
+  un compte » et ouvre le gate habituel, avec le geste en titre — « Rejoins la
+  communauté Upcomi pour obtenir les codes promo ».
+- Le bandeau disparaît entièrement quand aucun code n'est saisi. Contrairement
+  au bloc des mesures d'inclusion, l'absence d'avantage n'est pas une
+  information.
+- `src/components/events/event-promo-code.tsx`, `src/lib/events/promo-code.ts`.
+
+**Délais allongés et places réservées**, dans « Pour se préparer », sous
+l'ouverture des inscriptions : en gras et dans le vert inclusion de la charte,
+avec l'icône Venus. Ils sont rattachés à ce point de la timeline parce que
+c'est là qu'ils changent quelque chose pour la personne qui lit.
+
+- `EventKeyDate.highlights`, distinct de `details` : les précisions grises
+  (« 6 mois pour t'entraîner ») et ce qui décide de s'inscrire ne peuvent pas
+  avoir le même traitement.
+- `src/lib/events/registration-measures.ts`.
+
+### Migration `20260905100000_avantages_evenement.sql`
+
+Additive : deux tables, clés étrangères portées par les tables enfants,
+`events` intacte.
+
+- `event_registration_measures` (`event_id` en clé primaire, deux booléens) —
+  **lecture publique**, comme les mesures d'inclusion : la fiche est rendue avec
+  la clé publique et reste consultable sans compte. La base ne porte que le
+  fait ; sa formulation est écrite côté code.
+- `event_promo_codes` (`event_id`, `code`) — **aucun droit pour `anon`**. Un
+  code « exclusif, réservé aux membres » laissé lisible par la clé publique
+  serait publié : la clé est dans le navigateur de tout le monde. C'est la base
+  qui tient la promesse, pas l'interface.
+- `has_event_promo_code(bigint)`, `security definer`, exécutable par `anon` :
+  savoir qu'un code existe est public, le lire ne l'est pas. Même partage que
+  `get_event_interested_count` / `get_event_interested_people` (§9). Sans elle,
+  une visiteuse ne verrait aucun bandeau et ne saurait pas ce qu'elle gagne à
+  créer un compte.
+
+Vérifié en local avec la clé publique : `select` sur `event_promo_codes` renvoie
+`42501 permission denied`, l'appel à `has_event_promo_code` renvoie `true`, et
+`event_registration_measures` se lit sans compte.
+
+### Décisions prises
+
+- **Deux booléens plutôt que deux entrées de catalogue** pour les délais et les
+  places. Les rattacher à `inclusion_measures` les aurait rangés dans le bloc
+  vert, alors que l'ouverture des inscriptions est le seul endroit où ils se
+  lisent au bon moment.
+- **L'ocre, pas le corail ni le vert.** La fiche a déjà le corail des actions et
+  le vert des mesures ; un avantage membre n'est ni l'un ni l'autre. Fond clair
+  (`--orange-light`) et texte `--orange-dark` plutôt qu'un aplat plein : le
+  bandeau est au-dessus des boutons d'inscription, il ne doit pas leur passer
+  devant.
+- **Pas de saisie dans `/admin`**, comme pour les mesures d'inclusion : le
+  rattachement se fait en SQL pour l'instant.
+
+### Checklist de mise en prod
+
+1. Appliquer `supabase/migrations/20260905100000_avantages_evenement.sql`.
+2. Merger le code (aucun feature flag : sans saisie, le bandeau ne s'affiche pas
+   et la timeline est inchangée).
+3. Saisir les codes promo et les dispositions évènement par évènement.

@@ -1,5 +1,9 @@
 import { formatDateValue, getDateKey, getLocalDateKey } from "@/lib/utils/event-dates";
 import type { NearestStation } from "@/lib/utils/stations";
+import {
+  NO_REGISTRATION_MEASURES,
+  type EventRegistrationMeasures,
+} from "@/lib/events/registration-measures";
 
 export interface KeyDatesEvent {
   nomEvent: string | null;
@@ -22,6 +26,12 @@ export interface EventKeyDate {
   station: string | null;
   /** Précisions secondaires (durée, rythme, délai d'entraînement). */
   details: string[];
+  /**
+   * Ce que l'organisation met en place pour les femmes et minorités de genre à
+   * ce moment-là. Mis en avant plutôt que rangé dans `details` : c'est souvent
+   * l'information qui décide de s'inscrire, elle ne peut pas être grise.
+   */
+  highlights: string[];
   calendarUrl: string | null;
   /**
    * Proposer le rappel « M'envoyer un rappel » — seulement tant que
@@ -94,9 +104,17 @@ export function buildCalendarUrl(
  */
 export function getEventKeyDates(
   event: KeyDatesEvent,
-  options: { station?: NearestStation | null; todayKey?: string } = {}
+  options: {
+    station?: NearestStation | null;
+    todayKey?: string;
+    registrationMeasures?: EventRegistrationMeasures;
+  } = {}
 ): EventKeyDate[] {
-  const { station = null, todayKey = getLocalDateKey() } = options;
+  const {
+    station = null,
+    todayKey = getLocalDateKey(),
+    registrationMeasures = NO_REGISTRATION_MEASURES,
+  } = options;
 
   const openKey = getDateKey(event.dateInscription);
   const closeKey = getDateKey(event.clotureInscription);
@@ -133,6 +151,16 @@ export function getEventKeyDates(
     openDetails.push(`${trainingMonths} mois pour t'entraîner`);
   }
 
+  // Les deux dispositions se rattachent à l'ouverture des inscriptions : c'est
+  // le moment où elles changent quelque chose pour la personne qui lit.
+  const openHighlights: string[] = [];
+  if (registrationMeasures.extendedDeadline) {
+    openHighlights.push("Délais allongés pour les femmes et minorités de genre");
+  }
+  if (registrationMeasures.reservedSpots) {
+    openHighlights.push("Places réservées pour les femmes et minorités de genre");
+  }
+
   const dates: EventKeyDate[] = [
     {
       id: "ouverture",
@@ -142,6 +170,7 @@ export function getEventKeyDates(
       place: null,
       station: null,
       details: openDetails,
+      highlights: openHighlights,
       calendarUrl: openKey
         ? buildCalendarUrl(
             openKey,
@@ -164,6 +193,7 @@ export function getEventKeyDates(
       place: null,
       station: null,
       details: [],
+      highlights: [],
       calendarUrl: buildCalendarUrl(
         closeKey,
         `Clôture des inscriptions — ${eventName}`,
@@ -181,6 +211,7 @@ export function getEventKeyDates(
     place: [event.villeDepart, event.paysDepart].filter(Boolean).join(", ") || null,
     station: station?.label ?? null,
     details: departureDetails,
+    highlights: [],
     calendarUrl: null,
     reminder: false,
   });
@@ -194,6 +225,7 @@ export function getEventKeyDates(
       place: null,
       station: null,
       details: [],
+      highlights: [],
       calendarUrl: null,
       reminder: false,
     });
