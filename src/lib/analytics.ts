@@ -22,7 +22,8 @@ export type AnalyticsEventName =
   | "Onboarding Completed"
   | "Logout Clicked"
   | "Feedback Opened"
-  | "Feedback Submitted";
+  | "Feedback Submitted"
+  | "Interested People Opened";
 
 export type AnalyticsProps = Record<
   string,

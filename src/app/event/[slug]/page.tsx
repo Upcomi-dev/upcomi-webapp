@@ -22,6 +22,8 @@ import { EventCard } from "@/components/events/event-card";
 import { StickyActionBar } from "@/components/events/sticky-action-bar";
 import { EventKeyDates } from "@/components/events/event-key-dates";
 import { EventViewTracker } from "@/components/events/event-view-tracker";
+import { InterestedPeopleProvider } from "@/components/events/interested-people-context";
+import { InterestedBlock } from "@/components/events/interested-block";
 import { InclusionMeasures } from "@/components/events/inclusion-measures";
 import { MixiteBadge } from "@/components/events/mixite-badge";
 import { AppFooter } from "@/components/layout/app-footer";
@@ -213,7 +215,11 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    // Les personnes intéressées sont chargées une seule fois pour toute la
+    // fiche : le bloc du haut, celui de la colonne de droite, celui de la barre
+    // collante et la feuille de personnes lisent la même liste.
+    <InterestedPeopleProvider eventId={event.id}>
+      <div className="flex min-h-screen flex-col">
       <EventViewTracker
         eventId={event.id}
         eventType={event.type_event}
@@ -323,6 +329,15 @@ export default async function EventPage({ params, searchParams }: PageProps) {
             />
           </div>
         </div>
+
+        {/* Qui est intéressé — juste au-dessus de « M'inscrire » et « Ça
+            m'intéresse », comme dans le proto : l'intérêt social se montre au
+            moment du geste. Pleine largeur, au-dessus des deux colonnes. */}
+        <InterestedBlock
+          eventId={event.id}
+          eventName={event.nomEvent || "cet évènement"}
+          className="mb-3.5"
+        />
 
         {/* Actions principales, visibles dès l'arrivée sur la fiche. Masquées
             en desktop : la colonne de droite les porte en permanence, les
@@ -485,6 +500,12 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 className="glass rounded-[var(--radius)] p-4"
                 style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
               >
+                <InterestedBlock
+                  eventId={event.id}
+                  eventName={event.nomEvent || "cet évènement"}
+                  size="compact"
+                  className="mb-3"
+                />
                 <EventActions
                   eventId={event.id}
                   registrationUrl={event.URL}
@@ -512,6 +533,12 @@ export default async function EventPage({ params, searchParams }: PageProps) {
             className="glass rounded-[var(--radius)] p-4"
             style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
           >
+            <InterestedBlock
+              eventId={event.id}
+              eventName={event.nomEvent || "cet évènement"}
+              size="compact"
+              className="mb-2.5"
+            />
             <EventActions
               eventId={event.id}
               registrationUrl={event.URL}
@@ -522,7 +549,8 @@ export default async function EventPage({ params, searchParams }: PageProps) {
           </div>
         </div>
       </StickyActionBar>
-    </div>
+      </div>
+    </InterestedPeopleProvider>
   );
 }
 
