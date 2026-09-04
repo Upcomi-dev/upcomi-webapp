@@ -24,7 +24,8 @@ export type AnalyticsEventName =
   | "Event Story Prompt Dismissed"
   | "Logout Clicked"
   | "Feedback Opened"
-  | "Feedback Submitted";
+  | "Feedback Submitted"
+  | "Interested People Opened";
 
 export type AnalyticsProps = Record<
   string,

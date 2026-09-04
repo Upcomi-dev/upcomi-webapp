@@ -60,6 +60,8 @@ feat/onboarding-v2             (T1 — nouvelles colonnes sur `users`, additif)
 feat/dates-cles                (T1)
 feat/mesures-inclusion         (T1)
 feat/evenements-similaires     (T3 — gratuite, casable ici ou avant)
+feat/personnes-interessees     (T1 — LIVRÉE, voir §9 ; migration additive)
+   ↓ réutilise son bloc et ses lectures :
 feat/score-adequation          (T2 — sa propre petite migration)
    ↓ bloquant, seule :
 feat/socle-data                (profils publics consultables + entité organisateur)
@@ -68,7 +70,7 @@ feat/organisateur-enrichi      (T3, suite)
 feat/social                    (T4 — suivre, profils)
 ```
 
-Les cinq premières briques sont parallélisables entre elles dès maintenant.
+Les six premières briques sont parallélisables entre elles dès maintenant.
 `feat/socle-data` reste le seul verrou du plan, mais il n'intervient qu'avant
 la suite de T3 et tout T4 — largement repoussé par rapport à l'ordonnancement
 initial (2.2), ce qui laisse plusieurs semaines de marge avant d'y toucher.
@@ -79,6 +81,11 @@ Détail par lot :
   d'inclusion (catalogue en 4 groupes + suggestion), évolution UI de la page
   évènement au fil de l'eau (pas une refonte de nav), onboarding V2. Aucune
   dépendance entre elles ni avec le reste du plan.
+- **T1 — Personnes intéressées** : le compteur « X personnes intéressées », ses
+  visages et la feuille qui liste les personnes (nom, ville, niveau). Sortie du
+  périmètre de la fiche évènement (§8) puis reprise seule, avant le score
+  d'adéquation qui s'appuie dessus. Migration additive : deux colonnes sur
+  `user_public` et deux fonctions de lecture, **rien sur `users`**. Voir §9.
 - **T2 — Score d'adéquation** : questionnaire + calcul de compatibilité
   niveau/utilisatrice. Migration dédiée (catalogue de questions de
   compatibilité + réponses), indépendante de T1.
@@ -87,7 +94,9 @@ Détail par lot :
   organisateur enrichi, qui **dépend de `feat/socle-data`** — `events.organisateur`
   est du texte libre aujourd'hui, créer la vraie entité et dédupliquer est le
   chantier le plus délicat du plan (migration de données, pas juste additive).
-- **T4 — Social** : suivre, profils publics. **Dépend de `feat/socle-data`** —
+- **T4 — Social** : suivre, profils publics — le bouton « Suivre » que le proto
+  pose dans la feuille des personnes intéressées attend cette brique-là, pas
+  celle de §9. **Dépend de `feat/socle-data`** —
   `users` existe mais aucune policy ne permet aujourd'hui à quelqu'un de lire
   le profil d'une autre personne ; à ouvrir en RLS avant le reste de T4.
 
@@ -258,6 +267,16 @@ npm run dev
 `supabase/migrations/` au premier démarrage. `supabase stop` arrête le stack
 (les données survivent) ; `supabase status` réaffiche les URLs et les clés.
 
+⚠️ **Les migrations versionnées ne décrivent pas le socle de la base.** Elles
+ne créent que six tables (`collections`, `collection_events`, `admin_users`,
+`app_features`, `feedback_entries`, `event_submission_contacts`). Les vingt
+autres — `users`, `events`, `organisateurs`, `notifications`, `user_public`,
+`friendships`, `sous_events`… — n'ont jamais été décrites par une migration :
+elles viennent de FlutterFlow et du dashboard Supabase. Sur un volume Docker
+vierge, `supabase start` s'arrête donc en erreur dès la première migration V2
+(`alter table public.users` sur une table absente). Voir « Reconstruire la base
+locale » plus bas.
+
 | Service | URL |
 |---|---|
 | API (REST, Auth, Storage) | http://127.0.0.1:54321 |
@@ -296,15 +315,39 @@ moyen de les tester.
 supabase migration up
 ```
 
-Pour repartir d'une base propre et rejouer toute l'historique des migrations
-(les données locales sont perdues) :
-
-```bash
-supabase db reset
-```
+`supabase db reset` rejoue toute l'historique des migrations — mais, pour la
+raison ci-dessus, **il ne reconstruit plus une base exploitable** : il vide le
+volume puis échoue en cours de route. Ne pas le lancer sans avoir de quoi
+recréer le socle.
 
 Une migration n'est poussée en prod qu'après avoir été jouée ici. Les règles de
 la section 3 restent la référence pour ce qu'une migration a le droit de faire.
+
+### Reconstruire la base locale
+
+Le schéma de production n'est **pas versionné**. Il l'a été un temps, sous la
+forme d'un `supabase db dump` déposé dans `supabase/migrations/` : ce dump
+embarquait les clés d'API du projet en clair, cachées dans la définition des
+webhooks DB, et il a été retiré du dépôt.
+
+La photo du schéma est conservée hors dépôt, expurgée de ses clés et de ses
+webhooks :
+
+```
+~/Sites/upcomi-db-baseline/schema_prod_2026-09-01.sql
+```
+
+Le seed (`supabase/seed.sql`) n'est pas versionné non plus : il ne sert qu'au
+développement local et reste propre à chaque poste.
+
+Pour repartir d'une base neuve, appliquer la photo à la main sur le stack local
+avant de jouer les migrations V2 :
+
+```bash
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres \
+  -f ~/Sites/upcomi-db-baseline/schema_prod_2026-09-01.sql
+supabase migration up
+```
 
 ### Ce qui reste vrai vis-à-vis de la prod
 
@@ -489,6 +532,10 @@ Hors périmètre, comme convenu : le bloc « qui est intéressé » (avatars,
 compteur d'intéressé·es, feuille de personnes) et le partage de récit — une
 branche plus tard. Le composant `FavoriteCTA` existant tient la place.
 
+> **Repris depuis** par `feat/personnes-interessees` (§9) : le bloc « qui est
+> intéressé » est désormais sur la fiche. Ce qui suit décrit la fiche telle
+> qu'elle sortait de cette branche-ci.
+
 ### Ce qui est livré
 
 **Dates clés** — bloc « Pour se préparer » : timeline verticale ouverture des
@@ -636,7 +683,7 @@ afficherait deux fois la même chose à l'écran.
 Le compteur « X personnes intéressées » remplace le `FavoriteCTA` sur la fiche,
 qui faisait doublon avec le bouton d'intérêt. `FavoriteCTA` reste utilisé par
 le panneau de détail de la carte. Les avatars et la feuille « qui est
-intéressé » restent hors périmètre.
+intéressé » restent hors périmètre — jusqu'à §9, qui les pose.
 
 Le prix ne figure plus dans le bloc d'action : il est dans la ligne de
 synthèse, comme dans le proto.
@@ -676,7 +723,7 @@ c'est une autre famille, qui a ses propres règles dans le proto (`.pill`,
 
 - **Compteur d'intéressé·es** : retiré de la fiche — il relève du bloc « qui
   est intéressé ». La requête de comptage sur `favourite_events` a disparu avec
-  lui.
+  lui. (Il revient en §9, et compte alors des personnes, pas des favoris.)
 - **Tag `bike_type` sur le hero** : le proto n'a que mixité + durée +
   distance · dénivelé. Le type de vélo est une donnée que la webapp possède et
   qui n'apparaîtrait plus nulle part sur la fiche autrement ; gardé en 3ᵉ tag.
@@ -693,7 +740,163 @@ c'est une autre famille, qui a ses propres règles dans le proto (`.pill`,
 
 ---
 
-## 9. Brique — `feat/partage-experience` (affichage des récits)
+## 9. Brique `feat/personnes-interessees` (T1) — le bloc « qui est intéressé »
+
+Le bloc sorti du périmètre de `feat/fiche-evenement-v2` (§8), repris seul. Il
+répond à une question de la fiche — « est-ce que je serais la seule ? » — et
+n'a besoin ni du questionnaire d'adéquation (T2) ni des profils publics
+consultables (`feat/socle-data`).
+
+Le score d'adéquation, lui, s'appuiera dessus : c'est parmi ces personnes-là
+qu'il situe. Cette brique passe donc **avant** `feat/score-adequation`, et non
+avec elle.
+
+### Ce qui est livré
+
+**« X personnes intéressées », avec ses visages, à côté des actions.**
+« Intéressée » = a mis l'évènement en favori, ce qu'écrit le bouton « Ça
+m'intéresse ». Le bloc suit partout la paire « M'inscrire » / « Ça m'intéresse »
+et ne se montre jamais sans elle : en haut de fiche et dans la barre collante en
+mobile (`registered-count-label`), dans la colonne de droite en desktop. Même
+composant, une variante `compact` pour les deux emplacements étroits.
+
+> Le bloc du haut porte donc le `lg:hidden` de la paire qu'il accompagne. Sans
+> lui — c'est l'état d'où il a été repris — le compteur s'affichait **deux fois
+> sur le même écran** en desktop : une fois pleine largeur au-dessus des deux
+> colonnes, sans ses boutons puisqu'ils sont masqués là, et une fois dans la
+> colonne de droite.
+
+**La feuille des personnes**, ouverte en cliquant sur le compteur : une ligne
+par personne — son prénom suivi de l'initiale de son nom (« Camille D. »), puis
+« ville · pratique niveau ». Le nom de famille n'est pas affiché en entier : la
+feuille est ouverte à tout compte connecté, le prénom suffit à se reconnaître
+entre membres et le nom entier en ferait un annuaire. Sans compte, le clic
+ouvre le gate d'inscription (« Rejoins la communauté Upcomi pour voir qui est
+déjà intéressé·e »), comme dans le proto.
+
+- `src/components/events/interested-block.tsx` (compteur + pile de visages),
+  `person-avatar.tsx`, `people-sheet.tsx`,
+  `interested-people-context.tsx` (une seule lecture pour toute la fiche),
+  `src/lib/events/interested-people.ts`.
+- Migration `20260904160000_personnes_interessees.sql`, additive.
+
+### Migration
+
+Additive de bout en bout : aucune colonne existante n'est renommée, supprimée
+ni retypée, et ni `users` ni `favourite_events` ne sont touchées.
+
+- **`user_public.niveau` et `user_public.ville`**, recopiées de `users.pref2` et
+  `users.ville` par le trigger existant `trg_sync_user_public` (élargi à ces
+  deux colonnes), plus un backfill rejouable. C'est le seul moyen de lire le
+  niveau et la ville de quelqu'un d'autre sans ouvrir `public.users` en RLS,
+  c'est-à-dire sans faire `feat/socle-data` : la table existe précisément pour
+  ça (« infos affichées aux autres users ») et est déjà lisible par
+  `authenticated`. Rien d'autre n'y entre — ni e-mail, ni genre.
+  `saveUserProfile()` écrit les deux colonnes en même temps que le trigger, le
+  parcours d'inscription passant par `upsert` et non par une écriture directe
+  sur `users`.
+- `get_event_interested_people(bigint)`, `security definer`, réservée à
+  `authenticated`. Non pas pour contourner une policy — les deux tables sont
+  lisibles — mais parce que la clé étrangère de `favourite_events.user_id`
+  pointe sur `users.uid` et non sur `user_public.uid` : PostgREST ne sait pas
+  embarquer l'un dans l'autre.
+- `get_event_interested_count(bigint)`, exécutable par `anon` : on peut savoir
+  combien elles sont sans compte, pas qui elles sont.
+
+### Décisions prises
+
+- **Les trois visages sont toujours là**, dès une personne intéressée. Ce sont
+  des **portraits d'illustration**, pas les personnes : `user_public.avatar_url`
+  est vide dans l'immense majorité des cas, et une rangée de pastilles à
+  initiales ne dit pas « il y a du monde ». Les trois portraits du prototype
+  (randomuser.me, deux femmes et un homme) sont rapatriés dans
+  `public/avatars/` — pas de dépendance à un domaine tiers au rendu. La pile ne
+  suit pas le compteur : elle signale le bloc social, elle ne représente pas
+  qui est là. Seul le zéro fait exception — au-dessus de « sois la première
+  personne à t'intéresser », des visages contrediraient la phrase.
+- **La feuille, elle, ne porte aucun visage** : coller un portrait
+  d'illustration à côté d'un nom réel donnerait un visage à quelqu'un qui n'en
+  a pas.
+- **Ville et niveau, pas de bouton « Suivre ».** Le proto affiche
+  « ville · type de vélo » et un bouton « Suivre » sur chaque ligne. Suivre
+  quelqu'un relève de `feat/social` (T4) et n'a rien à faire ici. Ville et
+  niveau prennent la place : ce sont les deux repères pour se situer, et ils
+  sont déjà déclarés à l'inscription. Le type de vélo ne l'est pas — `users`
+  porte des types de *pratique* (`pref1`), pas de vélo.
+- **Le niveau s'affiche tel qu'il a été déclaré**, ses quatre valeurs
+  distinctes, simplement accordées au féminin (« pratique confirmée ») : les
+  valeurs en base sont sans accent. Le repliage en trois paliers d'expérience
+  est un besoin d'appariement, donc de `feat/score-adequation` — pas de cette
+  liste, qui rapporte ce que la personne a dit.
+- **Ville et niveau sont l'un et l'autre facultatifs** : la ligne secondaire
+  n'affiche que ce qui existe, et disparaît s'il n'y a ni l'un ni l'autre. Les
+  comptes créés avant l'onboarding V2 n'ont souvent ni l'un ni l'autre.
+- **Compter des personnes, pas des favoris.** `favourite_events` n'a aucune
+  contrainte d'unicité et porte des doublons : `get_event_favourite_counts()`
+  annonçait onze personnes là où la liste en montrait dix. Elle reste en place
+  pour `/admin`, qui compte bien des favoris ; le bloc social a la sienne, et la
+  jointure est en `select distinct`.
+- **Le nombre est public, les personnes ne le sont pas.** Deux fonctions, deux
+  droits d'exécution. Déconnectée, on voit combien elles sont ; la liste est
+  derrière le compte.
+- **Mon propre intérêt est ajusté côté client, sans relecture.** Le contexte des
+  favoris bascule de façon optimiste, avant que l'écriture ne soit partie : une
+  relecture déclenchée sur ce basculement rapporte l'ancien compte. L'écart est
+  connu — c'est moi, une personne — autant le corriger sans requête. Et je ne
+  figure jamais dans la liste : on ne se présente pas à soi-même.
+- **Une lecture pour toute la fiche** (`InterestedPeopleProvider`), pas une par
+  emplacement : le même compteur est rendu trois fois.
+- **« Personne » est toujours féminin**, quel qu'en soit le sujet : « X
+  personnes intéressées », sans point médian.
+- **Un échec de lecture ne casse pas la fiche** : liste vide, compteur à zéro.
+  Une fonction pas encore déployée dégrade en « personne pour le moment ».
+
+### À savoir pour la suite
+
+- **`feat/score-adequation` recouvre cette migration.** Sa propre migration
+  (`20260904120000_score_adequation.sql`) crée `user_public.niveau` et
+  redéfinit `sync_user_public()` **sans** `ville` — et son horodatage est
+  antérieur à celui d'ici. Sur une base neuve l'ordre les départage, mais sur
+  une base où celle-ci est déjà passée, l'appliquer ensuite ferait perdre la
+  recopie de la ville. À reprendre au moment de rebaser cette branche : la
+  partie « niveau » de sa migration fait double emploi et doit disparaître, il
+  ne doit y rester que `user_compatibility_answers`.
+- **Le type `InterestedPerson` porte `level` (le niveau déclaré brut)**, pas un
+  palier. C'est `feat/score-adequation` qui introduit les paliers et fera la
+  conversion de son côté.
+
+### ⚠️ Bloquant relevé : `favourite_events` n'a pas de policy d'écriture
+
+Relevé en développant le score d'adéquation, **non corrigé**, et toujours
+d'actualité ici : `public.favourite_events` porte, dans la photo du schéma de
+prod (`~/Sites/upcomi-db-baseline/`, hors dépôt), une seule policy —
+`for select using (true)`. Aucune policy d'`insert` ni de `delete`. Le bouton
+« Ça m'intéresse » écrit pourtant en direct depuis le navigateur
+(`favorites-context.tsx`) : sur une base locale reconstruite depuis cette photo,
+il répond **403**.
+
+Cette photo capture bien les policies d'écriture des autres tables
+(`feedback_entries` `for insert`, `prix` `for delete`, `organisateurs`
+`for update`). Deux explications possibles : les policies ont été ajoutées dans
+le dashboard Supabase sans passer par une migration, ou la prod est réellement
+dans cet état.
+
+**À vérifier avant la mise en prod** : c'est le geste dont tout le bloc dépend.
+Rien n'a été ajouté à la migration — écrire une policy à l'aveugle sur une table
+de production dont on ne connaît pas l'état réel est exactement ce que la
+section 3 interdit.
+
+### Checklist de mise en prod
+
+1. Vérifier les policies d'écriture de `favourite_events` (ci-dessus).
+2. Appliquer `supabase/migrations/20260904160000_personnes_interessees.sql`.
+3. Merger le code (aucun feature flag : le bloc est visible au déploiement, et
+   dégrade proprement — « sois la première personne à t'intéresser » quand
+   personne ne l'est encore).
+
+---
+
+## 11. Brique — `feat/partage-experience` (affichage des récits)
 
 La saisie d'un récit était déjà là, avancée dans `feat/onboarding-v2` (§7) :
 cette branche prend la suite avec **l'affichage** sur la fiche évènement et le

@@ -51,6 +51,12 @@ export async function saveUserProfile(
         uid: user.id,
         name: profile.firstName || null,
         surname: profile.lastName || null,
+        // Niveau et ville sont recopiés ici pour être lisibles des autres
+        // membres : la feuille « qui est intéressée » de la fiche évènement
+        // les affiche, et `users.pref2` / `users.ville` ne sont visibles que
+        // de soi.
+        niveau: profile.practiceLevel || null,
+        ville: profile.city || null,
         updated_at: now,
       },
       { onConflict: "uid" }
