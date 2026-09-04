@@ -9,6 +9,8 @@ import { getLocalDateKey } from "@/lib/utils/event-dates";
 import { getEventKeyDates } from "@/lib/utils/event-key-dates";
 import { findNearestStation } from "@/lib/utils/stations";
 import { fetchEventInclusionMeasures } from "@/lib/events/inclusion-measures";
+import { fetchEventRegistrationMeasures } from "@/lib/events/registration-measures";
+import { fetchEventPromoCode } from "@/lib/events/promo-code";
 import { getEventFactTags } from "@/lib/events/facts";
 import { getEventPath, getEventUrl, serializeJsonLd, SITE_NAME } from "@/lib/seo";
 import { parseLegacyEventId } from "@/lib/utils/slugify";
@@ -25,6 +27,7 @@ import { EventViewTracker } from "@/components/events/event-view-tracker";
 import { InterestedPeopleProvider } from "@/components/events/interested-people-context";
 import { InterestedBlock } from "@/components/events/interested-block";
 import { InclusionMeasures } from "@/components/events/inclusion-measures";
+import { EventPromoCode } from "@/components/events/event-promo-code";
 import { MixiteBadge } from "@/components/events/mixite-badge";
 import { AppFooter } from "@/components/layout/app-footer";
 import { TopNav } from "@/components/layout/top-nav";
@@ -131,17 +134,23 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   const canonicalUrl = getEventUrl(eventSlug);
   // Le compteur d'intéressé·es n'est plus lu ici : il fait partie du bloc
   // « qui est intéressé », traité dans sa propre brique.
-  const [relatedEvents, inclusionMeasures] = await Promise.all([
-    event.organisateur
-      ? fetchOrganizerEvents(supabase, event.organisateur, event.id)
-      : Promise.resolve([]),
-    fetchEventInclusionMeasures(supabase, event.id),
-  ]);
+  const [relatedEvents, inclusionMeasures, registrationMeasures, promoCode] =
+    await Promise.all([
+      event.organisateur
+        ? fetchOrganizerEvents(supabase, event.organisateur, event.id)
+        : Promise.resolve([]),
+      fetchEventInclusionMeasures(supabase, event.id),
+      fetchEventRegistrationMeasures(supabase, event.id),
+      fetchEventPromoCode(supabase, event.id),
+    ]);
 
   // Gare la plus proche du départ, calculée au rendu depuis le référentiel
   // embarqué : venir sans voiture est un critère de décision relevé en test.
   const nearestStation = findNearestStation(event.latitude, event.longitude);
-  const keyDates = getEventKeyDates(event, { station: nearestStation });
+  const keyDates = getEventKeyDates(event, {
+    station: nearestStation,
+    registrationMeasures,
+  });
 
   const formattedDate = event.dateEvent
     ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
@@ -329,6 +338,12 @@ export default async function EventPage({ params, searchParams }: PageProps) {
             />
           </div>
         </div>
+
+        {/* Code promo — bandeau pleine largeur, au-dessus du bloc d'intérêt et
+            des boutons d'inscription : c'est un argument à lire avant de
+            décider, pas une récompense à découvrir en bas de fiche. Il ne
+            s'affiche que si un code est saisi. */}
+        <EventPromoCode eventId={event.id} promo={promoCode} className="mb-3.5" />
 
         {/* Qui est intéressé — juste au-dessus de « M'inscrire » et « Ça
             m'intéresse », comme dans le proto : l'intérêt social se montre au
