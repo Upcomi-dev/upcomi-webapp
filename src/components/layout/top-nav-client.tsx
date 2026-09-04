@@ -13,6 +13,7 @@ import { FavoritesSheet } from "@/components/favorites/favorites-sheet";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { AppLegalInfo } from "@/components/layout/app-footer";
 import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { NotificationsBell } from "@/components/social/notifications-bell";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled: boolean }) {
@@ -129,6 +130,12 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                 />
               ) : null}
             </div>
+
+            {/* MAQUETTE (feat/social) — demandes de suivi et nouveaux
+                abonné·es. Posée entre les favoris et « Mon compte » : c'est du
+                courrier reçu, pas une entrée de navigation. Ne s'affiche que
+                connectée. */}
+            <NotificationsBell />
 
             {!ready ? (
               <div

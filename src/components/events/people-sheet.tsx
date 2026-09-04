@@ -1,6 +1,7 @@
 "use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FollowButton } from "@/components/social/follow-button";
 import {
   getPersonCity,
   getPersonDisplayName,
@@ -16,9 +17,13 @@ import {
  * des illustrations (voir `person-avatar.tsx`), et en coller un à côté d'un nom
  * réel donnerait un visage à quelqu'un qui n'en a pas.
  *
- * Le prototype ajoute un bouton « Suivre » : il n'est pas repris, suivre
- * quelqu'un relève de `feat/social`. La ligne secondaire porte donc
- * « ville · niveau » — deux repères pour se situer, aucun geste à faire.
+ * Le bouton « Suivre » du prototype est désormais là : c'est `feat/social` qui
+ * l'apporte, et cette feuille est le premier endroit où le geste se présente.
+ * Il vient à droite de la ligne, le nom et « ville · niveau » gardant la leur —
+ * on lit d'abord qui est là, on décide ensuite.
+ *
+ * MAQUETTE : le suivi n'est pas persisté et `friendships` n'a aujourd'hui
+ * aucune policy d'écriture. Voir `lib/social/mock-social`.
  */
 export function PeopleSheet({
   open,
@@ -51,15 +56,24 @@ export function PeopleSheet({
               const details = [city, level ? `pratique ${level}` : null].filter(Boolean);
 
               return (
-                <div key={person.uid} className="border-b border-black/6 py-3 last:border-b-0">
-                  <div className="truncate text-sm font-semibold text-foreground">
-                    {getPersonDisplayName(person)}
-                  </div>
-                  {details.length > 0 && (
-                    <div className="mt-0.5 text-[13px] text-muted-foreground">
-                      {details.join(" · ")}
+                <div
+                  key={person.uid}
+                  className="flex items-center gap-3 border-b border-black/6 py-3 last:border-b-0"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-foreground">
+                      {getPersonDisplayName(person)}
                     </div>
-                  )}
+                    {details.length > 0 && (
+                      <div className="mt-0.5 text-[13px] text-muted-foreground">
+                        {details.join(" · ")}
+                      </div>
+                    )}
+                  </div>
+                  <FollowButton
+                    personId={person.uid}
+                    personName={getPersonDisplayName(person)}
+                  />
                 </div>
               );
             })}

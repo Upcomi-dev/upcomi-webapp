@@ -1176,3 +1176,148 @@ Vérifié en local avec la clé publique : `select` sur `event_promo_codes` renv
 2. Merger le code (aucun feature flag : sans saisie, le bandeau ne s'affiche pas
    et la timeline est inchangée).
 3. Saisir les codes promo et les dispositions évènement par évènement.
+
+---
+
+## 14. Brique `feat/social` (T4) — MAQUETTE
+
+**Cette branche est une maquette.** Les écrans sont à leur place définitive et
+tous les gestes fonctionnent ; l'état vit en mémoire et disparaît au
+rechargement. Aucune migration n'est fournie. Voir §12 pour la convention de
+numérotation.
+
+C'est la plus grosse des cinq maquettes, et celle qui révèle le plus de
+manques : voir « Ce que la base ne sait pas encore porter » plus bas.
+
+### Ce qui est livré
+
+| Écran | Fichier |
+|---|---|
+| Mon profil, en vitrine | `src/app/profil/page.tsx` + `components/social/my-profile.tsx` |
+| Le profil de quelqu'un d'autre | `src/app/profil/[id]/page.tsx` |
+| La vitrine elle-même, partagée par les deux | `components/social/profile-view.tsx` |
+| Recherche des ami·es | `src/app/amis/page.tsx` + `components/social/friend-search.tsx` |
+| Suivre / Ne plus suivre | `components/social/follow-button.tsx` |
+| Feuille abonné·es / abonnements | `components/social/people-sheet.tsx` |
+| Ligne de personne, partagée | `components/social/person-row.tsx` |
+| Notifications (cloche + popover) | `components/social/notifications-bell.tsx` |
+| L'état de suivi | `components/social/follow-context.tsx` |
+| Les données en dur | `src/lib/social/mock-social.ts` |
+
+Modifications de l'existant :
+
+- `src/components/events/people-sheet.tsx` — la feuille « qui est intéressé »
+  gagne son bouton « Suivre ». Son propre commentaire l'annonçait déjà : le
+  geste relevait de cette brique.
+- `src/components/layout/top-nav-client.tsx` — la cloche, entre les favoris et
+  « Mon compte ».
+- `src/app/layout.tsx` — le `FollowProvider`.
+- **`src/app/@profile/(.)profil` est supprimée** — voir ci-dessous.
+
+### Décisions prises
+
+- **`/profil` devient une vitrine, l'éditeur passe en surimpression.** C'est le
+  geste du prototype, et surtout la seule mise en page qui laisse un profil
+  ressembler à un profil plutôt qu'à un formulaire. `UserProfileForm` n'est pas
+  retouché.
+- **La route interceptée `@profile/(.)profil` est supprimée.** Elle ouvrait
+  l'éditeur en modale par-dessus la page courante. Une même URL ne peut pas
+  servir une vitrine en navigation directe et un formulaire en navigation
+  interne. **À confirmer** : si l'interception doit revenir, c'est la vitrine
+  qu'elle doit ouvrir.
+- **Un seul composant pour les deux profils.** Ce qui change est le geste
+  offert en haut (Modifier vs Suivre) et deux notes qui n'existent que sur le
+  mien.
+- **L'ordre des quatre listes vient du prototype** et n'est pas neutre :
+  Intéressé·e, Recommandé, inscriptions à venir, évènements terminés. On arrive
+  sur un profil pour savoir où quelqu'un va, pas pour lire son historique.
+- **« Recommandé » ne s'affiche que s'il y a quelque chose.** Une section vide
+  y raconterait que la personne ne recommande rien, alors qu'elle n'a
+  simplement rien encore raconté.
+- **Pas de déconnexion sur le profil**, contrairement au prototype : elle vit
+  déjà dans le menu « Mon compte », et deux endroits pour se déconnecter valent
+  moins qu'un seul qu'on trouve.
+- **Pas de portrait dans les listes de personnes.** Les visages de la fiche
+  évènement sont des illustrations (`events/person-avatar.tsx`) ; en coller un
+  à côté d'un nom réel donnerait un visage à quelqu'un qui n'en a pas. Les
+  initiales suffisent à distinguer deux lignes.
+- **`FollowButton` prend un identifiant et un nom, pas une personne.** Il sert
+  aux profils en dur *et* aux vraies personnes de la feuille « qui est
+  intéressé », qui viennent de `user_public`.
+- **Ouvrir la cloche vaut lecture.** Le badge tombe quand on a vu la liste, pas
+  quand on a répondu : répondre est une décision, pas un accusé de réception.
+
+### ⚠️ Ce que la base ne sait pas encore porter
+
+Le plan (§2.1) dit que T4 « ne dépend plus d'un socle » — `friendships` existe,
+`user_public` est lisible par les comptes connectés. C'est vrai, et c'est
+insuffisant. La maquette rend visible tout ce que le prototype suppose et qui
+n'existe pas :
+
+1. **`friendships` n'a qu'une policy de `select`.** Ni `insert` ni `delete` :
+   « Suivre » et « Ne plus suivre » ne peuvent rien écrire. Même bloquant que
+   celui de `favourite_events` en §9, sous un autre nom.
+
+2. **Le profil privé n'existe pas** — et il commande tout le reste. Sans lui,
+   pas de **demandes** de suivi à accepter ou refuser. Il faut un drapeau et un
+   vrai usage de `friendships.status` (`pending` / `accepted`).
+
+3. **Les notifications n'existent nulle part — ni table, ni ligne dans le
+   plan.** Le prototype en a un centre complet. **C'est une brique à part
+   entière qui manque au découpage V2**, pas un détail de celle-ci.
+
+4. **`user_public` ne porte pas ce que le profil affiche.** Elle a `uid`,
+   `name`, `surname`, `avatar_url`, `niveau`, `ville`. Le proto montre en plus
+   la **pratique** et un lien **Strava**. `public.users` reste fermée aux
+   autres et doit le rester.
+
+5. **« Ses inscriptions à venir » suppose l'inscription publique**, qui
+   n'existe pas : `favourite_events.participates` est un booléen, pas le cycle
+   favori → inscrite → inscrite publique. Le plan le note déjà comme manquant
+   (§2.1, « État de la base »). **Cette section n'est pas branchable en
+   l'état.**
+
+6. **« Recommandé » = les récits**, donc cette section dépend de
+   `feat/partage-experience`, qui n'est pas encore dans `preprod`.
+
+### Migration à écrire au branchement
+
+```sql
+alter table public.user_public add column if not exists is_private boolean not null default false;
+alter table public.user_public add column if not exists pratique   text;
+alter table public.user_public add column if not exists strava_url text;
+
+create policy "Follow someone"   on public.friendships for insert to authenticated
+  with check ((select auth.uid()) = follower_id);
+create policy "Unfollow someone" on public.friendships for delete to authenticated
+  using ((select auth.uid()) = follower_id);
+```
+
+Plus la table de notifications, à concevoir — elle n'a pas de forme évidente et
+ne se déduit d'aucun existant.
+
+### Accès et RLS
+
+`src/proxy.ts` redirige déjà **tout** `/profil*` vers la connexion, y compris
+`/profil/[id]`. C'est le bon comportement et il n'y a rien à changer :
+`user_public` n'est lisible que par `authenticated`, et le prototype ferme lui
+aussi le réseau aux visiteurs.
+
+⚠️ **`/amis` n'est pas couverte par le proxy** : la garde y est faite à la main
+dans la page. À reprendre au branchement — soit on élargit le proxy, soit on
+garde la vérification locale, mais pas les deux à moitié.
+
+### Checklist de branchement
+
+1. Trancher le profil privé : c'est lui qui commande les demandes de suivi.
+2. Concevoir la table de notifications (brique à part entière, absente du plan).
+3. Appliquer la migration ci-dessus, policies comprises.
+4. Remplacer le contenu de `lib/social/mock-social.ts` par les lectures réelles,
+   en gardant les signatures.
+5. Brancher `FollowProvider` sur `friendships` — c'est déjà le point d'entrée
+   unique des écritures, les composants n'appellent que `isFollowing`,
+   `toggleFollow` et les deux réponses aux demandes.
+6. Laisser « Ses inscriptions à venir » débranchée tant que l'inscription
+   publique n'existe pas, plutôt que d'afficher les favoris à sa place.
+7. Décider du sort de la route interceptée `@profile/(.)profil`.
+8. Trancher l'accès à `/amis` (proxy ou garde locale).

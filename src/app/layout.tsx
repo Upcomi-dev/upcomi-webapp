@@ -9,6 +9,7 @@ import { AuthProvider } from "@/components/auth/auth-context";
 import { FavoritesProvider } from "@/components/favorites/favorites-context";
 import { FlyingHeartProvider } from "@/components/favorites/flying-heart";
 import { OnboardingModal } from "@/components/profile/onboarding-modal";
+import { FollowProvider } from "@/components/social/follow-context";
 import {
   buildInitialUserProfile,
   hasCompletedOnboarding,
@@ -124,6 +125,11 @@ export default async function RootLayout({
           <AuthModalProvider>
             <FavoritesProvider>
               <FlyingHeartProvider>
+              {/* MAQUETTE — l'état de suivi (qui je suis, qui me suit, les
+                  demandes en attente) vit ici, en mémoire seulement : un
+                  rechargement le remet à zéro. Voir
+                  `lib/social/mock-social`. */}
+              <FollowProvider>
               <AmbientOrbs />
               <div className="relative z-10 flex min-h-[100dvh] flex-col md:min-h-screen">
                 {children}
@@ -133,6 +139,7 @@ export default async function RootLayout({
                 <OnboardingModal initialValues={initialOnboardingValues} />
               ) : null}
               <AuthModal />
+              </FollowProvider>
               </FlyingHeartProvider>
             </FavoritesProvider>
           </AuthModalProvider>
