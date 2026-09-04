@@ -94,7 +94,7 @@ export function FeedbackDialog({
           onClick={() => handleOpenChange(true)}
           className="flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/75 transition-colors hover:bg-white/55 hover:text-coral"
         >
-          <MessageSquarePlus className="h-[18px] w-[18px] shrink-0" />
+          <MessageSquarePlus className="h-[18px] w-[18px] shrink-0 text-coral" />
           Idée, bug ou feedback
         </button>
       ) : variant === "menu" ? (

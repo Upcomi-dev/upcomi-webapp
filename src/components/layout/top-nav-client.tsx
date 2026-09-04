@@ -235,7 +235,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                 className="flex min-h-12 w-full items-center justify-between gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
               >
                 <span className="flex items-center gap-3">
-                  <Heart className="h-[18px] w-[18px] shrink-0" />
+                  <Heart className="h-[18px] w-[18px] shrink-0 text-coral" />
                   Mes favoris
                 </span>
                 {count > 0 ? (
@@ -251,7 +251,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                 className="flex min-h-12 w-full items-center justify-between gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
               >
                 <span className="flex items-center gap-3">
-                  <Check className="h-[18px] w-[18px] shrink-0" />
+                  <Check className="h-[18px] w-[18px] shrink-0 text-coral" />
                   Mes participations
                 </span>
                 {participationCount > 0 ? (
@@ -261,8 +261,6 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                 ) : null}
               </button>
             </div>
-
-            <div className="my-3 h-px bg-foreground/10" />
 
             <div className="space-y-1">
               {!ready ? (
@@ -283,7 +281,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                     onClick={closeMobileMenu}
                     className="flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
                   >
-                    <User className="h-[18px] w-[18px] shrink-0" />
+                    <User className="h-[18px] w-[18px] shrink-0 text-coral" />
                     Mon profil
                   </Link>
 
@@ -293,7 +291,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                     disabled={loggingOut}
                     className="flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral disabled:opacity-60"
                   >
-                    <LogOut className="h-[18px] w-[18px] shrink-0" />
+                    <LogOut className="h-[18px] w-[18px] shrink-0 text-coral" />
                     {loggingOut ? "Déconnexion..." : "Se déconnecter"}
                   </button>
                 </>
@@ -303,7 +301,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                   onClick={openMobileAuth}
                   className="flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
                 >
-                  <User className="h-[18px] w-[18px] shrink-0" />
+                  <User className="h-[18px] w-[18px] shrink-0 text-coral" />
                   Connexion
                 </button>
               )}
@@ -320,7 +318,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                   onClick={closeMobileMenu}
                   className="flex min-h-12 items-center gap-3 rounded-[14px] px-3 text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
                 >
-                  <CalendarPlus className="h-[18px] w-[18px] shrink-0" />
+                  <CalendarPlus className="h-[18px] w-[18px] shrink-0 text-coral" />
                   Proposer un événement
                 </Link>
               ) : null}
