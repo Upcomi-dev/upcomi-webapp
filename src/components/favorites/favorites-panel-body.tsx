@@ -26,12 +26,14 @@ interface FavoritesPanelBodyProps {
   onNavigate?: () => void;
   onEventOpen?: (event: FavoriteEvent) => void;
   className?: string;
+  initialTab?: "favorites" | "participations";
 }
 
 export function FavoritesPanelBody({
   onNavigate,
   onEventOpen,
   className,
+  initialTab = "favorites",
 }: FavoritesPanelBodyProps) {
   const {
     allFavoriteEvents,
@@ -43,7 +45,7 @@ export function FavoritesPanelBody({
   const { user } = useAuth();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"favorites" | "participations">("favorites");
+  const [activeTab, setActiveTab] = useState<"favorites" | "participations">(initialTab);
   const [pastVisibleCount, setPastVisibleCount] = useState(PAST_FAVORITES_PAGE_SIZE);
   const isAuthenticated = user !== null;
   const returnTo = buildRelativeUrl(pathname, searchParams.toString());

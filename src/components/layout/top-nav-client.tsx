@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CalendarPlus, Heart, Menu, User, X } from "lucide-react";
+import { CalendarPlus, Check, Heart, LogOut, Menu, User, X } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
@@ -17,15 +17,17 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled: boolean }) {
   const { openAuthModal } = useAuthModal();
-  const { user, ready } = useAuth();
-  const { count } = useFavorites();
+  const { user, ready, signOut } = useAuth();
+  const { count, participationCount } = useFavorites();
   const flyingHeart = useFlyingHeart();
   const isAuthenticated = user !== null;
   const favoritesButtonRef = useRef<HTMLButtonElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [favoritesInitialTab, setFavoritesInitialTab] = useState<"favorites" | "participations">("favorites");
   const [showProfile, setShowProfile] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -71,15 +73,29 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
     handleMobileMenuChange(false);
   }, [handleMobileMenuChange]);
 
-  const openMobileFavorites = useCallback(() => {
-    closeMobileMenu();
-    setShowFavorites(true);
-  }, [closeMobileMenu]);
+  const openMobileFavorites = useCallback(
+    (tab: "favorites" | "participations") => {
+      closeMobileMenu();
+      setFavoritesInitialTab(tab);
+      setShowFavorites(true);
+    },
+    [closeMobileMenu]
+  );
 
   const openMobileAuth = useCallback(() => {
     closeMobileMenu();
     openAuthModal();
   }, [closeMobileMenu, openAuthModal]);
+
+  const handleMobileLogout = useCallback(async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    const { error } = await signOut();
+    setLoggingOut(false);
+    if (!error) {
+      closeMobileMenu();
+    }
+  }, [loggingOut, signOut, closeMobileMenu]);
 
   return (
     <>
@@ -116,7 +132,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
                 <span
-                  ref={flyingHeart?.counterRef}
+                  ref={!isMobile ? flyingHeart?.counterRef : undefined}
                   className={`absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white shadow-[0_2px_6px_rgba(235,95,59,0.4)] transition-transform ${count > 0 ? "scale-100" : "scale-0"}`}
                 >
                   {count}
@@ -161,16 +177,33 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => handleMobileMenuChange(true)}
-            className="soft-ring ml-auto inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/58 text-foreground/68 transition-colors hover:bg-white/80 hover:text-coral md:hidden"
-            aria-label="Ouvrir le menu"
-            aria-expanded={showMobileMenu}
-            aria-controls="mobile-header-menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          <div className="ml-auto flex items-center gap-2 md:hidden">
+            <button
+              type="button"
+              onClick={() => openMobileFavorites("favorites")}
+              className="soft-ring relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/58 text-foreground/68 transition-colors hover:bg-white/80 hover:text-coral"
+              aria-label="Voir mes favoris"
+            >
+              <Heart className="h-5 w-5" />
+              <span
+                ref={isMobile ? flyingHeart?.counterRef : undefined}
+                className={`absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[11px] font-bold leading-none text-white shadow-[0_2px_6px_rgba(235,95,59,0.4)] transition-transform ${count > 0 ? "scale-100" : "scale-0"}`}
+              >
+                {count}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleMobileMenuChange(true)}
+              className="soft-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/58 text-foreground/68 transition-colors hover:bg-white/80 hover:text-coral"
+              aria-label="Ouvrir le menu"
+              aria-expanded={showMobileMenu}
+              aria-controls="mobile-header-menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -196,69 +229,98 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
             <div className="space-y-1">
+              <button
+                type="button"
+                onClick={() => openMobileFavorites("favorites")}
+                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
+              >
+                <span className="flex items-center gap-3">
+                  <Heart className="h-[18px] w-[18px] shrink-0" />
+                  Mes favoris
+                </span>
+                {count > 0 ? (
+                  <span className="rounded-full bg-coral/12 px-2 py-0.5 text-[11px] font-bold text-coral">
+                    {count}
+                  </span>
+                ) : null}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => openMobileFavorites("participations")}
+                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
+              >
+                <span className="flex items-center gap-3">
+                  <Check className="h-[18px] w-[18px] shrink-0" />
+                  Mes participations
+                </span>
+                {participationCount > 0 ? (
+                  <span className="rounded-full bg-coral/12 px-2 py-0.5 text-[11px] font-bold text-coral">
+                    {participationCount}
+                  </span>
+                ) : null}
+              </button>
+            </div>
+
+            <div className="my-3 h-px bg-foreground/10" />
+
+            <div className="space-y-1">
               {!ready ? (
-                <div className="h-14 animate-pulse rounded-[18px] bg-white/45" aria-hidden="true" />
+                <div className="h-12 animate-pulse rounded-[14px] bg-white/45" aria-hidden="true" />
               ) : isAuthenticated ? (
-                <div className="space-y-2">
+                <>
+                  <div className="px-3 pb-1 pt-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground/38">
+                      Connecté en tant que
+                    </p>
+                    <p className="mt-0.5 truncate text-[13px] font-medium text-foreground/80">
+                      {user?.email ?? "(email non renseigné)"}
+                    </p>
+                  </div>
+
+                  <Link
+                    href="/profil"
+                    onClick={closeMobileMenu}
+                    className="flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
+                  >
+                    <User className="h-[18px] w-[18px] shrink-0" />
+                    Mon profil
+                  </Link>
+
                   <button
                     type="button"
-                    onClick={() => setShowProfile((previous) => !previous)}
-                    className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-3 text-left text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
-                    aria-expanded={showProfile}
+                    onClick={handleMobileLogout}
+                    disabled={loggingOut}
+                    className="flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral disabled:opacity-60"
                   >
-                    <span className="soft-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] text-orange-dark">
-                      <User className="h-4 w-4" />
-                    </span>
-                    Mon compte
+                    <LogOut className="h-[18px] w-[18px] shrink-0" />
+                    {loggingOut ? "Déconnexion..." : "Se déconnecter"}
                   </button>
-                  {showProfile ? (
-                    <ProfileDropdown variant="inline" onClose={closeMobileMenu} />
-                  ) : null}
-                </div>
+                </>
               ) : (
                 <button
                   type="button"
                   onClick={openMobileAuth}
-                  className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-3 text-left text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
+                  className="flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
                 >
-                  <span className="soft-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] text-orange-dark">
-                    <User className="h-4 w-4" />
-                  </span>
+                  <User className="h-[18px] w-[18px] shrink-0" />
                   Connexion
                 </button>
               )}
-
-              <button
-                type="button"
-                onClick={openMobileFavorites}
-                className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-3 text-left text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
-              >
-                <span className="soft-ring relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/58 text-coral">
-                  <Heart className="h-4 w-4" />
-                  {count > 0 ? (
-                    <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white">
-                      {count}
-                    </span>
-                  ) : null}
-                </span>
-                Mes favoris
-              </button>
             </div>
 
-            <div className="my-4 h-px bg-foreground/8" />
+            <div className="my-3 h-px bg-foreground/10" />
 
             <div className="space-y-1">
-              <FeedbackDialog variant="menu" />
+              <FeedbackDialog variant="menu-plain" />
 
               {eventProposalsEnabled ? (
                 <Link
                   href="/proposer-un-evenement"
                   onClick={closeMobileMenu}
-                  className="flex min-h-14 items-center gap-3 rounded-[18px] px-3 text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
+                  className="flex min-h-12 items-center gap-3 rounded-[14px] px-3 text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
                 >
-                  <span className="soft-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/58 text-coral">
-                    <CalendarPlus className="h-4 w-4" />
-                  </span>
+                  <CalendarPlus className="h-[18px] w-[18px] shrink-0" />
                   Proposer un événement
                 </Link>
               ) : null}
@@ -275,7 +337,11 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
       </Dialog>
 
       {isMobile ? (
-        <FavoritesSheet open={showFavorites} onOpenChange={setShowFavorites} />
+        <FavoritesSheet
+          open={showFavorites}
+          onOpenChange={setShowFavorites}
+          initialTab={favoritesInitialTab}
+        />
       ) : null}
     </>
   );
