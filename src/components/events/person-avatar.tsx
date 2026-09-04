@@ -19,24 +19,19 @@ const PLACEHOLDER_AVATARS = [
 ];
 
 /**
- * En dessous de ce nombre d'intéressé·es, pas de visages : trois portraits
- * au-dessus de « 2 personnes intéressées » se lisent comme trois personnes
- * précises, et l'illustration devient un mensonge lisible à l'œil nu.
+ * La pile est une **décoration**, pas un décompte : elle montre les mêmes trois
+ * portraits quel que soit le nombre de personnes. Elle ne décide donc pas
+ * elle-même de s'afficher — c'est à l'appelant de savoir si un visage a un sens
+ * à cet endroit (la ligne d'arrivée du chemin en a toujours un ; un compteur à
+ * zéro, non).
  */
-export const MIN_PEOPLE_FOR_AVATARS = 5;
-
 export function AvatarStack({
-  count,
   size = 26,
   className,
 }: {
-  /** Nombre de personnes intéressées — décide de l'affichage, pas du contenu. */
-  count: number;
   size?: number;
   className?: string;
 }) {
-  if (count < MIN_PEOPLE_FOR_AVATARS) return null;
-
   return (
     <div className={cn("flex w-max flex-none items-center", className)} aria-hidden>
       {PLACEHOLDER_AVATARS.map((src, index) => (

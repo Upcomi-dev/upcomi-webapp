@@ -59,7 +59,9 @@ export function InterestedBlock({
 
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
-      <AvatarStack count={count} size={size === "compact" ? 22 : 26} />
+      {/* Des visages au-dessus de « sois la première personne » se
+          contrediraient : c'est le seul cas où la pile n'a rien à illustrer. */}
+      {count > 0 && <AvatarStack size={size === "compact" ? 22 : 26} />}
       <button
         type="button"
         onClick={handleClick}

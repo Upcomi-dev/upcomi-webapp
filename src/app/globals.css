@@ -78,8 +78,12 @@
   --orange-dark: #9e6319;
   --orange-light: #fff0db;
 
-  --violet: #7e69c8;
-  --violet-dark: #5d499f;
+  /* Le lila du proto (`--upcomi-lila` / `--upcomi-lila-dark` de
+     upcomi-clone/assets/css/tokens.css). La webapp portait un violet plus
+     saturé et plus bleu, jamais aligné sur la charte : c'est le fond du bloc
+     d'adéquation, le seul aplat plein de l'app, et il tranchait avec le reste. */
+  --violet: #ab89db;
+  --violet-dark: #8a63c4;
 
   /* Vert de la charte : sert au bloc « mesures pour les femmes et minorités
      de genre », le seul endroit où l'app parle d'inclusivité. */
@@ -294,21 +298,28 @@
     padding: 0 4px;
   }
 
-  /* Le bloc lila du score d'adéquation est le seul fond plein de l'app. Le
-     liseré corail du bouton secondaire n'y a plus de sens — il ne se justifie
-     que sur fond clair. Sur ce fond, c'est texte violet sur blanc, sans
-     contour, comme dans le proto.
+  /* Le bloc lila du score d'adéquation est le seul fond plein de l'app, et ses
+     boutons sont la seule exception à la charte : violet plein sur blanc, sans
+     contour et **sans survol**. Le liseré corail du bouton secondaire ne se
+     justifie que sur fond clair, et un survol qui ternit le blanc se lit comme
+     une désactivation sur un fond aussi saturé.
 
      Descendant plutôt qu'utilitaire Tailwind posé sur le bouton : `text-*` et
      `.btn-secondary` vivent dans la même couche, et c'est la règle écrite en
      dernier qui gagne — le bouton ressortait corail. */
   .compat-card .btn-secondary {
+    background: #fff;
     border: none;
     color: var(--violet-dark);
+    font-weight: 600;
   }
+  /* Écart assumé au proto, qui ternit le blanc à 90 % au survol : sur un aplat
+     aussi saturé, ce voile se lit comme un bouton désactivé. Rien ne bouge donc
+     au survol — la règle est écrite plutôt que supprimée, sinon celle de
+     `.btn-secondary` reprendrait la main avec son fond corail. */
   .compat-card .btn-secondary:not(:disabled):hover {
     background: #fff;
-    opacity: 0.9;
+    opacity: 1;
   }
   /* Une fois intéressé·e, le texte et le cœur passent à l'ocre de la charte —
      jamais de fond ocre. */

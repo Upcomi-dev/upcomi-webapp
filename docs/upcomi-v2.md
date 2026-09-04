@@ -747,7 +747,15 @@ se chevauchant d'un palier à l'autre :
 | **3 Confirmé** | non | oui | oui |
 
 Une débutante ne croise donc jamais le peloton de tête : voir le niveau des plus
-aguerries décourage plus que ça ne rassure (constat du prototype). La règle
+aguerries décourage plus que ça ne rassure (constat du prototype).
+
+> **Vérifié de bout en bout** sur un évènement portant 15 débutantes,
+> 14 intermédiaires, 12 confirmées/compétition et 6 niveaux inconnus. Réponses
+> hautes (plusieurs jours d'affilée / plus de 3500 m / confirmée) : **26**, soit
+> 14 + 12 — les débutantes et les paliers inconnus sont bien hors du compte.
+> Réponses basses (moins de 4 h / moins de 1000 m / pas de gravel) : **29**,
+> soit 15 + 14 — les confirmées sont hors du compte. La matrice est bien celle
+> ci-dessus dans les deux sens. La règle
 « une débutante est toujours incluse » du proto n'est **pas** reprise — elle y
 repose sur « aucun évènement à son actif », donnée qu'on n'a pas, et la
 transposer en « palier 1 toujours inclus » rendait la matrice non monotone.
@@ -859,24 +867,46 @@ la compter.
   initiales ne dit pas « il y a du monde ». Les trois portraits du prototype
   (randomuser.me, deux femmes et un homme) sont rapatriés dans
   `public/avatars/` — pas de dépendance à un domaine tiers au rendu.
-  **En dessous de cinq intéressées, aucun visage** (`MIN_PEOPLE_FOR_AVATARS`) :
-  trois portraits au-dessus de « 2 personnes intéressées » se lisent comme
-  trois personnes précises, et l'illustration devient un mensonge lisible à
-  l'œil nu. La feuille de personnes, elle, n'en porte aucun — comme dans le
-  proto : coller un visage d'illustration à côté d'un nom réel donnerait un
-  visage à quelqu'un qui n'en a pas.
+  Le seuil des cinq intéressées est **abandonné** : la pile ne décompte rien,
+  elle illustre, et la faire disparaître laissait la ligne d'arrivée du chemin
+  sans destination une fiche sur deux. `AvatarStack` ne décide donc plus de
+  s'afficher — c'est l'appelant qui sait si un visage a un sens à cet endroit.
+  Le chemin en montre toujours ; le compteur les cache au seul cas où ils se
+  contrediraient, « sois la première personne à t'intéresser ». La feuille de
+  personnes, elle, n'en porte aucun — comme dans le proto : coller un visage
+  d'illustration à côté d'un nom réel donnerait un visage à quelqu'un qui n'en
+  a pas.
+- **Un vélo pour se représenter**, et non une silhouette : sur cette piste on
+  se situe par sa pratique, et le personnage du proto se lisait comme un profil
+  parmi les portraits d'en face.
 - **Icônes exclusivement Lucide**, le set de l'app — jamais les noms Tabler du
   prototype. `zoom-question` n'a pas d'équivalent : c'est `UserRoundSearch` qui
   le remplace, et qui dit d'ailleurs mieux le sujet du bloc. L'icône est un
-  **filigrane** (92 px, opacité 0,18, débordant du coin haut-droit), le titre
-  passe devant.
+  **filigrane** (92 px, opacité 0,18), le titre passe devant. Elle est **posée
+  à l'intérieur** de la carte et non à cheval sur le coin comme dans le proto,
+  qui la donnait à lire comme rognée : `WATERMARK_OFFSET`, le seul endroit à
+  toucher pour la recaler.
 - **« Personne » est toujours féminin**, quel qu'en soit le sujet : « X
   personnes … sont déjà intéressées », sans point médian.
-- **Le bloc lila est le seul fond plein de l'app** : ses boutons secondaires
-  passent en texte violet sur blanc, sans liseré corail. La règle est un
-  descendant (`.compat-card .btn-secondary`), pas un utilitaire Tailwind posé
-  sur le bouton — `text-*` et `.btn-secondary` vivent dans la même couche, et
-  c'est la règle écrite en dernier qui gagnait : le bouton ressortait corail.
+- **Le lila est celui du proto.** `--violet` / `--violet-dark` valaient
+  `#7e69c8` / `#5d499f` depuis le commit initial — un violet plus saturé et plus
+  bleu, jamais aligné sur la charte. Ils reprennent les valeurs de
+  `upcomi-clone/assets/css/tokens.css` : **`#ab89db`** (`--upcomi-lila`) et
+  **`#8a63c4`** (`--upcomi-lila-dark`). Le token est global : les deux dégradés
+  de repli d'image et la pastille « auto » de `/admin` suivent, ce qui est bien
+  l'intention — c'est la couleur de la charte, pas celle d'un bloc.
+- **Le bloc lila est le seul fond plein de l'app**, et ses boutons la seule
+  exception à la charte : violet plein sur blanc, en gras, sans liseré corail et
+  **sans survol**. La règle est un descendant (`.compat-card .btn-secondary`),
+  pas un utilitaire Tailwind posé sur le bouton — `text-*` et `.btn-secondary`
+  vivent dans la même couche, et c'est la règle écrite en dernier qui gagnait :
+  le bouton ressortait corail.
+  Écart assumé au proto, qui ternit le blanc à 90 % au survol : sur un aplat
+  aussi saturé, ce voile se lit comme un bouton désactivé. La règle de survol
+  est réécrite plutôt que supprimée — l'effacer laisserait celle de
+  `.btn-secondary` reprendre la main avec son fond corail.
+- **« Je situe mon niveau »** plutôt que « Commencer » sur le premier bouton :
+  le geste est de se situer, pas de démarrer un test.
 - **Un seul emplacement pour le bloc violet**, dans la colonne de lecture,
   **après « Qui organise ? »** — c'est là que le proto pose son
   `compat-slot-inline`, et il n'en rend pas d'autre. Ordre complet de la fiche :

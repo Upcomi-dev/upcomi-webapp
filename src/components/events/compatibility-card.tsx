@@ -58,7 +58,7 @@ export function CompatibilityCard({
   const { user, ready: authReady } = useAuth();
   const { openAuthModal } = useAuthModal();
   const { isFavorite, toggleFavorite, ready: favoritesReady } = useFavorites();
-  const { count, people, tierCounts } = useInterestedPeople();
+  const { people, tierCounts } = useInterestedPeople();
 
   const [state, setState] = useState<CardState>({ kind: "idle" });
   const [answers, setAnswers] = useState<CompatAnswers | null>(null);
@@ -215,7 +215,7 @@ export function CompatibilityCard({
         Suis-je prêt·e pour {event.name} &nbsp;?
       </h2>
 
-      <CompatibilityPath overall={overall} interestedCount={count} />
+      <CompatibilityPath overall={overall} />
 
       <hr className="mb-[18px] border-none border-t border-white/20" />
 
@@ -232,7 +232,7 @@ export function CompatibilityCard({
               trackAnalyticsEvent("Compatibility Started", { event_id: eventId });
             }}
           >
-            Commencer →
+            Je situe mon niveau →
           </button>
         </>
       )}
@@ -284,9 +284,13 @@ export function CompatibilityCard({
  * viewBox de 24, soit ~8 px de vide de chaque côté à cette taille), donc le
  * déplacement visible n'est jamais celui qu'on vient d'écrire.
  *
- * Le proto partait de `{ down: -26, left: -26 }`.
+ * Le proto partait de `{ down: -26, left: -26 }` : la loupe débordait du coin
+ * et se lisait comme rognée par la carte. Elle est désormais **posée à
+ * l'intérieur**, décollée des deux bords — à cette taille le glyphe laisse déjà
+ * ~8 px de vide de chaque côté, l'écart visible est donc d'une douzaine de
+ * pixels de moins que les valeurs ci-dessous.
  */
-const WATERMARK_OFFSET = { down: -16, left: -16 };
+const WATERMARK_OFFSET = { down: 20, left: 20 };
 
 /**
  * `zoom-question` de Tabler (MIT), la seule icône du proto absente de lucide :
