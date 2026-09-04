@@ -42,43 +42,84 @@ uniquement à brancher les boutons vers les nouvelles pages.
 > fonction par flag. Au-delà de deux ou trois briques flaguées, il faudra un
 > `isFeatureEnabled(key)` générique et un écran d'interrupteurs dans `/admin`.
 
-### État des branches en cours (2026-09-04)
+### État des branches (2026-09-04) — vue de passation
 
 Chaque branche se documente elle-même, et le fait **sur sa branche** : sa
 section n'arrive dans ce document qu'avec le merge — d'où la colonne
 « Section », qui dit où lire. Ce qui suit est le reste : ce qu'aucune branche ne
 peut porter seule, parce que ça se joue **entre** elles.
 
-| Branche | Ce qu'elle porte | Section | Migration |
+> **Rien de la V2 n'est en production.** `main` est à **42 commits derrière
+> `preprod`** et n'a reçu aucune brique V2. Tout ce qui est marqué « fusionné »
+> ci-dessous l'est **dans `preprod` seulement**. La première livraison est donc
+> un batch : `preprod → main`, avec toutes les migrations à appliquer d'un coup
+> (voir « Ordre d'application » plus bas) et les deux policies RLS à vérifier.
+
+#### Fusionné dans `preprod` — écrit, relu, jamais livré
+
+| Brique | Ce qu'elle porte | Section | Migrations |
 |---|---|---|---|
-| `feat/calendrier-inscriptions` | Calendrier des inscriptions | §6 | aucune |
-| `feat/fiche-evenement-v2` | Dates clés, mesures d'inclusion, UI | §8 | `20260902101500` |
-| `feat/onboarding-v2` | Parcours d'inscription, récits, modération | §7 (modération : sur la branche) | `20260901103000`, `20260903001000`, `20260905110000` |
-| `feat/avantages-evenement` | Code promo, dispositions d'inscription | §10, sur la branche | `20260905100000` |
-| `feat/partage-experience` | Affichage des récits | §11, sur la branche | `20260904000000`, `20260905120000` |
-| `feat/score-adequation` | Score d'adéquation | §9, sur la branche | `20260904120000`, `20260904170000` |
+| `feat/onboarding-v2` | Parcours d'inscription, saisie des récits, modération dans `/admin` | §7 | `20260901103000`, `20260903001000`, `20260905110000` |
+| `feat/fiche-evenement-v2` | Dates clés, mesures d'inclusion, refonte UI de la fiche | §8 | `20260902101500` |
+| `feat/personnes-interessees` | Bloc « qui est intéressé » | §9 | `20260904160000` |
+| `feat/avantages-evenement` | Code promo, dispositions d'inscription | §10 | `20260905100000` |
 
-Toutes partent de `preprod` et sont à jour, **sauf `feat/score-adequation`** —
-voir ci-dessous.
+Reste à faire sur ces quatre : **la saisie**. Les mesures d'inclusion, les codes
+promo et les dispositions n'ont **aucun écran d'administration** — le
+rattachement se fait en SQL, évènement par évènement. Tant que personne ne
+saisit, les blocs restent invisibles en production.
 
-> **Collision de numérotation à prévoir** : `feat/score-adequation` numérote sa
-> section §9, place que `feat/personnes-interessees` occupe déjà ici. Les deux
-> branches se disputent aussi le même bloc (voir plus bas) : c'est le même
-> chantier de réconciliation, le document suit le code.
+#### Écrites et fonctionnelles, hors `preprod`
+
+| Branche | État | À faire avant merge |
+|---|---|---|
+| `feat/calendrier-inscriptions` | terminée, **45 commits de retard** sur `preprod` | rebaser puis merger. Sa section §6 est *déjà* dans le document, pas son code. Le bouton « Me prévenir » est reporté (table `registration_reminders` à créer) |
+| `feat/partage-experience` | terminée, 13 commits de retard | rebaser puis merger. Migration `20260905120000` **après** `20260905110000` |
+| `feat/score-adequation` | terminée mais **divergée** | réconcilier le bloc « qui est intéressé » avec `preprod` (voir ci-dessous) |
+| `worktree-burger-menu-v2` | 3 commits, **partie d'un `main` ancien**, non documentée | décider de son sort : elle réécrit `top-nav-client.tsx`, que `feat/nav-v2` réécrit aussi. Deux versions du même menu, l'une des deux doit disparaître |
+
+#### Maquettes — écrans en place, données en dur
+
+Cinq branches à jour sur `preprod`, chacune avec sa section prête (§12 à §16)
+et sa checklist de branchement. **Aucune ne lit la base, aucune ne porte de
+migration.** Ce sont des maquettes assumées : le geste et la mise en page sont
+tranchés, le branchement ne l'est pas.
+
+| Branche | Section | Ce qui bloque le branchement |
+|---|---|---|
+| `feat/evenements-similaires` | §12 | trancher **sélection éditoriale ou score de proximité**. Si score : migration `distance_km` / `duration_days` + backfill |
+| `feat/organisateur-enrichi` | §13 | 3 `add column` additifs — mais surtout **un écran de saisie dans `/admin`**, sans quoi les colonnes resteront vides |
+| `feat/social` | §14 | policies `insert`/`delete` sur `friendships`, **profil privé**, et une **table de notifications qui n'existe nulle part dans le plan** |
+| `feat/recherche-v2` | §15 | même migration `distance_km` / `duration_days` que §12 — **à écrire une seule fois pour les deux** |
+| `feat/nav-v2` | §16 | dépend de `feat/calendrier-inscriptions` (l'entrée mène à une 404 sans elle). À fusionner **en dernier** : c'est celle qui touche le plus de fichiers partagés |
+
+#### Ordre de merge recommandé
+
+```
+1. feat/calendrier-inscriptions   (rebase — 45 commits de retard)
+2. feat/partage-experience        (rebase — migration après celle d'onboarding)
+3. feat/score-adequation          (après réconciliation, cf. ci-dessous)
+4. les maquettes, une fois branchées : §12 §13 §15 §14
+5. feat/nav-v2                    (en dernier, après le calendrier)
+```
 
 #### Ordre d'application des migrations
 
 Les fichiers sont indépendants et rejouables, à **une** exception près :
 
 ```
-20260905110000_moderation_recits.sql   (feat/onboarding-v2)
+20260905110000_moderation_recits.sql   (feat/onboarding-v2, dans preprod)
         ↓ crée user_event_stories.status
-20260905120000_recits_valides.sql      (feat/partage-experience)
+20260905120000_recits_valides.sql      (feat/partage-experience, hors preprod)
 ```
 
 La seconde filtre l'affichage sur `status = 'approved'` : jouée en premier, elle
 cherche une colonne qui n'existe pas encore. C'est la seule dépendance entre
 branches du plan.
+
+Second point, à traiter au rebase de `feat/score-adequation` : sa migration
+`20260904120000` redéfinit `sync_user_public()` **sans** `ville` et porte un
+horodatage antérieur à `20260904160000` (déjà dans `preprod`). Voir §9.
 
 #### ⚠️ `feat/score-adequation` a divergé de `preprod`
 
@@ -96,6 +137,10 @@ questionnaire dessus. C'est un chantier à programmer pour lui-même, pas un
 préalable qu'on règle en passant. **Tant qu'il n'est pas fait, la branche ne
 peut pas être fusionnée.**
 
+> **Collision de numérotation** : `feat/score-adequation` numérote sa section
+> §9, place que `feat/personnes-interessees` occupe déjà ici. Même chantier de
+> réconciliation : le document suit le code.
+
 #### Deux policies RLS à vérifier en prod avant de livrer
 
 Relevées en base **locale**, sur deux tables qu'aucune de ces briques n'a
@@ -106,7 +151,8 @@ dump dont vient la baseline, soit la prod est réellement dans cet état — c'e
 ce qu'il faut aller regarder.
 
 1. **`public.favourite_events` n'a aucune policy d'écriture** — détail et
-   commandes de déblocage en §9. Bloque « Ça m'intéresse ».
+   commandes de déblocage en §9. Bloque « Ça m'intéresse », donc le bloc
+   « qui est intéressé » *et* le score d'adéquation.
 2. **`public.admin_users` a la RLS activée et aucune policy.** `assertAdmin()`
    lit sa propre ligne en tant qu'`authenticated` : sans policy elle ne voit
    rien, et `/admin` renvoie tout le monde à l'accueil. Pour débloquer en
@@ -117,45 +163,73 @@ ce qu'il faut aller regarder.
      for select to authenticated using ((select auth.uid()) = user_id);
    ```
 
+3. **`friendships` n'a qu'une policy de `select`** — même bloquant, il tombera
+   le jour où `feat/social` se branche (§14).
+
+#### Ce qui n'est porté par aucune branche
+
+- **Le centre de notifications** — le prototype en a un complet, il n'existe ni
+  table, ni brique, ni ligne dans le découpage. Révélé par `feat/social` (§14).
+- **L'inscription publique** (cycle favori → inscrite → inscrite publique) :
+  `favourite_events.participates` est un booléen. Bloque « ses inscriptions à
+  venir » sur le profil (§14).
+- **`registration_reminders`** — le « Me prévenir » du calendrier (§6), décrit
+  par le proto comme le bénéfice central de la page.
+- **Les écrans de saisie `/admin`** : mesures d'inclusion, avantages, et les
+  trois champs de l'organisateur.
+- **`users.genre` / `users.gender`** — deux colonnes pour la même chose, voir
+  « État de la base » en §2.1.
+
 ---
 
 ## 2. Découpage en briques
 
-### 2.1 Priorisation actuelle (arbitrage du 2026-09-01)
+### 2.1 Priorisation actuelle (arbitrage du 2026-09-01, revu le 2026-09-04)
 
-Dépriorisé pour l'instant : refonte de la navigation (nav desktop + barre app
-mobile), recherche V2 (filtres avancés), inscription publique (voir qui est
-inscrit, statut public). **Non tranché** : le parcours « je suis inscrite → 
-partager », et l'évolution de « Mes évènements » — à confirmer avant de les
-programmer ou de les exclure.
+L'arbitrage initial dépriorisait la navigation, la recherche V2 et
+l'inscription publique, et laissait **non tranchés** le parcours « je suis
+inscrite → partager » et l'évolution de « Mes évènements ».
 
-> **Revu le 2026-09-04.** Deux choses ont bougé depuis l'arbitrage : la moitié
-> des briques est écrite (voir « État des branches en cours » ci-dessus), et
-> `feat/socle-data` **n'est plus un verrou** — elle est dissoute, voir plus bas.
+> **Ce qui a bougé depuis.** (1) `feat/socle-data` **n'est plus un verrou** —
+> elle est dissoute, voir plus bas. (2) Les briques dépriorisées ont quand même
+> été **maquettées** : navigation (§16) et recherche V2 (§15) existent en
+> écrans, données en dur. L'arbitrage tient — on ne les branche pas — mais
+> l'écran est prêt le jour où il revient. (3) L'inscription publique reste le
+> seul manque structurant : elle bloque « ses inscriptions à venir » sur le
+> profil (§14).
 
 ```
-Écrites, dans preprod :
-  feat/onboarding-v2            T1 — la branche a repris de l'avance (modération des récits)
+Écrites et fusionnées dans preprod (mais PAS en prod : main est 42 commits derrière) :
+  feat/onboarding-v2            T1 — inscription, saisie des récits, modération
   feat/fiche-evenement-v2       T1 — absorbe feat/dates-cles et feat/mesures-inclusion
   feat/personnes-interessees    T1 — §9
-  feat/avantages-evenement      hors plan initial — code promo, dispositions d'inscription, voir §10
+  feat/avantages-evenement      hors plan initial — code promo, dispositions, §10
 
 Écrites, hors preprod :
-  feat/calendrier-inscriptions  T1 — terminée, jamais mergée
+  feat/calendrier-inscriptions  T1 — terminée, 45 commits de retard, à rebaser
   feat/partage-experience       affichage des récits — après la modération d'onboarding-v2
   feat/score-adequation         T2 — terminée mais divergée, à réconcilier avant merge
+  worktree-burger-menu-v2       hors plan, partie d'un main ancien, non documentée
 
-Pas commencées :
-  feat/evenements-similaires    T3 — zéro migration
-  feat/organisateur-enrichi     T3 — additive, l'entité existe déjà en base
-  feat/social                   T4 — suivre, profils
+Maquettées — écran en place, aucune donnée lue, aucune migration :
+  feat/evenements-similaires    T3 — §12
+  feat/organisateur-enrichi     T3 — §13
+  feat/social                   T4 — §14
+  feat/recherche-v2             T5 — §15
+  feat/nav-v2                   T6 — §16
+
+Pas commencées, et portées par aucune branche :
+  notifications                 révélé par §14 — ni table, ni brique, ni ligne au plan
+  inscription publique          le cycle favori → inscrite → inscrite publique
+  registration_reminders        le « Me prévenir » du calendrier (§6)
+  saisie /admin                 mesures d'inclusion, avantages, champs organisateur
 ```
 
-**Plus aucune brique n'en bloque une autre.** Il ne reste que deux points de
-séquence, tous deux décrits dans « État des branches en cours » : la dépendance
-entre les deux migrations de récits, et la réconciliation de
-`feat/score-adequation` avec `preprod` — un chantier à programmer pour
-lui-même, pas un préalable d'architecture.
+**Plus aucune brique n'en bloque une autre.** Il reste des points de séquence,
+tous décrits en §1 : la dépendance entre les deux migrations de récits, la
+réconciliation de `feat/score-adequation`, la migration `distance_km` /
+`duration_days` partagée par §12 et §15, et `feat/nav-v2` qui suit le
+calendrier.
 
 #### `feat/socle-data` est dissoute
 
@@ -1176,3 +1250,24 @@ Vérifié en local avec la clé publique : `select` sur `event_promo_codes` renv
 2. Merger le code (aucun feature flag : sans saisie, le bandeau ne s'affiche pas
    et la timeline est inchangée).
 3. Saisir les codes promo et les dispositions évènement par évènement.
+
+---
+
+## 12 à 16 — les briques maquettées
+
+Leurs sections vivent **sur leur branche**, selon la convention posée en §1 :
+§12 `feat/evenements-similaires`, §13 `feat/organisateur-enrichi`,
+§14 `feat/social`, §15 `feat/recherche-v2`, §16 `feat/nav-v2`. Les places sont
+réservées d'avance pour qu'elles ne se disputent pas une même place comme §9.
+
+Pour les lire sans changer de branche :
+
+```bash
+git show feat/social:docs/upcomi-v2.md | sed -n '/^## 14\./,$p'
+```
+
+Chacune se termine par une **checklist de branchement** : c'est le reste-à-faire
+détaillé, brique par brique.
+
+De même, §11 (`feat/partage-experience`) et la version §9 du score d'adéquation
+(`feat/score-adequation`) ne sont lisibles que sur leur branche.
