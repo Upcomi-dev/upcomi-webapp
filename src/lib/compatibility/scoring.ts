@@ -61,7 +61,12 @@ export interface EventCompatProfile {
   isVtt: boolean;
   terrainTier: number;
   kmPerDay: number;
-  hoursTier: number;
+  /**
+   * Ce que l'évènement demande d'endurance, sur l'échelle de la question
+   * « ta plus longue sortie d'une traite » (1 = moins de 4 h, 5 = plusieurs
+   * jours d'affilée). Voir `getDurationTier`.
+   */
+  durationTier: number;
   /** 1 = solo/autonomie, 3 = format collectif. */
   social: number;
 }
@@ -79,6 +84,34 @@ function parseSingleDistance(distance: string | null): number | null {
   if (!matches || matches.length !== 1) return null;
   const value = Number.parseFloat(matches[0].replace(",", "."));
   return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/** Vitesse moyenne, seulement pour estimer la durée d'un évènement d'un jour. */
+const ESTIMATED_SPEED_KMH = 20;
+
+/**
+ * Ce que l'évènement demande d'endurance, sur l'échelle de la question « ta
+ * plus longue sortie d'une traite ».
+ *
+ * La durée est une donnée à part entière, pas une conséquence du kilométrage :
+ * un évènement de deux jours demande d'enchaîner deux jours, même si chacun
+ * couvre une distance déjà familière. Elle vient donc des **dates**.
+ *
+ * Les kilomètres ne servent qu'à trancher **sous la journée**, là où les dates
+ * ne disent plus rien : `dateEvent` et `dateFin` ne distinguent pas une sortie
+ * de trois heures d'une sortie de douze. On estime alors la durée à
+ * 20 km/h — faute de mieux, et sur ce seul cas.
+ */
+function getDurationTier(days: number, kmPerDay: number): number {
+  // Plusieurs jours : c'est l'enchaînement qui est demandé, la distance
+  // quotidienne n'y change rien.
+  if (days > 1) return 5;
+
+  const hours = kmPerDay / ESTIMATED_SPEED_KMH;
+  if (hours > 12) return 4; // une longue journée
+  if (hours > 8) return 3; // une journée
+  if (hours > 4) return 2; // une demi-journée
+  return 1; // moins de 4 h
 }
 
 /**
@@ -111,14 +144,19 @@ export function getEventCompatProfile(
 
   const km = route?.distanceKm ?? parseSingleDistance(event.distance) ?? 0;
   const kmPerDay = Math.round(km / days) || 0;
-  // Vitesse moyenne indicative sur longue distance, arrêts compris.
-  const hoursPerDay = kmPerDay / 18;
-  const hoursTier = hoursPerDay > 12 ? 4 : hoursPerDay > 8 ? 3 : hoursPerDay > 4 ? 2 : 1;
 
   const soloText = `${event.name} ${event.description ?? ""}`.toLowerCase();
   const social = /autonomie/.test(soloText) ? 1 : 3;
 
-  return { denivele, isGravel, isVtt, terrainTier, kmPerDay, hoursTier, social };
+  return {
+    denivele,
+    isGravel,
+    isVtt,
+    terrainTier,
+    kmPerDay,
+    durationTier: getDurationTier(days, kmPerDay),
+    social,
+  };
 }
 
 export interface CompatCriterion {
@@ -143,6 +181,24 @@ function levelScore(userLevel: number, eventTier: number): number {
   if (diff === 0) return 9;
   if (diff === -1) return 6.5;
   return 3;
+}
+
+/**
+ * Le conseil de durée nomme ce qu'il faut aller chercher — « la journée
+ * entière », « plusieurs jours » — plutôt que de renvoyer à un kilométrage :
+ * c'est le temps passé en selle qui manque, pas les kilomètres.
+ */
+function durationGapText(tier: number): string {
+  if (tier >= 5) return "Plusieurs jours d'affilée : entraîne-toi à enchaîner deux sorties sur deux jours.";
+  if (tier === 4) return "Une longue journée en selle : entraîne-toi à rouler du matin au soir.";
+  if (tier === 3) return "Une journée entière en selle : entraîne-toi à rouler sur la journée complète.";
+  return "Une demi-journée en selle : allonge un peu tes sorties.";
+}
+
+function durationGoodText(tier: number): string {
+  if (tier >= 5) return "Tu as déjà enchaîné plusieurs jours, c'est le format de cet évènement";
+  if (tier >= 3) return "Tu as déjà passé une journée en selle, c'est le format de cet évènement";
+  return "Le format tient en une demi-journée, tu l'as déjà fait";
 }
 
 export function computeCompatibility(
@@ -186,19 +242,18 @@ export function computeCompatibility(
     revetementScore = 9.5;
   }
 
-  // Distance et délais : la plus longue distance déjà parcourue et la plus
-  // longue durée de selle, comparées aux km/jour de l'évènement.
-  const distanceSub =
+  // Distance et durée sont deux questions distinctes, et deux conseils
+  // distincts. Les moyenner laissait passer le cas qui compte le plus : avoir
+  // déjà couvert la distance d'une étape ne dit pas qu'on sait enchaîner deux
+  // jours, et la moyenne effaçait le manque derrière un kilométrage familier.
+  const distanceScore =
     distance && distance.km !== undefined
       ? profile.kmPerDay <= distance.km
         ? 9.5
         : Math.max(3, 9.5 - (profile.kmPerDay - distance.km) / 20)
       : null;
-  const hoursSub = sortie ? levelScore(sortie.level, profile.hoursTier) : null;
-  const distanceScore =
-    distanceSub !== null && hoursSub !== null
-      ? (distanceSub + hoursSub) / 2
-      : (distanceSub ?? hoursSub);
+
+  const durationScore = sortie ? levelScore(sortie.level, profile.durationTier) : null;
 
   const criteria: CompatCriterion[] = [
     {
@@ -218,10 +273,17 @@ export function computeCompatibility(
     },
     {
       key: "distance",
-      label: "Distance totale et délais",
+      label: "Distance",
       score: distanceScore,
       goodText: `${profile.kmPerDay} km/j env., vu ce que tu as déjà fait, c'est totalement atteignable !`,
-      gapText: `${profile.kmPerDay} km/j env. : entraîne-toi à rouler un peu plus longtemps dans la journée.`,
+      gapText: `${profile.kmPerDay} km/j env. : allonge tes sorties pour t'habituer à cette distance.`,
+    },
+    {
+      key: "duree",
+      label: "Durée",
+      score: durationScore,
+      goodText: durationGoodText(profile.durationTier),
+      gapText: durationGapText(profile.durationTier),
     },
   ];
 

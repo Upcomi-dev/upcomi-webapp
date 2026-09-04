@@ -802,6 +802,23 @@ la compter.
 - **Le résultat s'affiche même déconnectée** — en test, ne rien voir à la fin du
   questionnaire était pris pour un bug. Il n'est simplement pas gardé, et la
   liste de personnes reste derrière le gate.
+- **Distance et durée sont deux critères séparés**, avec chacun son conseil. Le
+  proto les moyennait en un seul (« Distance totale et délais »), et la moyenne
+  effaçait le cas qui compte le plus : avoir déjà couvert 100 km ne dit pas
+  qu'on sait en enchaîner deux jours de suite, mais un kilométrage familier
+  suffisait à ramener la note au-dessus du seuil. La fiche porte donc quatre
+  critères et non trois.
+- **La durée demandée par l'évènement vient des dates, pas des kilomètres.**
+  Plus d'un jour d'écart entre `dateEvent` et `dateFin` : c'est l'enchaînement
+  qui est demandé, quelle que soit la distance quotidienne. Les kilomètres ne
+  servent plus qu'à trancher **sous la journée**, là où les dates ne disent
+  rien — une sortie de trois heures et une de douze ont la même date — et à
+  **20 km/h**, sur ce seul cas. L'ancienne conversion systématique à 18 km/h
+  décidait seule du passage de « 4-8 h » à « 8-12 h » sur tous les formats.
+- **Le conseil de durée nomme ce qu'il faut aller chercher** (« entraîne-toi à
+  enchaîner deux sorties sur deux jours », « à rouler sur la journée complète »)
+  plutôt que de renvoyer à un kilométrage : c'est du temps en selle qui manque,
+  pas des kilomètres.
 - **Le questionnaire n'écrase pas `pref2`** : la déclaration d'onboarding et la
   mesure fine coexistent. Proposer « ton niveau déclaré ne correspond plus, on
   le met à jour ? » reste à faire.
