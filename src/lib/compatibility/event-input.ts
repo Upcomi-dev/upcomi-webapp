@@ -1,5 +1,5 @@
 import { getDateKey } from "@/lib/utils/event-dates";
-import type { CompatRoute } from "@/lib/compatibility/questions";
+import { parseBikeTypes, type CompatRoute } from "@/lib/compatibility/questions";
 import type { CompatEventInput } from "@/lib/compatibility/scoring";
 import type { Event, SousEvent } from "@/lib/types/database";
 
@@ -28,17 +28,22 @@ function getDurationDays(dateEvent: string | null, dateFin: string | null): numb
 /**
  * L'évènement, réduit à ce dont le score d'adéquation a besoin.
  *
- * Les « parcours » du prototype sont ici les `sous_events`. Le revêtement vient
- * de `bikeType` quand il est renseigné sur le parcours, sinon du `bike_type` de
- * l'évènement — c'est souvent le seul des deux à l'être.
+ * Les « parcours » du prototype sont ici les `sous_events`. Le type de vélo est
+ * celui du parcours quand il est exploitable, sinon celui de l'évènement : un
+ * `sous_events.bikeType` vide ou hors vocabulaire ne doit pas effacer la liste
+ * de l'évènement, qui est souvent la mieux remplie des deux.
  */
 export function buildCompatEvent(event: Event, sousEvents: SousEvent[]): CompatEventInput {
-  const routes: CompatRoute[] = sousEvents.map((se, index) => ({
-    name: se.nom?.trim() || `Parcours ${index + 1}`,
-    surface: se.bikeType || event.bike_type,
-    distanceKm: se.distance,
-    elevationM: se.elevation,
-  }));
+  const eventBikeTypes = parseBikeTypes(event.bike_type);
+  const routes: CompatRoute[] = sousEvents.map((se, index) => {
+    const routeBikeTypes = parseBikeTypes(se.bikeType);
+    return {
+      name: se.nom?.trim() || `Parcours ${index + 1}`,
+      bikeTypes: routeBikeTypes.length > 0 ? routeBikeTypes : eventBikeTypes,
+      distanceKm: se.distance,
+      elevationM: se.elevation,
+    };
+  });
 
   return {
     name: event.nomEvent || "cet évènement",

@@ -819,6 +819,25 @@ la compter.
   enchaîner deux sorties sur deux jours », « à rouler sur la journée complète »)
   plutôt que de renvoyer à un kilométrage : c'est du temps en selle qui manque,
   pas des kilomètres.
+- **Le terrain se lit dans un vocabulaire fermé, jamais par une regex.**
+  `Route | Gravel | VTT` est validé à l'écriture (`BIKE_TYPES` du parcours de
+  proposition), et `events.bike_type` est la jonction par virgules des types de
+  ses parcours. `parseBikeTypes()` découpe et compare par appartenance exacte.
+  Le `/gravel|mixte/` du proto acceptait « Gravelotte » et « Parcours mixte », et
+  son `mixte` n'existe dans aucun des deux champs — c'est le double match
+  Gravel + VTT qui produit le cas mixte. Sur les valeurs présentes en base, les
+  deux lectures donnent le même résultat : le changement ne ferme qu'une porte.
+- **Les deux questions de terrain sont posées** : la donnée VTT est du même
+  vocabulaire, et de la même qualité, que la donnée gravel.
+
+  > **À vérifier en prod.** En base locale, `sous_events.bikeType` ne porte
+  > qu'une seule valeur — `Gravel`, sur 94 lignes sur 94. Comme le type du
+  > parcours prime sur celui de l'évènement, **57 évènements dont
+  > `events.bike_type` vaut « Route »** se voient poser la question gravel. Si
+  > la prod présente la même uniformité, il faut inverser la priorité (ou
+  > n'utiliser que `events.bike_type`) avant d'activer le bloc. La requête :
+  > `select count(distinct "bikeType") from sous_events;`
+
 - **Le questionnaire n'écrase pas `pref2`** : la déclaration d'onboarding et la
   mesure fine coexistent. Proposer « ton niveau déclaré ne correspond plus, on
   le met à jour ? » reste à faire.

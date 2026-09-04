@@ -67,8 +67,6 @@ export interface EventCompatProfile {
    * jours d'affilée). Voir `getDurationTier`.
    */
   durationTier: number;
-  /** 1 = solo/autonomie, 3 = format collectif. */
-  social: number;
 }
 
 /**
@@ -135,18 +133,17 @@ export function getEventCompatProfile(
   const denivele =
     elevationPerDay > 3500 ? 4 : elevationPerDay > 2000 ? 3 : elevationPerDay > 1000 ? 2 : 1;
 
-  const surface = (route?.surface ?? "").toLowerCase();
-  const isGravel = /gravel|mixte/.test(surface);
-  const isVtt = /vtt|mixte/.test(surface);
-  // Simplification reprise du proto : un parcours gravel/VTT est considéré
-  // « intermédiaire », le champ ne dit pas à quel point le terrain est engagé.
+  // Appartenance au vocabulaire des types de vélo, jamais une recherche de
+  // sous-chaîne : les valeurs sont connues d'avance (voir `parseBikeTypes`).
+  const bikeTypes = route?.bikeTypes ?? [];
+  const isGravel = bikeTypes.includes("Gravel");
+  const isVtt = bikeTypes.includes("VTT");
+  // Le champ dit quel terrain, pas à quel point il est engagé : un parcours
+  // gravel ou VTT est donc considéré « intermédiaire », faute de mieux.
   const terrainTier = 2;
 
   const km = route?.distanceKm ?? parseSingleDistance(event.distance) ?? 0;
   const kmPerDay = Math.round(km / days) || 0;
-
-  const soloText = `${event.name} ${event.description ?? ""}`.toLowerCase();
-  const social = /autonomie/.test(soloText) ? 1 : 3;
 
   return {
     denivele,
@@ -155,7 +152,6 @@ export function getEventCompatProfile(
     terrainTier,
     kmPerDay,
     durationTier: getDurationTier(days, kmPerDay),
-    social,
   };
 }
 
