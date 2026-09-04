@@ -164,7 +164,10 @@ export interface CompatCriterion {
   label: string;
   /** `null` tant que la question qui l'alimente n'a pas de réponse. */
   score: number | null;
-  goodText: string;
+  /**
+   * Le conseil, affiché seulement quand le critère est sous le seuil. Un
+   * critère acquis ne dit rien : il disparaît simplement de la liste.
+   */
   gapText: string;
 }
 
@@ -193,12 +196,6 @@ function durationGapText(tier: number): string {
   if (tier === 4) return "Une longue journée en selle : entraîne-toi à rouler du matin au soir.";
   if (tier === 3) return "Une journée entière en selle : entraîne-toi à rouler sur la journée complète.";
   return "Une demi-journée en selle : allonge un peu tes sorties.";
-}
-
-function durationGoodText(tier: number): string {
-  if (tier >= 5) return "Tu as déjà enchaîné plusieurs jours, c'est le format de cet évènement";
-  if (tier >= 3) return "Tu as déjà passé une journée en selle, c'est le format de cet évènement";
-  return "Le format tient en une demi-journée, tu l'as déjà fait";
 }
 
 export function computeCompatibility(
@@ -260,7 +257,6 @@ export function computeCompatibility(
       key: "denivele",
       label: "Dénivelé",
       score: deniveleScore,
-      goodText: "Tu as déjà fait ce type de dénivelé",
       gapText:
         "Dénivelé important : fais quelques sorties en montagne pour t'habituer à ce terrain.",
     },
@@ -268,21 +264,18 @@ export function computeCompatibility(
       key: "revetement",
       label: "Revêtement",
       score: revetementScore,
-      goodText: `Itinéraire principalement sur ${revetementLabel}`,
       gapText: `Itinéraire principalement ${revetementLabel} : faisable, mais essaye d'abord quelques sorties pour tester.`,
     },
     {
       key: "distance",
       label: "Distance",
       score: distanceScore,
-      goodText: `${profile.kmPerDay} km/j env., vu ce que tu as déjà fait, c'est totalement atteignable !`,
       gapText: `${profile.kmPerDay} km/j env. : allonge tes sorties pour t'habituer à cette distance.`,
     },
     {
       key: "duree",
       label: "Durée",
       score: durationScore,
-      goodText: durationGoodText(profile.durationTier),
       gapText: durationGapText(profile.durationTier),
     },
   ];
