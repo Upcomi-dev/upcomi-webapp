@@ -9,11 +9,13 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 interface FavoritesSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialTab?: "favorites" | "participations";
 }
 
 export function FavoritesSheet({
   open,
   onOpenChange,
+  initialTab,
 }: FavoritesSheetProps) {
   const [selectedEvent, setSelectedEvent] = useState<FavoriteEvent | null>(null);
 
@@ -47,6 +49,7 @@ export function FavoritesSheet({
               onNavigate={() => onOpenChange(false)}
               onEventOpen={setSelectedEvent}
               className="pb-4 md:pt-4"
+              initialTab={initialTab}
             />
           </div>
         </DialogContent>
