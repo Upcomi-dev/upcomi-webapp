@@ -32,7 +32,7 @@ const FRANCE_VIEW = {
 /** Bottom sheet peek height on mobile — keep markers above the sheet. */
 const MOBILE_BOTTOM_INSET = 148;
 /** Keep event previews clear of the fixed mobile map/list toggle. */
-const MOBILE_EVENT_CARD_BOTTOM_INSET = 88;
+const MOBILE_EVENT_CARD_BOTTOM_INSET = 144;
 const MOBILE_MARKER_TOUCH_RADIUS = 22;
 const DESKTOP_MARKER_TOUCH_RADIUS = 10;
 
