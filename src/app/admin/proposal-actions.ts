@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { assertAdmin } from "@/lib/auth/assert-admin";
 import { getUniqueEventSlug } from "@/lib/events/slugs";
+import { geocodeDeparture } from "@/lib/geocoding/nominatim";
 import { buildSupabasePublicStorageUrl, parseSupabasePublicStorageUrl } from "@/lib/storage/urls";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -130,6 +131,7 @@ async function persistProposal(eventId: number, formData: FormData, status: Revi
   const admin = createAdminClient();
   const name = required(formData, "nomEvent", "Le nom", 180);
   const city = required(formData, "villeDepart", "La ville", 120);
+  const country = optional(formData, "paysDepart", "Le pays", 120);
   const description = required(formData, "description", "La description", 4000);
   const organizerInput = required(formData, "organisateur", "L’organisateur", 180);
   const startDate = dateValue(formData, "dateEvent", "La date de début", true);
@@ -138,8 +140,22 @@ async function persistProposal(eventId: number, formData: FormData, status: Revi
   const routes = parseRoutes(formData);
   if (status === "rejected" && !reason?.trim()) throw new Error("Le motif de refus est obligatoire.");
 
-  const { data: current, error: currentError } = await admin.from("events").select("image").eq("id", eventId).single();
+  const { data: current, error: currentError } = await admin
+    .from("events")
+    .select("image, verifie, latitude, longitude, villeDepart, paysDepart")
+    .eq("id", eventId)
+    .single();
   if (currentError) throw new Error(currentError.message);
+
+  let latitude = current.latitude;
+  let longitude = current.longitude;
+  const locationChanged = current.villeDepart !== city || (current.paysDepart ?? "") !== country;
+  const coordinatesMissing = !Number.isFinite(latitude) || !Number.isFinite(longitude);
+  const eventWillBePublished = status === "approved" || (status === null && current.verifie);
+  if (eventWillBePublished && (locationChanged || coordinatesMissing)) {
+    ({ latitude, longitude } = await geocodeDeparture(city, country));
+  }
+
   const oldImage = typeof current.image === "string" ? current.image : "";
   const image = await parseImage(formData);
   const { data: organizer, error: organizerError } = await admin.rpc("ensure_organisateur", { organizer_name: organizerInput });
@@ -161,7 +177,8 @@ async function persistProposal(eventId: number, formData: FormData, status: Revi
     const range = distances.length === 1 ? `${distances[0]} km` : `${distances[0]}-${distances.at(-1)} km`;
     const eventPayload = {
       name, slug, startDate, endDate, city,
-      country: optional(formData, "paysDepart", "Le pays", 120),
+      country,
+      latitude, longitude,
       description, url: httpUrl(formData), image: imageUrl, organizer,
       mint: formData.has("mint"),
       eventType: [...new Set(routes.map((route) => route.eventType))].join(", "),

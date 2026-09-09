@@ -116,6 +116,12 @@ function ProposalEditor({ proposal, organizers }: { proposal: AdminProposal; org
             <Field label="Date de fin" name="dateFin" type="date" defaultValue={event.dateFin} />
             <Field label="Ville de départ" name="villeDepart" defaultValue={event.villeDepart} required />
             <Field label="Pays" name="paysDepart" defaultValue={event.paysDepart} />
+            <p className="md:col-span-2 -mt-2 text-[11px] text-foreground/45">
+              Les coordonnées seront récupérées automatiquement à partir de la ville et du pays lors de la validation ·{" "}
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline hover:text-coral">
+                © contributeurs OpenStreetMap
+              </a>
+            </p>
             <Field label="Organisateur" name="organisateur" defaultValue={event.organisateur} required list="review-organizers" />
             <Field label="Site ou page Instagram" name="URL" type="url" defaultValue={event.URL} />
           </div>
