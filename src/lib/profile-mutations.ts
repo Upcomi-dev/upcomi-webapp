@@ -28,9 +28,8 @@ interface SaveUserProfileOptions {
 }
 
 /**
- * Écrit le profil aux trois endroits qui le composent : `users` (la source),
- * `user_public` (ce que les autres pourront lire) et `user_metadata` (lu sans
- * requête supplémentaire, notamment par le layout).
+ * Écrit `users` et les métadonnées Auth. Le trigger `sync_user_public` recopie
+ * les champs publics dans la même transaction que l'écriture de `users`.
  */
 export async function saveUserProfile(
   supabase: SupabaseClient,
@@ -42,46 +41,25 @@ export async function saveUserProfile(
   const now = new Date().toISOString();
   const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(" ");
 
-  const [profileResult, publicProfileResult] = await Promise.all([
-    supabase.from("users").upsert(
-      {
-        uid: user.id,
-        email: user.email ?? profile.email ?? null,
-        name: profile.firstName || null,
-        surname: profile.lastName || null,
-        ville: profile.city || null,
-        pref1: profile.practiceTypes.length > 0 ? profile.practiceTypes : null,
-        pref2: profile.practiceLevel || null,
-        gender: profile.gender || null,
-        updated_at: now,
-      },
-      { onConflict: "uid" }
-    ),
-    supabase.from("user_public").upsert(
-      {
-        uid: user.id,
-        name: profile.firstName || null,
-        surname: profile.lastName || null,
-        // Niveau et ville sont recopiés ici pour être lisibles des autres
-        // membres : la feuille « qui est intéressée » de la fiche évènement
-        // les affiche, et `users.pref2` / `users.ville` ne sont visibles que
-        // de soi.
-        niveau: profile.practiceLevel || null,
-        ville: profile.city || null,
-        updated_at: now,
-      },
-      { onConflict: "uid" }
-    ),
-  ]);
+  // Une seule écriture pour le profil et sa copie publique : aucune course
+  // entre un upsert côté navigateur et celui du trigger.
+  const profileResult = await supabase.from("users").upsert(
+    {
+      uid: user.id,
+      email: user.email ?? profile.email ?? null,
+      name: profile.firstName || null,
+      surname: profile.lastName || null,
+      ville: profile.city || null,
+      pref1: profile.practiceTypes.length > 0 ? profile.practiceTypes : null,
+      pref2: profile.practiceLevel || null,
+      gender: profile.gender || null,
+      updated_at: now,
+    },
+    { onConflict: "uid" }
+  );
 
   if (profileResult.error) {
-    return { error: profileResult.error.message || "Impossible d'enregistrer ton profil." };
-  }
-
-  if (publicProfileResult.error) {
-    return {
-      error: publicProfileResult.error.message || "Impossible de synchroniser ton profil public.",
-    };
+    return { error: "Impossible d'enregistrer ton profil. Ton compte existe déjà ; réessaie dans un instant." };
   }
 
   const { error: authError } = await supabase.auth.updateUser({
@@ -99,7 +77,7 @@ export async function saveUserProfile(
   });
 
   if (authError) {
-    return { error: authError.message || "Impossible de mettre à jour ton compte." };
+    return { error: "Ton profil a été enregistré, mais la mise à jour de ton compte a échoué. Réessaie dans un instant." };
   }
 
   return { error: null };

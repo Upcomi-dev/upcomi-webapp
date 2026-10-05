@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
+
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { updateEventStoryStatus } from "@/app/admin/actions";
@@ -88,18 +90,18 @@ export function AdminStoriesClient({ stories }: AdminStoriesClientProps) {
             placeholder="Chercher un évènement, une autrice, un extrait..."
             className={`${inputClassName} min-w-[280px]`}
           />
-          <select
+          <Select
+            aria-label="Filtrer par statut"
             value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(event.target.value as EventStoryStatus | "all")
-            }
-            className={`${inputClassName} min-w-[180px]`}
-          >
-            <option value="pending">En attente ({counts.pending})</option>
-            <option value="approved">Publiés ({counts.approved})</option>
-            <option value="rejected">Refusés ({counts.rejected})</option>
-            <option value="all">Tous les récits ({counts.all})</option>
-          </select>
+            onValueChange={(value) => setStatusFilter(value as EventStoryStatus | "all")}
+            className="min-w-[180px]"
+            options={[
+              { value: "pending", label: `En attente (${counts.pending})` },
+              { value: "approved", label: `Publiés (${counts.approved})` },
+              { value: "rejected", label: `Refusés (${counts.rejected})` },
+              { value: "all", label: `Tous les récits (${counts.all})` },
+            ]}
+          />
         </div>
       </div>
 
@@ -173,20 +175,14 @@ export function AdminStoriesClient({ stories }: AdminStoriesClientProps) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/38">
                   Modération
                 </p>
-                <select
-                  value={story.status}
-                  onChange={(event) =>
-                    handleStatusChange(story, event.target.value as EventStoryStatus)
-                  }
-                  disabled={isPending}
-                  className={`${inputClassName} mt-3`}
-                >
-                  {EVENT_STORY_STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                    aria-label="Statut du récit"
+                    value={story.status}
+                    onValueChange={(value) => handleStatusChange(story, value as EventStoryStatus)}
+                    disabled={isPending}
+                    className="mt-3"
+                    options={EVENT_STORY_STATUS_OPTIONS}
+                  />
               </div>
             </div>
           </article>

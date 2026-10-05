@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
+
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
@@ -138,8 +140,8 @@ function ProposalEditor({ proposal, organizers }: { proposal: AdminProposal; org
                 <div className="flex items-center justify-between"><strong className="text-[14px]">Parcours {index + 1}</strong><button type="button" disabled={routes.length === 1} onClick={() => { setRoutes((current) => current.filter((item) => item.clientId !== route.clientId)); setDirty(true); }} className="rounded-full p-2 text-red-500 disabled:opacity-25"><Trash2 className="h-4 w-4" /></button></div>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                   <Field label="Nom" name="route_name" defaultValue={route.nom} />
-                  <SelectField label="Type d’événement" name="route_type_event" defaultValue={route.typeEvent} options={route.typeEvent && !EVENT_TYPES.includes(route.typeEvent) ? [...EVENT_TYPES, route.typeEvent] : EVENT_TYPES} />
-                  <SelectField label="Type de vélo" name="route_bike_type" defaultValue={route.bikeType} options={BIKE_TYPES} />
+                  <SelectField onChange={() => setDirty(true)} label="Type d’événement" name="route_type_event" defaultValue={route.typeEvent} options={route.typeEvent && !EVENT_TYPES.includes(route.typeEvent) ? [...EVENT_TYPES, route.typeEvent] : EVENT_TYPES} />
+                  <SelectField onChange={() => setDirty(true)} label="Type de vélo" name="route_bike_type" defaultValue={route.bikeType} options={BIKE_TYPES} />
                   <Field label="Distance (km)" name="route_distance" type="number" defaultValue={route.distance} required min="1" />
                   <Field label="Dénivelé (m)" name="route_elevation" type="number" defaultValue={route.elevation} min="0" />
                   <Field label="Prix (€)" name="route_price" type="number" defaultValue={route.prix ?? 0} required min="0" />
@@ -174,8 +176,20 @@ function Field({ label, name, defaultValue, type = "text", required, span, list,
   return <label className={span ? "md:col-span-2" : ""}><span className={labelClass}>{label}{required ? " *" : ""}</span><input name={name} type={type} required={required} defaultValue={defaultValue ?? ""} list={list} min={min} step={type === "number" ? "1" : undefined} className={inputClass} /></label>;
 }
 
-function SelectField({ label, name, defaultValue, options }: { label: string; name: string; defaultValue?: string | null; options: string[] }) {
-  return <label><span className={labelClass}>{label} *</span><select name={name} required defaultValue={defaultValue ?? ""} className={inputClass}>{options.map((option) => <option key={option}>{option}</option>)}</select></label>;
+function SelectField({ label, name, defaultValue, options, onChange }: { label: string; name: string; defaultValue?: string | null; options: string[]; onChange: () => void }) {
+  return (
+    <label>
+      <span className={labelClass}>{label} *</span>
+      <Select
+        name={name}
+        aria-label={label}
+        required
+        defaultValue={defaultValue || options[0]}
+        onValueChange={onChange}
+        options={options.map((option) => ({ value: option, label: option }))}
+      />
+    </label>
+  );
 }
 
 function ActionButton({ children, icon, onClick, pending, danger, success }: { children: React.ReactNode; icon: React.ReactNode; onClick: React.MouseEventHandler<HTMLButtonElement>; pending: boolean; danger?: boolean; success?: boolean }) {

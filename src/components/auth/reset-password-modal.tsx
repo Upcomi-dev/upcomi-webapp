@@ -10,7 +10,6 @@ import { createClient } from "@/lib/supabase/client";
 import {
   getPasswordRequirementsMessage,
   isPasswordValid,
-  PASSWORD_MIN_LENGTH,
   translatePasswordError,
 } from "@/lib/auth/password";
 import { PASSWORD_RECOVERY_PENDING_KEY } from "@/lib/auth/recovery";
@@ -145,7 +144,7 @@ function ResetPasswordModalContent() {
     });
 
     if (updateError) {
-      setError(translatePasswordError(updateError.message));
+      setError(translatePasswordError(updateError.message, updateError.code));
       setLoading(false);
       return;
     }
@@ -205,11 +204,11 @@ function ResetPasswordModalContent() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   required
-                  minLength={PASSWORD_MIN_LENGTH}
+                  aria-describedby="reset-password-requirements"
                   autoComplete="new-password"
                   className={FIELD_INPUT_CLASS}
                 />
-                <PasswordRequirements password={password} />
+                <PasswordRequirements id="reset-password-requirements" password={password} />
               </Field>
 
               <Field label="Confirmer le mot de passe" htmlFor="new-password-confirmation">
@@ -221,7 +220,6 @@ function ResetPasswordModalContent() {
                     setPasswordConfirmation(event.target.value)
                   }
                   required
-                  minLength={PASSWORD_MIN_LENGTH}
                   autoComplete="new-password"
                   className={FIELD_INPUT_CLASS}
                 />

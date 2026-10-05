@@ -1,6 +1,7 @@
 import { getPasswordRequirements } from "@/lib/auth/password";
 
 interface PasswordRequirementsProps {
+  id?: string;
   password: string;
 }
 
@@ -8,11 +9,11 @@ interface PasswordRequirementsProps {
  * Rappel discret des règles, sous le champ : un encadré titré prenait plus de
  * place que le formulaire qu'il accompagne.
  */
-export function PasswordRequirements({ password }: PasswordRequirementsProps) {
+export function PasswordRequirements({ id, password }: PasswordRequirementsProps) {
   const requirements = getPasswordRequirements(password);
 
   return (
-    <ul className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[13px] leading-5 text-foreground/55">
+    <ul id={id} className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[13px] leading-5 text-foreground/55">
       {requirements.map((requirement, index) => (
         <li
           key={requirement.id}

@@ -1,9 +1,10 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
+
 import { useId, useRef, useState, useTransition } from "react";
 import { Autocomplete } from "@base-ui/react/autocomplete";
-import { Select } from "@base-ui/react/select";
-import { Building2, Check, CheckCircle2, ChevronDown, HelpCircle, Loader2, Plus, Send, Trash2 } from "lucide-react";
+import { Building2, CheckCircle2, HelpCircle, Loader2, Plus, Send, Trash2 } from "lucide-react";
 import { submitEventProposal } from "@/app/proposer-un-evenement/actions";
 
 const EVENT_TYPES = ["Social Ride", "Aventure", "Brevet", "Course", "Ultra", "Événement", "Autre"];
@@ -301,49 +302,19 @@ function SelectField({ label, name, options, value, required, onChange }: {
   onChange: (value: string) => void;
 }) {
   const labelId = useId();
-  const items = options.map((option) => ({ label: option, value: option }));
-
   return (
     <div className="space-y-2">
       <span id={labelId} className="block"><FieldLabel label={label} required={required} /></span>
-      <Select.Root
+      <Select
         name={name}
-        items={items}
+        aria-labelledby={labelId}
+        options={options.map((option) => ({ label: option, value: option }))}
+        value={value}
+        onValueChange={onChange}
         required={required}
-        value={value || null}
-        onValueChange={(nextValue) => onChange(nextValue ?? "")}
-      >
-        <Select.Trigger
-          aria-labelledby={labelId}
-          className="group flex min-h-12 w-full items-center justify-between gap-3 rounded-[18px] border border-white/80 bg-white/84 px-4 py-3 text-left text-[14px] text-foreground shadow-[var(--shadow-sm)] outline-none transition-all hover:border-coral/20 hover:bg-white focus-visible:border-coral/45 focus-visible:ring-3 focus-visible:ring-coral/12 data-[popup-open]:border-coral/35 data-[popup-open]:bg-white data-[popup-open]:ring-3 data-[popup-open]:ring-coral/10"
-        >
-          <Select.Value placeholder="Sélectionner" className="data-[placeholder]:text-foreground/35" />
-          <Select.Icon className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-coral/8 text-coral transition-transform duration-200 group-data-[popup-open]:rotate-180 group-data-[popup-open]:bg-coral/12">
-            <ChevronDown className="h-4 w-4" />
-          </Select.Icon>
-        </Select.Trigger>
-
-        <Select.Portal>
-          <Select.Positioner sideOffset={8} alignItemWithTrigger={false} className="z-50">
-            <Select.Popup className="min-w-[var(--anchor-width)] origin-[var(--transform-origin)] rounded-[20px] border border-coral/15 bg-[#fffaf4] p-1.5 text-foreground shadow-[0_20px_55px_rgba(80,48,32,0.22)] transition-[transform,opacity] duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0">
-              <Select.List className="max-h-72 overflow-y-auto py-1">
-                {options.map((option) => (
-                  <Select.Item
-                    key={option}
-                    value={option}
-                    className="group/item grid cursor-default grid-cols-[1fr_auto] items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[14px] outline-none transition-colors data-[highlighted]:bg-coral/9 data-[highlighted]:text-coral-dark data-[selected]:font-semibold data-[selected]:text-coral"
-                  >
-                    <Select.ItemText>{option}</Select.ItemText>
-                    <Select.ItemIndicator className="flex h-6 w-6 items-center justify-center rounded-full bg-coral text-white shadow-sm">
-                      <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-                    </Select.ItemIndicator>
-                  </Select.Item>
-                ))}
-              </Select.List>
-            </Select.Popup>
-          </Select.Positioner>
-        </Select.Portal>
-      </Select.Root>
+        placeholder="Sélectionner"
+        className="min-h-12 rounded-[18px] px-4"
+      />
     </div>
   );
 }

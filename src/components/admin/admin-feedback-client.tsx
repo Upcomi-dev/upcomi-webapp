@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
+
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { updateFeedbackEntryStatus } from "@/app/admin/actions";
@@ -80,16 +82,18 @@ export function AdminFeedbackClient({ entries }: AdminFeedbackClientProps) {
             placeholder="Chercher un sujet, un message, un email..."
             className={`${inputClassName} min-w-[280px]`}
           />
-          <select
+          <Select
+            aria-label="Filtrer par statut"
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as FeedbackStatus | "all")}
-            className={`${inputClassName} min-w-[180px]`}
-          >
-            <option value="all">Tous les statuts ({counts.all})</option>
-            <option value="new">Nouveaux ({counts.new})</option>
-            <option value="reviewing">En cours ({counts.reviewing})</option>
-            <option value="closed">Clôturés ({counts.closed})</option>
-          </select>
+            onValueChange={(value) => setStatusFilter(value as FeedbackStatus | "all")}
+            className="min-w-[180px]"
+            options={[
+              { value: "all", label: `Tous les statuts (${counts.all})` },
+              { value: "new", label: `Nouveaux (${counts.new})` },
+              { value: "reviewing", label: `En cours (${counts.reviewing})` },
+              { value: "closed", label: `Clôturés (${counts.closed})` },
+            ]}
+          />
         </div>
       </div>
 
@@ -151,18 +155,14 @@ export function AdminFeedbackClient({ entries }: AdminFeedbackClientProps) {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground/38">
                     Traitement
                   </p>
-                  <select
+                  <Select
+                    aria-label="Statut du retour"
                     value={entry.status}
-                    onChange={(event) => handleStatusChange(entry.id, event.target.value as FeedbackStatus)}
+                    onValueChange={(value) => handleStatusChange(entry.id, value as FeedbackStatus)}
                     disabled={isPending}
-                    className={`${inputClassName} mt-3`}
-                  >
-                    {FEEDBACK_STATUS_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    className="mt-3"
+                    options={FEEDBACK_STATUS_OPTIONS}
+                  />
                 </div>
               </div>
             </article>

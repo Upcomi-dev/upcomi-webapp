@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,12 +13,11 @@ import { trackAnalyticsEvent } from "@/lib/analytics";
 import {
   getPasswordRequirementsMessage,
   isPasswordValid,
-  PASSWORD_MIN_LENGTH,
   translatePasswordError,
 } from "@/lib/auth/password";
 import {
   GENDER_OPTIONS,
-  PRACTICE_LEVEL_OPTIONS,
+  PRACTICE_LEVEL_SELECT_OPTIONS,
   PRACTICE_TYPE_OPTIONS,
   isUserProfileComplete,
   normalizeUserProfile,
@@ -113,7 +114,10 @@ export function SignupWizard({
     normalizeUserProfile(initialValues ?? EMPTY_PROFILE)
   );
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
+  const [passwordConfirmationTouched, setPasswordConfirmationTouched] = useState(false);
   const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(false);
   const [recommended, setRecommended] = useState<RecommendableEvent[]>([]);
   // Un seul récit est demandé, comme dans le proto : le premier événement
@@ -130,6 +134,7 @@ export function SignupWizard({
   const [pending, setPending] = useState(false);
 
   const accountUser = user ?? signedUpUser;
+  const hasStoryContent = Boolean(storyUrl.trim() || story.trim());
   // Sans événement recommandé il n'y a rien à raconter : l'étape « récits » est
   // sautée, et la pastille correspondante disparaît de la barre de progression.
   // Elle est aussi sautée, plus tard, si tous les événements choisis ont déjà
@@ -140,6 +145,15 @@ export function SignupWizard({
   );
   const stepIndex = visibleSteps.indexOf(step);
   const heading = STEP_TITLES[step];
+  const passwordsMatch = password === passwordConfirmation;
+  const showPasswordMismatch = passwordConfirmationTouched && !passwordsMatch;
+  const canContinueIdentity = Boolean(
+    profile.firstName.trim() &&
+      profile.lastName.trim() &&
+      isPasswordValid(password) &&
+      passwordsMatch &&
+      acceptedPrivacyPolicy
+  );
 
   const updateProfile = (patch: Partial<UserProfileFormValues>) => {
     setProfile((current) => ({ ...current, ...patch }));
@@ -167,6 +181,7 @@ export function SignupWizard({
 
   const handleIdentitySubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (pending) return;
     setError(null);
 
     if (!profile.firstName.trim() || !profile.lastName.trim()) {
@@ -177,6 +192,12 @@ export function SignupWizard({
     if (!isPasswordValid(password)) {
       setError(getPasswordRequirementsMessage());
       trackAnalyticsEvent("Signup Submitted", { success: false, reason: "weak_password" });
+      return;
+    }
+
+    if (!passwordsMatch) {
+      setPasswordConfirmationTouched(true);
+      setError("Les deux mots de passe ne correspondent pas.");
       return;
     }
 
@@ -218,7 +239,7 @@ export function SignupWizard({
       setError(
         alreadyRegistered
           ? "Un compte existe déjà avec cet email"
-          : translatePasswordError(signUpError.message)
+          : translatePasswordError(signUpError.message, signUpError.code)
       );
       setPending(false);
       return;
@@ -338,8 +359,18 @@ export function SignupWizard({
 
   // ---- Étape 5 : récits ------------------------------------------------------
 
-  // « Ajouter » valide l'étape même les champs vides : le récit est facultatif
-  // de bout en bout, et le proto ne double donc pas le bouton d'un « Passer ».
+  const handleStorySkip = async () => {
+    setError(null);
+
+    if (!accountUser) {
+      setError("Ta session a expiré. Reconnecte-toi pour continuer.");
+      return;
+    }
+
+    setPending(true);
+    await completeOnboarding({ storyAdded: false });
+  };
+
   const handleStorySubmit = async () => {
     setError(null);
 
@@ -400,7 +431,7 @@ export function SignupWizard({
       </div>
 
       {error && (
-        <div className="rounded-[var(--radius-sm)] border border-red-200/60 bg-red-50/80 px-3.5 py-2.5 text-[13px] text-red-600">
+        <div role="alert" className="rounded-[var(--radius-sm)] border border-red-200/60 bg-red-50/80 px-3.5 py-2.5 text-[13px] text-red-600">
           {error}
         </div>
       )}
@@ -416,7 +447,7 @@ export function SignupWizard({
       )}
 
       {step === "identite" && (
-        <form onSubmit={handleIdentitySubmit} className="space-y-3.5">
+        <form noValidate onSubmit={handleIdentitySubmit} className="space-y-3.5">
           <div className="grid gap-3.5 sm:grid-cols-2">
             <Field label="Prénom" htmlFor="signup-first-name">
               <input
@@ -458,7 +489,8 @@ export function SignupWizard({
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
-                minLength={PASSWORD_MIN_LENGTH}
+                autoComplete="new-password"
+                aria-describedby="signup-password-requirements"
                 disabled={pending}
                 className={`${FIELD_INPUT_CLASS} pr-10`}
                 placeholder="••••••••"
@@ -474,7 +506,42 @@ export function SignupWizard({
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
-            <PasswordRequirements password={password} />
+            <PasswordRequirements id="signup-password-requirements" password={password} />
+          </Field>
+
+          <Field label="Confirmer le mot de passe" htmlFor="signup-password-confirmation">
+            <div className="relative">
+              <input
+                id="signup-password-confirmation"
+                type={showPasswordConfirmation ? "text" : "password"}
+                value={passwordConfirmation}
+                onChange={(event) => setPasswordConfirmation(event.target.value)}
+                onBlur={() => setPasswordConfirmationTouched(true)}
+                required
+                autoComplete="new-password"
+                aria-invalid={showPasswordMismatch}
+                aria-describedby={showPasswordMismatch ? "signup-password-confirmation-error" : undefined}
+                disabled={pending}
+                className={`${FIELD_INPUT_CLASS} pr-12`}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasswordConfirmation((current) => !current)}
+                disabled={pending}
+                aria-label={showPasswordConfirmation ? "Masquer la confirmation du mot de passe" : "Afficher la confirmation du mot de passe"}
+                aria-pressed={showPasswordConfirmation}
+                aria-controls="signup-password-confirmation"
+                className="absolute right-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-foreground/40 transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-coral disabled:opacity-50"
+              >
+                {showPasswordConfirmation ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+            {showPasswordMismatch && (
+              <p id="signup-password-confirmation-error" role="status" className="mt-1.5 text-[13px] text-red-600">
+                Les deux mots de passe ne correspondent pas.
+              </p>
+            )}
           </Field>
 
           <label
@@ -512,7 +579,11 @@ export function SignupWizard({
             >
               Retour
             </button>
-            <button type="submit" disabled={pending} className={`${PRIMARY_BUTTON_CLASS} flex-1`}>
+            <button
+              type="submit"
+              disabled={pending || !canContinueIdentity}
+              className={`${PRIMARY_BUTTON_CLASS} flex-1 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:bg-coral`}
+            >
               {pending ? "Création..." : "Continuer →"}
             </button>
           </div>
@@ -535,21 +606,14 @@ export function SignupWizard({
               />
             </Field>
             <Field label="Niveau" htmlFor="signup-level">
-              <select
+              <Select
                 id="signup-level"
                 value={profile.practiceLevel}
-                onChange={(event) => updateProfile({ practiceLevel: event.target.value })}
+                onValueChange={(practiceLevel) => updateProfile({ practiceLevel })}
+                options={PRACTICE_LEVEL_SELECT_OPTIONS}
                 required
                 disabled={pending}
-                className={FIELD_INPUT_CLASS}
-              >
-                <option value="">Choisir</option>
-                {PRACTICE_LEVEL_OPTIONS.map((level) => (
-                  <option key={level} value={level}>
-                    {level}
-                  </option>
-                ))}
-              </select>
+              />
             </Field>
           </div>
 
@@ -622,13 +686,23 @@ export function SignupWizard({
             </button>
             <button
               type="button"
-              onClick={handleStorySubmit}
+              onClick={hasStoryContent ? handleStorySubmit : handleStorySkip}
               disabled={pending}
               className={`${PRIMARY_BUTTON_CLASS} flex-1`}
             >
-              {pending ? "Enregistrement..." : "Ajouter →"}
+              {pending ? "Enregistrement..." : hasStoryContent ? "Ajouter →" : "Passer cette étape →"}
             </button>
           </div>
+          {hasStoryContent && (
+            <button
+              type="button"
+              onClick={handleStorySkip}
+              disabled={pending}
+              className="min-h-11 w-full rounded-[var(--radius-sm)] px-3.5 py-3 text-sm font-medium text-foreground/55 transition-colors hover:text-foreground disabled:opacity-50"
+            >
+              Passer cette étape
+            </button>
+          )}
         </div>
       )}
 

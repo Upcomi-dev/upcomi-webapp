@@ -5,17 +5,14 @@ import { cn } from "@/lib/utils";
  *
  * Ce sont des **portraits d'illustration**, pas les personnes intéressées :
  * `user_public.avatar_url` est vide dans l'immense majorité des cas, et une
- * rangée de pastilles à initiales ne dit pas « il y a du monde ». Mêmes
- * portraits que le prototype (randomuser.me), rapatriés dans `public/` pour ne
- * pas dépendre d'un domaine tiers au rendu.
- *
- * Deux femmes et un homme, dans cet ordre : c'est la proportion de la
- * communauté, et c'est ce que la pile doit donner à voir en un coup d'œil.
+ * rangée de pastilles à initiales ne dit pas « il y a du monde ». Les
+ * portraits choisis pour Upcomi sont hébergés dans `public/` pour ne pas dépendre
+ * d'un domaine tiers au rendu. L'ordre va de gauche à droite.
  */
 const PLACEHOLDER_AVATARS = [
-  "/avatars/placeholder-1.jpg",
-  "/avatars/placeholder-2.jpg",
-  "/avatars/placeholder-3.jpg",
+  "/avatars/cyclist-left.jpg",
+  "/avatars/cyclist-middle.jpg",
+  "/avatars/cyclist-right.jpg",
 ];
 
 /**

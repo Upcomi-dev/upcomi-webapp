@@ -26,6 +26,14 @@ export const PRACTICE_LEVEL_OPTIONS = [
   "Competition",
 ] as const;
 
+// Les valeurs persistées restent inchangées ; seuls les libellés sont accentués.
+export const PRACTICE_LEVEL_SELECT_OPTIONS = [
+  { value: "Debutant", label: "Débutant" },
+  { value: "Intermediaire", label: "Intermédiaire" },
+  { value: "Confirme", label: "Confirmé" },
+  { value: "Competition", label: "Compétition" },
+] as const;
+
 type MetadataRecord = Record<string, unknown>;
 
 export interface UserProfileRow {

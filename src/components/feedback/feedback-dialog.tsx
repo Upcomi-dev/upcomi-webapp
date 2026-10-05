@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
+
 import { useRef, useState, useTransition } from "react";
 import { Bug, Lightbulb, MessageSquarePlus } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -149,18 +151,13 @@ export function FeedbackDialog({
                   <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/44">
                     Type
                   </span>
-                  <select
+                  <Select
                     name="kind"
+                    aria-label="Type de retour"
                     value={selectedKind}
-                    onChange={(event) => setSelectedKind(event.target.value as FeedbackKind)}
-                    className={fieldClassName}
-                  >
-                    {FEEDBACK_KIND_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onValueChange={(value) => setSelectedKind(value as FeedbackKind)}
+                    options={FEEDBACK_KIND_OPTIONS}
+                  />
                 </label>
 
                 <div className="rounded-[20px] border border-coral/14 bg-coral/6 px-4 py-3">

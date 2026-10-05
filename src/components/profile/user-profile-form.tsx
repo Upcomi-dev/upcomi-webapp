@@ -1,12 +1,14 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
+
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/auth-context";
 import {
   GENDER_OPTIONS,
-  PRACTICE_LEVEL_OPTIONS,
+  PRACTICE_LEVEL_SELECT_OPTIONS,
   PRACTICE_TYPE_OPTIONS,
   type UserProfileFormValues,
   isUserProfileComplete,
@@ -196,24 +198,14 @@ export function UserProfileForm({ initialValues }: UserProfileFormProps) {
           <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/55">
             Niveau
           </span>
-          <select
+          <Select
+            aria-label="Niveau"
             value={form.practiceLevel}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                practiceLevel: event.target.value,
-              }))
-            }
+            onValueChange={(practiceLevel) => setForm((current) => ({ ...current, practiceLevel }))}
+            options={PRACTICE_LEVEL_SELECT_OPTIONS}
             disabled={pending}
-            className="w-full rounded-[18px] border border-foreground/14 bg-white/80 px-4 py-3 text-[15px] text-foreground shadow-[var(--shadow-sm)] outline-none transition focus:border-orange/50 focus:ring-2 focus:ring-orange/15 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <option value="">Choisir</option>
-            {PRACTICE_LEVEL_OPTIONS.map((level) => (
-              <option key={level} value={level}>
-                {level}
-              </option>
-            ))}
-          </select>
+            className="rounded-[18px] px-4 py-3 text-[15px]"
+          />
         </label>
       </div>
 
