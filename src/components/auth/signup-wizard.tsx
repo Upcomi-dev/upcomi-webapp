@@ -2,7 +2,7 @@
 
 import { Select } from "@/components/ui/select";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
@@ -25,11 +25,11 @@ import {
   type UserProfileFormValues,
 } from "@/lib/profile";
 import {
-  fetchEventsWithStories,
   saveEventStory,
   saveRecommendedEvents,
   saveUserProfile,
 } from "@/lib/profile-mutations";
+import { fetchEventStoryCounts, selectStoryEvent } from "@/lib/event-story-selection";
 import { Field, FIELD_INPUT_CLASS, FieldLabel, Muted } from "@/components/ui/field";
 import { EventStoryForm } from "./event-story-form";
 import { GoogleAuthButton } from "./google-auth-button";
@@ -79,9 +79,9 @@ const STEP_TITLES: Record<SignupWizardStep, { title: string; description?: strin
     description: "Si oui, indique ceux que tu recommandes à la communauté.",
   },
   recits: {
-    title: "As-tu écrit un récit ou pris des photos de l'événement ?",
+    title: "Partage un récit d’aventure",
     description:
-      "Pour aider les autres membres de la communauté, ajoute un lien vers Instagram, Strava ou ton blog pour ajouter ton récit ou tes photos à l'événement. L'équipe le relit avant qu'il n'apparaisse sur la fiche.",
+      "Un seul événement suffit. Partage un lien, quelques mots, ou passe cette étape.",
   },
   confirmation: { title: "C'est tout bon !" },
 };
@@ -120,11 +120,14 @@ export function SignupWizard({
   const [passwordConfirmationTouched, setPasswordConfirmationTouched] = useState(false);
   const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(false);
   const [recommended, setRecommended] = useState<RecommendableEvent[]>([]);
-  // Un seul récit est demandé, comme dans le proto : le premier événement
-  // recommandé qui n'en a pas déjà un. Nul tant que l'étape n'est pas atteinte.
-  const [storyEvent, setStoryEvent] = useState<RecommendableEvent | null>(null);
-  const [storyUrl, setStoryUrl] = useState("");
-  const [story, setStory] = useState("");
+  const [storyEventId, setStoryEventId] = useState<number | null>(null);
+  const [manualStoryEventId, setManualStoryEventId] = useState<number | null>(null);
+  const [choosingStoryEvent, setChoosingStoryEvent] = useState(false);
+  const [storyDrafts, setStoryDrafts] = useState<Record<number, { storyUrl: string; story: string }>>({});
+  // Once saved, retry only the completion flag: never save a second story if
+  // finalization fails after the first one has reached the database.
+  const [storySaved, setStorySaved] = useState(false);
+  const onboardingActionRef = useRef(false);
   const [signedUpUser, setSignedUpUser] = useState<User | null>(null);
   // Vrai seulement si le projet Supabase exige une confirmation par email :
   // `signUp` renvoie alors un compte sans session, et le parcours ne peut pas
@@ -134,11 +137,12 @@ export function SignupWizard({
   const [pending, setPending] = useState(false);
 
   const accountUser = user ?? signedUpUser;
+  const storyEvent = recommended.find((event) => event.id === storyEventId) ?? null;
+  const storyUrl = storyEvent ? storyDrafts[storyEvent.id]?.storyUrl ?? "" : "";
+  const story = storyEvent ? storyDrafts[storyEvent.id]?.story ?? "" : "";
   const hasStoryContent = Boolean(storyUrl.trim() || story.trim());
   // Sans événement recommandé il n'y a rien à raconter : l'étape « récits » est
   // sautée, et la pastille correspondante disparaît de la barre de progression.
-  // Elle est aussi sautée, plus tard, si tous les événements choisis ont déjà
-  // un récit — ça ne se sait qu'une fois la question posée à la base.
   const visibleSteps = useMemo<readonly SignupWizardStep[]>(
     () => (recommended.length > 0 ? STEPS : STEPS.filter((name) => name !== "recits")),
     [recommended.length]
@@ -296,14 +300,49 @@ export function SignupWizard({
 
   // ---- Étape 4 : événements recommandés --------------------------------------
 
+  const updateRecommendations = (events: RecommendableEvent[]) => {
+    setRecommended(events);
+    if (!events.some((event) => event.id === manualStoryEventId)) {
+      setManualStoryEventId(null);
+    }
+  };
+
+  const updateStoryDraft = (patch: Partial<{ storyUrl: string; story: string }>) => {
+    if (!storyEvent || storySaved) return;
+    const eventId = storyEvent.id;
+    setStoryDrafts((current) => ({
+      ...current,
+      [eventId]: { ...(current[eventId] ?? { storyUrl: "", story: "" }), ...patch },
+    }));
+  };
+
+  const runOnboardingAction = async (action: () => Promise<void>) => {
+    // A ref also catches repeated clicks before React paints disabled buttons.
+    if (pending || onboardingActionRef.current) return;
+    setError(null);
+    if (!accountUser) {
+      setError("Ta session a expiré. Reconnecte-toi pour continuer.");
+      return;
+    }
+
+    onboardingActionRef.current = true;
+    setPending(true);
+    try {
+      await action();
+    } catch {
+      setError("Impossible de terminer cette étape. Ta saisie est conservée, réessaie.");
+    } finally {
+      onboardingActionRef.current = false;
+      setPending(false);
+    }
+  };
+
   // Le drapeau « onboarding terminé » est posé une seule fois, quel que soit le
   // chemin emprunté — avec ou sans étape « récits ».
   const completeOnboarding = async ({ storyAdded }: { storyAdded: boolean }) => {
     const { error: flagError } = await createClient().auth.updateUser({
       data: { onboarding_completed: true },
     });
-    setPending(false);
-
     if (flagError) {
       setError(flagError.message || "Impossible de finaliser ton inscription.");
       return;
@@ -316,15 +355,8 @@ export function SignupWizard({
     setStep("confirmation");
   };
 
-  const handleRecommendationsSubmit = async () => {
-    setError(null);
-
-    if (!accountUser) {
-      setError("Ta session a expiré. Reconnecte-toi pour continuer.");
-      return;
-    }
-
-    setPending(true);
+  const handleRecommendationsSubmit = () => runOnboardingAction(async () => {
+    if (!accountUser) return;
     const supabase = createClient();
     const { error: recommendationsError } = await saveRecommendedEvents(
       supabase,
@@ -333,53 +365,41 @@ export function SignupWizard({
     );
 
     if (recommendationsError) {
-      setPending(false);
       setError(recommendationsError);
       return;
     }
 
     // Les recommandations sont enregistrées avant l'étape suivante, sur le
     // modèle du profil : une interruption pendant le récit ne les perd pas.
-    const alreadyCovered = await fetchEventsWithStories(
+    const counts = await fetchEventStoryCounts(
       supabase,
       recommended.map((event) => event.id)
     );
-    const nextStoryEvent =
-      recommended.find((event) => !alreadyCovered.has(event.id)) ?? null;
+    const nextStoryEvent = selectStoryEvent(recommended, counts, manualStoryEventId);
 
     if (!nextStoryEvent) {
       await completeOnboarding({ storyAdded: false });
       return;
     }
 
-    setStoryEvent(nextStoryEvent);
-    setPending(false);
+    setStoryEventId(nextStoryEvent.id);
+    setChoosingStoryEvent(false);
     setStep("recits");
-  };
+  });
 
   // ---- Étape 5 : récits ------------------------------------------------------
 
-  const handleStorySkip = async () => {
-    setError(null);
+  const handleStorySkip = () => runOnboardingAction(async () => {
+    await completeOnboarding({ storyAdded: storySaved });
+  });
 
-    if (!accountUser) {
-      setError("Ta session a expiré. Reconnecte-toi pour continuer.");
+  const handleStorySubmit = () => runOnboardingAction(async () => {
+    if (!accountUser || !storyEvent) return;
+    if (storySaved) {
+      await completeOnboarding({ storyAdded: true });
       return;
     }
 
-    setPending(true);
-    await completeOnboarding({ storyAdded: false });
-  };
-
-  const handleStorySubmit = async () => {
-    setError(null);
-
-    if (!accountUser || !storyEvent) {
-      setError("Ta session a expiré. Reconnecte-toi pour continuer.");
-      return;
-    }
-
-    setPending(true);
     const { error: storyError, saved } = await saveEventStory(createClient(), accountUser, {
       eventId: storyEvent.id,
       storyUrl,
@@ -387,13 +407,12 @@ export function SignupWizard({
     });
 
     if (storyError) {
-      setPending(false);
       setError(storyError);
       return;
     }
-
+    setStorySaved(saved);
     await completeOnboarding({ storyAdded: saved });
-  };
+  });
 
   // ---- Étape 6 : confirmation -------------------------------------------------
 
@@ -644,7 +663,7 @@ export function SignupWizard({
         <div className="space-y-4">
           <RecommendedEventsPicker
             selected={recommended}
-            onChange={setRecommended}
+            onChange={updateRecommendations}
             disabled={pending}
           />
           <button
@@ -664,14 +683,55 @@ export function SignupWizard({
 
       {step === "recits" && storyEvent && (
         <div className="space-y-4">
+          {recommended.length > 1 && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                aria-expanded={choosingStoryEvent}
+                aria-controls="signup-story-event-choice"
+                disabled={pending || storySaved}
+                onClick={() => setChoosingStoryEvent((current) => !current)}
+                className="min-h-11 rounded-[var(--radius-sm)] text-sm font-medium text-foreground/75 underline underline-offset-4 transition-colors hover:text-coral-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-coral disabled:opacity-50"
+              >
+                Choisir un autre événement
+              </button>
+              {choosingStoryEvent && (
+                <div id="signup-story-event-choice">
+                  <Field label="Événement à raconter" htmlFor="signup-story-event">
+                    <Select
+                      id="signup-story-event"
+                      value={String(storyEvent.id)}
+                      options={recommended.map((event) => ({
+                        value: String(event.id),
+                        label: event.nomEvent || "Événement",
+                      }))}
+                      disabled={pending || storySaved}
+                      onValueChange={(value) => {
+                        const eventId = Number(value);
+                        if (!recommended.some((event) => event.id === eventId)) return;
+                        setStoryEventId(eventId);
+                        setManualStoryEventId(eventId);
+                        setError(null);
+                      }}
+                    />
+                  </Field>
+                </div>
+              )}
+            </div>
+          )}
           <EventStoryForm
             event={storyEvent}
             storyUrl={storyUrl}
             story={story}
-            onStoryUrlChange={setStoryUrl}
-            onStoryChange={setStory}
-            disabled={pending}
+            onStoryUrlChange={(storyUrl) => updateStoryDraft({ storyUrl })}
+            onStoryChange={(story) => updateStoryDraft({ story })}
+            disabled={pending || storySaved}
           />
+          {storySaved && (
+            <p role="status" className="text-sm text-foreground/75">
+              Ton récit est enregistré. Il reste à terminer ton inscription.
+            </p>
+          )}
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -679,21 +739,21 @@ export function SignupWizard({
                 setError(null);
                 setStep("recommandations");
               }}
-              disabled={pending}
+              disabled={pending || storySaved}
               className="rounded-[var(--radius-sm)] px-3.5 py-3 text-sm font-medium text-foreground/55 transition-colors hover:text-foreground disabled:opacity-50"
             >
               Retour
             </button>
             <button
               type="button"
-              onClick={hasStoryContent ? handleStorySubmit : handleStorySkip}
+              onClick={hasStoryContent || storySaved ? handleStorySubmit : handleStorySkip}
               disabled={pending}
               className={`${PRIMARY_BUTTON_CLASS} flex-1`}
             >
-              {pending ? "Enregistrement..." : hasStoryContent ? "Ajouter →" : "Passer cette étape →"}
+              {pending ? "Enregistrement..." : storySaved ? "Terminer" : hasStoryContent ? "Enregistrer et terminer" : "Passer cette étape"}
             </button>
           </div>
-          {hasStoryContent && (
+          {hasStoryContent && !storySaved && (
             <button
               type="button"
               onClick={handleStorySkip}

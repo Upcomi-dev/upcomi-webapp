@@ -68,7 +68,7 @@ select jsonb_build_object(
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
-        and p.proname in ('sync_user_public', 'get_event_interested_people', 'get_event_interested_count', 'get_events_with_stories')
+        and p.proname in ('sync_user_public', 'get_event_interested_people', 'get_event_interested_count', 'get_events_with_stories', 'get_event_story_counts')
     ) audit_row
   ),
   'migration_history', (

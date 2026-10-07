@@ -14,9 +14,7 @@ interface EventStoryFormProps {
 }
 
 /**
- * L'étape « Ajoute ton récit d'aventure » du prototype (`review.js`) : un seul
- * champ, le lien vers là où le récit a déjà été publié. Le texte libre est
- * gardé sous le lien — la table le prévoit et il viendra compléter l'extrait.
+ * Un seul événement : un lien, quelques mots, ou les deux.
  */
 export function EventStoryForm({
   event,
@@ -30,7 +28,7 @@ export function EventStoryForm({
     <div className="space-y-3.5">
       <div className="flex items-center gap-3">
         <EventThumb event={event} />
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+        <span className="min-w-0 flex-1 break-words text-[13px] font-medium text-foreground">
           {event.nomEvent || "Événement"}
         </span>
       </div>
@@ -64,10 +62,13 @@ export function EventStoryForm({
             dépasser, il n'y a donc pas d'erreur à annoncer. Il dit seulement
             combien il reste de place, ce que « en quelques mots » ne chiffre
             pas. */}
-        <p className="mt-1 text-right text-[12px] tabular-nums text-foreground/40">
+        <p className="mt-1 text-right text-[12px] tabular-nums text-foreground/65">
           {story.length} / {EVENT_STORY_MAX_LENGTH}
         </p>
       </Field>
+      <p className="text-[12px] leading-5 text-foreground/65">
+        L&apos;équipe relit ton récit avant sa publication sur la fiche de l&apos;événement.
+      </p>
     </div>
   );
 }

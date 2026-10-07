@@ -85,7 +85,7 @@ export function AuthModalDialog({
         <div className="h-px bg-gradient-to-r from-transparent via-foreground/8 to-transparent" />
 
         {/* Form */}
-        <div className="px-6 pt-5 pb-6">
+        <div className="min-w-0 px-6 pt-5 pb-6">
           {view === "gate" ? (
             <AuthGate
               title={gateTitle}
