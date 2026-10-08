@@ -2,7 +2,7 @@
 
 import { Select } from "@/components/ui/select";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
@@ -25,16 +25,17 @@ import {
   type UserProfileFormValues,
 } from "@/lib/profile";
 import {
+  normalizeStoryUrl,
   saveEventStory,
   saveRecommendedEvents,
   saveUserProfile,
 } from "@/lib/profile-mutations";
-import { fetchEventStoryCounts, selectStoryEvent } from "@/lib/event-story-selection";
 import { Field, FIELD_INPUT_CLASS, FieldLabel, Muted } from "@/components/ui/field";
 import { EventStoryForm } from "./event-story-form";
 import { GoogleAuthButton } from "./google-auth-button";
 import { PasswordRequirements } from "./password-requirements";
 import {
+  EventThumb,
   RecommendedEventsPicker,
   type RecommendableEvent,
 } from "./recommended-events-picker";
@@ -81,12 +82,14 @@ const STEP_TITLES: Record<SignupWizardStep, { title: string; description?: strin
   recits: {
     title: "Partage un récit d’aventure",
     description:
-      "Un seul événement suffit. Partage un lien, quelques mots, ou passe cette étape.",
+      "Choisis l’événement que tu souhaites raconter",
   },
   confirmation: { title: "C'est tout bon !" },
 };
 
 interface SignupWizardProps {
+  /** Local-only UI preview: never persists recommendations, stories or account flags. */
+  previewEvents?: RecommendableEvent[];
   /** « profil » pour reprendre un parcours interrompu (retour de Google, session coupée). */
   startStep?: SignupWizardStep;
   initialValues?: UserProfileFormValues;
@@ -97,12 +100,14 @@ interface SignupWizardProps {
 }
 
 export function SignupWizard({
+  previewEvents,
   startStep = "methode",
   initialValues,
   redirectTo = "/",
   onSwitchToLogin,
   onDone,
 }: SignupWizardProps) {
+  const isPreview = process.env.NODE_ENV === "development" && previewEvents !== undefined;
   const router = useRouter();
   const { user } = useAuth();
   const [step, setStep] = useState<SignupWizardStep>(startStep);
@@ -119,14 +124,13 @@ export function SignupWizard({
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
   const [passwordConfirmationTouched, setPasswordConfirmationTouched] = useState(false);
   const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(false);
-  const [recommended, setRecommended] = useState<RecommendableEvent[]>([]);
+  const [recommended, setRecommended] = useState<RecommendableEvent[]>(() => isPreview ? previewEvents ?? [] : []);
   const [storyEventId, setStoryEventId] = useState<number | null>(null);
-  const [manualStoryEventId, setManualStoryEventId] = useState<number | null>(null);
-  const [choosingStoryEvent, setChoosingStoryEvent] = useState(false);
+  const [storyPhase, setStoryPhase] = useState<"selection" | "writing" | "saved">("selection");
   const [storyDrafts, setStoryDrafts] = useState<Record<number, { storyUrl: string; story: string }>>({});
-  // Once saved, retry only the completion flag: never save a second story if
-  // finalization fails after the first one has reached the database.
-  const [storySaved, setStorySaved] = useState(false);
+  // Saved events remain visible but cannot be submitted again during this session.
+  const [savedStoryEventIds, setSavedStoryEventIds] = useState<number[]>([]);
+  const storyHeadingRef = useRef<HTMLHeadingElement>(null);
   const onboardingActionRef = useRef(false);
   const [signedUpUser, setSignedUpUser] = useState<User | null>(null);
   // Vrai seulement si le projet Supabase exige une confirmation par email :
@@ -148,7 +152,13 @@ export function SignupWizard({
     [recommended.length]
   );
   const stepIndex = visibleSteps.indexOf(step);
-  const heading = STEP_TITLES[step];
+  const heading = step === "recits" && storyPhase === "writing"
+      ? { title: STEP_TITLES.recits.title, description: "Partage un lien, quelques mots, ou les deux." }
+      : STEP_TITLES[step];
+
+  useEffect(() => {
+    if (step === "recits") storyHeadingRef.current?.focus();
+  }, [step, storyPhase]);
   const passwordsMatch = password === passwordConfirmation;
   const showPasswordMismatch = passwordConfirmationTouched && !passwordsMatch;
   const canContinueIdentity = Boolean(
@@ -302,13 +312,11 @@ export function SignupWizard({
 
   const updateRecommendations = (events: RecommendableEvent[]) => {
     setRecommended(events);
-    if (!events.some((event) => event.id === manualStoryEventId)) {
-      setManualStoryEventId(null);
-    }
+    setStoryEventId(null);
   };
 
   const updateStoryDraft = (patch: Partial<{ storyUrl: string; story: string }>) => {
-    if (!storyEvent || storySaved) return;
+    if (!storyEvent || storyPhase !== "writing" || savedStoryEventIds.includes(storyEvent.id)) return;
     const eventId = storyEvent.id;
     setStoryDrafts((current) => ({
       ...current,
@@ -320,7 +328,7 @@ export function SignupWizard({
     // A ref also catches repeated clicks before React paints disabled buttons.
     if (pending || onboardingActionRef.current) return;
     setError(null);
-    if (!accountUser) {
+    if (!accountUser && !isPreview) {
       setError("Ta session a expiré. Reconnecte-toi pour continuer.");
       return;
     }
@@ -340,6 +348,10 @@ export function SignupWizard({
   // Le drapeau « onboarding terminé » est posé une seule fois, quel que soit le
   // chemin emprunté — avec ou sans étape « récits ».
   const completeOnboarding = async ({ storyAdded }: { storyAdded: boolean }) => {
+    if (isPreview) {
+      setStep("confirmation");
+      return;
+    }
     const { error: flagError } = await createClient().auth.updateUser({
       data: { onboarding_completed: true },
     });
@@ -356,6 +368,12 @@ export function SignupWizard({
   };
 
   const handleRecommendationsSubmit = () => runOnboardingAction(async () => {
+    if (isPreview) {
+      setStoryEventId(null);
+      setStoryPhase("selection");
+      setStep(recommended.length ? "recits" : "confirmation");
+      return;
+    }
     if (!accountUser) return;
     const supabase = createClient();
     const { error: recommendationsError } = await saveRecommendedEvents(
@@ -371,53 +389,54 @@ export function SignupWizard({
 
     // Les recommandations sont enregistrées avant l'étape suivante, sur le
     // modèle du profil : une interruption pendant le récit ne les perd pas.
-    const counts = await fetchEventStoryCounts(
-      supabase,
-      recommended.map((event) => event.id)
-    );
-    const nextStoryEvent = selectStoryEvent(recommended, counts, manualStoryEventId);
-
-    if (!nextStoryEvent) {
-      await completeOnboarding({ storyAdded: false });
+    if (recommended.length === 0) {
+      await completeOnboarding({ storyAdded: savedStoryEventIds.length > 0 });
       return;
     }
 
-    setStoryEventId(nextStoryEvent.id);
-    setChoosingStoryEvent(false);
+    setStoryEventId(null);
+    setStoryPhase("selection");
     setStep("recits");
   });
 
   // ---- Étape 5 : récits ------------------------------------------------------
 
   const handleStorySkip = () => runOnboardingAction(async () => {
-    await completeOnboarding({ storyAdded: storySaved });
+    await completeOnboarding({ storyAdded: savedStoryEventIds.length > 0 });
   });
 
   const handleStorySubmit = () => runOnboardingAction(async () => {
-    if (!accountUser || !storyEvent) return;
-    if (storySaved) {
-      await completeOnboarding({ storyAdded: true });
-      return;
-    }
+    if ((!accountUser && !isPreview) || !storyEvent || storyPhase !== "writing" || savedStoryEventIds.includes(storyEvent.id)) return;
 
-    const { error: storyError, saved } = await saveEventStory(createClient(), accountUser, {
-      eventId: storyEvent.id,
-      storyUrl,
-      story,
-    });
+    const { error: storyError, saved } = isPreview
+      ? {
+          error: storyUrl.trim() && !normalizeStoryUrl(storyUrl.trim())
+            ? "Ce lien ne semble pas valide. Colle l'adresse complète de ton récit."
+            : null,
+          saved: hasStoryContent,
+        }
+      : await saveEventStory(createClient(), accountUser!, {
+          eventId: storyEvent.id,
+          storyUrl,
+          story,
+        });
 
     if (storyError) {
       setError(storyError);
       return;
     }
-    setStorySaved(saved);
-    await completeOnboarding({ storyAdded: saved });
+    if (saved) {
+      setSavedStoryEventIds((current) => [...current, storyEvent.id]);
+      setStoryEventId(null);
+      setStoryPhase("saved");
+    }
   });
 
   // ---- Étape 6 : confirmation -------------------------------------------------
 
   const handleDone = () => {
     onDone?.();
+    if (isPreview) return;
     router.replace(sanitizeRedirectPath(redirectTo, "/"));
     router.refresh();
   };
@@ -443,7 +462,7 @@ export function SignupWizard({
       <StepDots steps={visibleSteps} currentIndex={stepIndex} />
 
       <div className="space-y-1.5">
-        <h3 className="font-serif text-[20px] font-bold leading-tight text-foreground">
+        <h3 ref={storyHeadingRef} tabIndex={-1} className="font-serif text-[20px] font-bold leading-tight text-foreground focus:outline-none">
           {heading.title}
         </h3>
         {heading.description && <Muted>{heading.description}</Muted>}
@@ -681,88 +700,105 @@ export function SignupWizard({
         </div>
       )}
 
-      {step === "recits" && storyEvent && (
+      {step === "recits" && (storyPhase === "selection" || storyPhase === "saved") && recommended.length > 0 && (
         <div className="space-y-4">
-          {recommended.length > 1 && (
-            <div className="space-y-2">
-              <button
-                type="button"
-                aria-expanded={choosingStoryEvent}
-                aria-controls="signup-story-event-choice"
-                disabled={pending || storySaved}
-                onClick={() => setChoosingStoryEvent((current) => !current)}
-                className="min-h-11 rounded-[var(--radius-sm)] text-sm font-medium text-foreground/75 underline underline-offset-4 transition-colors hover:text-coral-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-coral disabled:opacity-50"
-              >
-                Choisir un autre événement
-              </button>
-              {choosingStoryEvent && (
-                <div id="signup-story-event-choice">
-                  <Field label="Événement à raconter" htmlFor="signup-story-event">
-                    <Select
-                      id="signup-story-event"
-                      value={String(storyEvent.id)}
-                      options={recommended.map((event) => ({
-                        value: String(event.id),
-                        label: event.nomEvent || "Événement",
-                      }))}
-                      disabled={pending || storySaved}
-                      onValueChange={(value) => {
-                        const eventId = Number(value);
-                        if (!recommended.some((event) => event.id === eventId)) return;
-                        setStoryEventId(eventId);
-                        setManualStoryEventId(eventId);
-                        setError(null);
-                      }}
-                    />
-                  </Field>
-                </div>
-              )}
-            </div>
-          )}
+          <fieldset disabled={pending} className="min-w-0">
+            <legend className="sr-only">Événement à raconter</legend>
+            <ul className="divide-y divide-foreground/10">
+              {recommended.map((event) => (
+                <li key={event.id} className="py-1 first:pt-0 last:pb-0">
+                  {savedStoryEventIds.includes(event.id) ? (
+                    <div className="flex min-h-16 items-center gap-3 rounded-[var(--radius-sm)] bg-green-50 px-3 py-3 text-green-800">
+                      <span aria-hidden="true"><EventThumb event={event} /></span>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-medium">{event.nomEvent || "Événement"}</p>
+                      </div>
+                      <CircleCheck role="img" aria-label="Récit enregistré" className="size-5 shrink-0" />
+                    </div>
+                  ) : (
+                    <label className="flex min-h-16 cursor-pointer items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3 transition-colors hover:bg-foreground/5 has-[:checked]:bg-coral/10 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-coral has-[:disabled]:cursor-wait has-[:disabled]:opacity-50">
+                      <span aria-hidden="true"><EventThumb event={event} /></span>
+                      <span className="min-w-0 flex-1 break-words text-sm font-medium text-foreground">
+                        {event.nomEvent || "Événement"}
+                      </span>
+                      <input
+                        type="radio"
+                        name="signup-story-event"
+                        value={event.id}
+                        checked={storyEventId === event.id}
+                        onChange={() => {
+                          setStoryEventId(event.id);
+                          setError(null);
+                        }}
+                        className="size-4 shrink-0 accent-coral"
+                      />
+                    </label>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </fieldset>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => { setError(null); setStoryEventId(null); setStep("recommandations"); }}
+              className="rounded-[var(--radius-sm)] px-3.5 py-3 text-sm font-medium text-foreground/65 transition-colors hover:text-foreground disabled:opacity-50"
+            >
+              Retour
+            </button>
+            <button
+              type="button"
+              disabled={pending || !storyEvent || savedStoryEventIds.includes(storyEvent.id)}
+              onClick={() => {
+                if (!storyEvent || savedStoryEventIds.includes(storyEvent.id)) return;
+                setError(null);
+                setStoryPhase("writing");
+              }}
+              className={`${PRIMARY_BUTTON_CLASS} flex-1`}
+            >
+              Raconter cet événement
+            </button>
+          </div>
+          <button type="button" disabled={pending} onClick={handleStorySkip}
+            className="min-h-11 w-full rounded-[var(--radius-sm)] border border-foreground/20 px-3.5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50">
+            {pending ? "Finalisation..." : "Terminer mon inscription"}
+          </button>
+        </div>
+      )}
+
+      {step === "recits" && storyPhase === "writing" && storyEvent && (
+        <div className="space-y-4">
           <EventStoryForm
             event={storyEvent}
             storyUrl={storyUrl}
             story={story}
             onStoryUrlChange={(storyUrl) => updateStoryDraft({ storyUrl })}
             onStoryChange={(story) => updateStoryDraft({ story })}
-            disabled={pending || storySaved}
+            disabled={pending}
           />
-          {storySaved && (
-            <p role="status" className="text-sm text-foreground/75">
-              Ton récit est enregistré. Il reste à terminer ton inscription.
-            </p>
-          )}
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => {
-                setError(null);
-                setStep("recommandations");
-              }}
-              disabled={pending || storySaved}
-              className="rounded-[var(--radius-sm)] px-3.5 py-3 text-sm font-medium text-foreground/55 transition-colors hover:text-foreground disabled:opacity-50"
+              onClick={() => { setError(null); setStoryEventId(null); setStoryPhase("selection"); }}
+              disabled={pending}
+              className="rounded-[var(--radius-sm)] px-3.5 py-3 text-sm font-medium text-foreground/65 transition-colors hover:text-foreground disabled:opacity-50"
             >
               Retour
             </button>
             <button
               type="button"
-              onClick={hasStoryContent || storySaved ? handleStorySubmit : handleStorySkip}
-              disabled={pending}
+              onClick={handleStorySubmit}
+              disabled={pending || !hasStoryContent}
               className={`${PRIMARY_BUTTON_CLASS} flex-1`}
             >
-              {pending ? "Enregistrement..." : storySaved ? "Terminer" : hasStoryContent ? "Enregistrer et terminer" : "Passer cette étape"}
+              {pending ? "Enregistrement..." : "Enregistrer le récit"}
             </button>
           </div>
-          {hasStoryContent && !storySaved && (
-            <button
-              type="button"
-              onClick={handleStorySkip}
-              disabled={pending}
-              className="min-h-11 w-full rounded-[var(--radius-sm)] px-3.5 py-3 text-sm font-medium text-foreground/55 transition-colors hover:text-foreground disabled:opacity-50"
-            >
-              Passer cette étape
-            </button>
-          )}
+          <button type="button" onClick={handleStorySkip} disabled={pending}
+            className="min-h-11 w-full rounded-[var(--radius-sm)] px-3.5 py-3 text-sm font-medium text-foreground/65 transition-colors hover:text-foreground disabled:opacity-50">
+            Terminer mon inscription
+          </button>
         </div>
       )}
 
@@ -770,10 +806,9 @@ export function SignupWizard({
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-3 text-center">
             <CircleCheck className="size-16 text-foreground/72" />
-            <Muted>
+            <p className="text-base font-medium leading-6 text-foreground">
               Bienvenue dans la communauté Upcomi
-              {profile.firstName ? `, ${profile.firstName}` : ""} !
-            </Muted>
+            </p>
           </div>
           <button type="button" onClick={handleDone} className={`${PRIMARY_BUTTON_CLASS} w-full`}>
             Continuer →

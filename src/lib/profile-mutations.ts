@@ -117,7 +117,7 @@ export interface EventStoryDraft {
  * Le proto accepte un lien collé sans protocole (`instagram.com/p/…`) et le
  * complète : la contrainte `user_event_stories_url_shape` exige `http(s)://`.
  */
-function normalizeStoryUrl(rawUrl: string): string | null {
+export function normalizeStoryUrl(rawUrl: string): string | null {
   const trimmed = rawUrl.trim();
   if (!trimmed) return null;
 

@@ -30,7 +30,7 @@ export function OnboardingModal({ initialValues }: OnboardingModalProps) {
     return query ? `${pathname}?${query}` : pathname;
   }, [pathname, searchParams]);
 
-  if (isProfilePage) {
+  if (isProfilePage || (process.env.NODE_ENV === "development" && pathname === "/dev/onboarding")) {
     return null;
   }
 

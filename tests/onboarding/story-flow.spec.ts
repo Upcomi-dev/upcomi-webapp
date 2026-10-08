@@ -24,31 +24,47 @@ async function recommendations(page: Page, selected = names.slice(0, 2)) {
   }
 }
 
-async function storyStep(page: Page, selected?: string[]) {
+async function selectionStep(page: Page, selected?: string[]) {
   await recommendations(page, selected);
   await page.getByRole("button", { name: "Continuer", exact: false }).click();
   await expect(page.getByRole("heading", { name: "Partage un récit d’aventure" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Événement à raconter" })).toBeVisible();
+  await expect(page.locator('input[name="signup-story-event"]:checked')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Raconter cet événement", exact: true })).toBeDisabled();
+}
+
+async function storyStep(page: Page, selected?: string[]) {
+  await selectionStep(page, selected);
+  await expect(page.locator("#signup-story")).toHaveCount(0);
+  await chooseEvent(page, selected?.length === 1 ? selected[0] : names[1]);
 }
 
 async function chooseEvent(page: Page, name: string) {
-  const choice = page.getByRole("combobox", { name: "Événement à raconter" });
-  if (!await choice.isVisible()) await page.getByRole("button", { name: "Choisir un autre événement" }).click();
-  await choice.click();
-  await page.getByRole("option", { name, exact: true }).click();
+  if (await page.locator("#signup-story").isVisible()) {
+    await page.getByRole("button", { name: "Retour", exact: true }).click();
+  }
+  await page.getByRole("radio", { name, exact: true }).check();
+  await page.getByRole("button", { name: "Raconter cet événement", exact: true }).click();
+}
+
+async function finishSavedStory(page: Page) {
+  await expect(page.getByRole("img", { name: "Récit enregistré", exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Terminer mon inscription", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "C'est tout bon !" })).toBeVisible();
 }
 
 test.beforeEach(async ({ request }) => {
   await request.post(`${api}/__scenario`, { data: {} });
 });
 
-test("saves one story for the least covered event and finishes", async ({ page, request }, testInfo) => {
+test("saves one story for the manually selected event and finishes", async ({ page, request }, testInfo) => {
   await storyStep(page);
   await expect(page.getByText(names[1], { exact: true })).toBeVisible();
   await page.locator("#signup-story").fill("Une belle aventure à partager.");
   await expect(page.locator("#signup-story")).toHaveAttribute("maxlength", "200");
   await page.screenshot({ path: testInfo.outputPath("story.png"), fullPage: true });
-  await page.getByRole("button", { name: "Enregistrer et terminer" }).click();
-  await expect(page.getByRole("heading", { name: "C'est tout bon !" })).toBeVisible();
+  await page.getByRole("button", { name: "Enregistrer le récit" }).click();
+  await finishSavedStory(page);
   const log = await (await request.get(`${api}/__requests`)).json();
   const stories = log.filter((entry: { path: string }) => entry.path === "/rest/v1/user_event_stories");
   expect(stories).toHaveLength(1);
@@ -68,27 +84,31 @@ test("keeps separate drafts, manual choice and handles removed recommendations",
   await chooseEvent(page, names[0]);
   await expect(page.locator("#signup-story-url")).toHaveValue("https://example.test/alpes");
   await page.getByRole("button", { name: "Retour", exact: true }).click();
+  await page.getByRole("button", { name: "Retour", exact: true }).click();
   await page.getByRole("button", { name: "Continuer", exact: false }).click();
+  await expect(page.getByRole("button", { name: "Raconter cet événement", exact: true })).toBeDisabled();
+  await chooseEvent(page, names[0]);
   await expect(page.locator("#signup-story-url")).toHaveValue("https://example.test/alpes");
+  await page.getByRole("button", { name: "Retour", exact: true }).click();
   await page.getByRole("button", { name: "Retour", exact: true }).click();
   await page.getByRole("button", { name: `Retirer ${names[0]}` }).click();
   await page.getByRole("button", { name: "Continuer", exact: false }).click();
+  await chooseEvent(page, names[1]);
   await expect(page.locator("#signup-story")).toHaveValue("Brouillon breton");
-  await page.getByRole("button", { name: "Choisir un autre événement" }).click();
-  const select = page.getByRole("combobox", { name: "Événement à raconter" });
-  await select.focus();
+  await page.getByRole("button", { name: "Retour", exact: true }).click();
+  const choices = page.getByRole("group", { name: "Événement à raconter" });
+  await expect(page.getByRole("radio", { name: names[0], exact: true })).toHaveCount(0);
+  await page.getByRole("radio", { name: names[1], exact: true }).focus();
   await page.keyboard.press("ArrowDown");
-  await expect(page.getByRole("option", { name: names[0], exact: true })).toHaveCount(0);
-  await page.keyboard.press("End");
-  await page.keyboard.press("Enter");
-  await expect(select).toContainText(names[2]);
-  await expect(page.locator("#signup-story")).toHaveValue("");
+  await expect(page.getByRole("radio", { name: names[2], exact: true })).toBeChecked();
   await page.screenshot({ path: testInfo.outputPath("story-choice.png"), fullPage: true });
-  const bounds = await select.boundingBox();
+  const bounds = await choices.boundingBox();
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await page.getByRole("button", { name: "Raconter cet événement", exact: true }).click();
+  await expect(page.locator("#signup-story")).toHaveValue("");
   await page.locator("#signup-story-url").fill("https://example.test/pyrenees");
-  await page.getByRole("button", { name: "Enregistrer et terminer" }).click();
-  await expect(page.getByRole("heading", { name: "C'est tout bon !" })).toBeVisible();
+  await page.getByRole("button", { name: "Enregistrer le récit" }).click();
+  await finishSavedStory(page);
   const log = await (await request.get(`${api}/__requests`)).json();
   const stories = log.filter((entry: { path: string }) => entry.path === "/rest/v1/user_event_stories");
   expect(stories).toHaveLength(1);
@@ -103,21 +123,25 @@ test("empty recommendations skip stories entirely", async ({ page, request }) =>
   expect(log.filter((entry: { path: string }) => /get_event_story_counts|user_event_stories/.test(entry.path))).toHaveLength(0);
 });
 
-test("one event hides selection and an empty form can be skipped", async ({ page, request }) => {
-  await storyStep(page, [names[0]]);
-  await expect(page.getByRole("button", { name: "Choisir un autre événement" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Passer cette étape", exact: true }).click();
+test("one event still has a selection step and an empty form can be skipped", async ({ page, request }) => {
+  await selectionStep(page, [names[0]]);
+  await expect(page.getByRole("radio", { name: names[0], exact: true })).not.toBeChecked();
+  await page.getByRole("radio", { name: names[0], exact: true }).check();
+  await expect(page.locator("#signup-story")).toHaveCount(0);
+  await page.getByRole("button", { name: "Raconter cet événement", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Enregistrer le récit" })).toBeDisabled();
+  await page.getByRole("button", { name: "Terminer mon inscription", exact: true }).click();
   await expect(page.getByRole("heading", { name: "C'est tout bon !" })).toBeVisible();
   const log = await (await request.get(`${api}/__requests`)).json();
   expect(log.filter((entry: { path: string }) => entry.path === "/rest/v1/user_event_stories")).toHaveLength(0);
 });
 
-test("count failure proposes first recommendation and skip discards unsaved drafts", async ({ page, request }) => {
+test("manual selection needs no count request and finishing discards unsaved drafts", async ({ page, request }) => {
   await request.post(`${api}/__scenario`, { data: { countFailure: true } });
-  await storyStep(page);
+  await storyStep(page, [names[0]]);
   await expect(page.getByText(names[0], { exact: true })).toBeVisible();
   await page.locator("#signup-story").fill("Un brouillon non publié");
-  await page.getByRole("button", { name: "Passer cette étape", exact: true }).click();
+  await page.getByRole("button", { name: "Terminer mon inscription", exact: true }).click();
   await expect(page.getByRole("heading", { name: "C'est tout bon !" })).toBeVisible();
   const log = await (await request.get(`${api}/__requests`)).json();
   expect(log.filter((entry: { path: string }) => entry.path === "/rest/v1/user_event_stories")).toHaveLength(0);
@@ -127,12 +151,12 @@ test("save failure preserves the draft; rapid submissions write only once per at
   await request.post(`${api}/__scenario`, { data: { storyFailures: 1, storyDelay: 300 } });
   await storyStep(page);
   await page.locator("#signup-story").fill("À conserver après une erreur");
-  const save = page.getByRole("button", { name: "Enregistrer et terminer" });
+  const save = page.getByRole("button", { name: "Enregistrer le récit" });
   await save.evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
   await expect(page.getByRole("alert")).toContainText("Récit indisponible");
   await expect(page.locator("#signup-story")).toHaveValue("À conserver après une erreur");
   await save.click();
-  await expect(page.getByRole("heading", { name: "C'est tout bon !" })).toBeVisible();
+  await finishSavedStory(page);
   const log = await (await request.get(`${api}/__requests`)).json();
   expect(log.filter((entry: { path: string }) => entry.path === "/rest/v1/user_event_stories")).toHaveLength(2);
 });
@@ -141,11 +165,12 @@ test("failed finalization retries without writing another story", async ({ page,
   await request.post(`${api}/__scenario`, { data: { completionFailures: 1 } });
   await storyStep(page);
   await page.locator("#signup-story").fill("Un seul récit enregistré");
-  await page.getByRole("button", { name: "Enregistrer et terminer" }).click();
-  await expect(page.getByRole("status")).toContainText("Ton récit est enregistré");
-  await expect(page.getByRole("button", { name: "Choisir un autre événement" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Retour", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "Terminer", exact: true }).click();
+  await page.getByRole("button", { name: "Enregistrer le récit" }).click();
+  await expect(page.getByRole("img", { name: "Récit enregistré", exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Terminer mon inscription", exact: true }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.locator("#signup-story")).toHaveCount(0);
+  await page.getByRole("button", { name: "Terminer mon inscription", exact: true }).click();
   await expect(page.getByRole("heading", { name: "C'est tout bon !" })).toBeVisible();
   const log = await (await request.get(`${api}/__requests`)).json();
   expect(log.filter((entry: { path: string }) => entry.path === "/rest/v1/user_event_stories")).toHaveLength(1);
@@ -166,15 +191,83 @@ test("invalid URL and offline save preserve input before a successful retry", as
   await storyStep(page);
   await page.locator("#signup-story-url").fill("http://[");
   await page.locator("#signup-story").fill("Récit à conserver");
-  await page.getByRole("button", { name: "Enregistrer et terminer" }).click();
+  await page.getByRole("button", { name: "Enregistrer le récit" }).click();
   await expect(page.getByRole("alert")).toContainText("Ce lien ne semble pas valide");
   await page.locator("#signup-story-url").fill("https://example.test/recit");
   await page.route("**/rest/v1/user_event_stories*", (route) => route.abort());
-  await page.getByRole("button", { name: "Enregistrer et terminer" }).click();
+  await page.getByRole("button", { name: "Enregistrer le récit" }).click();
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(page.locator("#signup-story")).toHaveValue("Récit à conserver");
   await expect(page.locator("#signup-story-url")).toHaveValue("https://example.test/recit");
   await page.unroute("**/rest/v1/user_event_stories*");
-  await page.getByRole("button", { name: "Enregistrer et terminer" }).click();
+  await page.getByRole("button", { name: "Enregistrer le récit" }).click();
+  await finishSavedStory(page);
+});
+
+
+test("saves successive stories without finalizing early or offering saved events again", async ({ page, request }, testInfo) => {
+  await selectionStep(page);
+  await page.screenshot({ path: testInfo.outputPath("selection.png"), fullPage: true });
+  await chooseEvent(page, names[1]);
+  await page.locator("#signup-story").fill("Le récit breton");
+  // Keep a separate draft ready for the second event.
+  await chooseEvent(page, names[0]);
+  await page.locator("#signup-story-url").fill("https://example.test/alpes");
+  await chooseEvent(page, names[1]);
+  await page.getByRole("button", { name: "Enregistrer le récit" }).click();
+  await expect(page.getByRole("heading", { name: "Partage un récit d’aventure" })).toBeFocused();
+  await expect(page.getByRole("img", { name: "Récit enregistré", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("group", { name: "Événement à raconter" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Raconter cet événement", exact: true })).toBeDisabled();
+  await expect(page.locator('input[name="signup-story-event"]:checked')).toHaveCount(0);
+  const completedEvent = page.getByRole("listitem").filter({ hasText: names[1] });
+  await expect(completedEvent.getByRole("img", { name: "Récit enregistré" })).toBeVisible();
+  await expect(completedEvent.locator("svg")).toBeVisible();
+  await expect(completedEvent.locator(".text-green-800")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("saved.png"), fullPage: true });
+  let log = await (await request.get(`${api}/__requests`)).json();
+  expect(log.some((entry: { body?: { data?: { onboarding_completed?: boolean } } }) => entry.body?.data?.onboarding_completed)).toBe(false);
+  await expect(page.getByRole("group", { name: "Événement à raconter" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: names[1], exact: true })).toHaveCount(0);
+  await page.getByRole("radio", { name: names[0], exact: true }).check();
+  await page.getByRole("button", { name: "Raconter cet événement", exact: true }).click();
+  await expect(page.locator("#signup-story-url")).toHaveValue("https://example.test/alpes");
+  await expect(page.locator("#signup-story")).toHaveValue("");
+  await page.getByRole("button", { name: "Enregistrer le récit" }).click();
+  await expect(page.getByRole("img", { name: "Récit enregistré", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Raconter cet événement", exact: true })).toBeDisabled();
+  await expect(page.getByRole("img", { name: "Récit enregistré", exact: true })).toHaveCount(2);
+  await expect(page.getByRole("radio")).toHaveCount(0);
+  await finishSavedStory(page);
+  log = await (await request.get(`${api}/__requests`)).json();
+  const stories = log.filter((entry: { path: string }) => entry.path === "/rest/v1/user_event_stories");
+  expect(stories.map((entry: { body: unknown }) => entry.body)).toMatchObject([
+    { event_id: 22, story: "Le récit breton", story_url: null },
+    { event_id: 11, story: null, story_url: "https://example.test/alpes" },
+  ]);
+});
+
+test("can finish from the next selection without losing the saved story", async ({ page, request }) => {
+  await storyStep(page);
+  await page.locator("#signup-story").fill("Récit déjà enregistré");
+  await page.getByRole("button", { name: "Enregistrer le récit" }).click();
+  await expect(page.getByRole("group", { name: "Événement à raconter" })).toBeVisible();
+  await page.getByRole("button", { name: "Retour", exact: true }).click();
+  // Removing every recommendation must not lose or rewrite the saved story.
+  for (const name of names.slice(0, 2)) {
+    await page.getByRole("button", { name: `Retirer ${name}` }).click();
+  }
+  await page.getByRole("button", { name: "Passer cette étape", exact: true }).click();
   await expect(page.getByRole("heading", { name: "C'est tout bon !" })).toBeVisible();
+  const log = await (await request.get(`${api}/__requests`)).json();
+  expect(log.filter((entry: { path: string }) => entry.path === "/rest/v1/user_event_stories")).toHaveLength(1);
+});
+
+
+test("can finish from the unselected list without writing a story", async ({ page, request }) => {
+  await selectionStep(page);
+  await page.getByRole("button", { name: "Terminer mon inscription", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "C'est tout bon !" })).toBeVisible();
+  const log = await (await request.get(`${api}/__requests`)).json();
+  expect(log.filter((entry: { path: string }) => /get_event_story_counts|user_event_stories/.test(entry.path))).toHaveLength(0);
 });

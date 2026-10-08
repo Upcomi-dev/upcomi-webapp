@@ -66,7 +66,7 @@ export function AuthModalDialog({
       >
         {/* Header with gradient mesh */}
         <div className={`hero-mesh relative px-6 pt-7 ${hasOwnTitle ? "pb-4" : "pb-5"}`}>
-          <AppLogo href="/" imageClassName="h-8 w-auto" />
+          <AppLogo href="http://www.upcomi.cc" ariaLabel="Accéder au site Upcomi" imageClassName="h-8 w-auto" />
           {!hasOwnTitle && (
             <>
               <h2 className="mt-4 font-serif text-[22px] font-bold leading-tight text-foreground">
