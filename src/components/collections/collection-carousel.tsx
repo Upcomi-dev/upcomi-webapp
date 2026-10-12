@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { CollectionWithEvents } from "@/lib/types/database";
 import { EventCard } from "@/components/events/event-card";
 
@@ -50,7 +51,7 @@ export function CollectionCarousel({ collection, onEventClick, onEventHover }: C
             {collection.name}
           </h2>
           {collection.description && (
-            <p className="mt-0.5 text-[12px] text-foreground/50">
+            <p className="mt-0.5 text-[13px] text-foreground/50">
               {collection.description}
             </p>
           )}
@@ -65,7 +66,7 @@ export function CollectionCarousel({ collection, onEventClick, onEventHover }: C
             className="flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-white/70 text-foreground/50 transition-all hover:bg-white hover:text-foreground disabled:opacity-30 disabled:cursor-default"
             aria-label="Précédent"
           >
-            ←
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -74,7 +75,7 @@ export function CollectionCarousel({ collection, onEventClick, onEventHover }: C
             className="flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-white/70 text-foreground/50 transition-all hover:bg-white hover:text-foreground disabled:opacity-30 disabled:cursor-default"
             aria-label="Suivant"
           >
-            →
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -97,6 +98,7 @@ export function CollectionCarousel({ collection, onEventClick, onEventHover }: C
             villeDepart={event.villeDepart}
             paysDepart={event.paysDepart}
             distance={event.distance}
+            maxElevation={event.maxElevation}
             mint={event.mint}
             variant="carousel"
             onEventClick={onEventClick}

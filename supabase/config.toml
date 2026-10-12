@@ -33,7 +33,7 @@ shadow_port = 54320
 health_timeout = "2m"
 # The database major version to use. This has to be the same as your remote database's. Run `SHOW
 # server_version;` on the remote database to check.
-major_version = 17
+major_version = 15
 
 [db.pooler]
 enabled = false
@@ -62,6 +62,8 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
+# `seed.sql` n'est pas versionné (voir supabase/.gitignore) : il est propre à
+# chaque poste. Sans lui, `db reset` saute simplement l'étape de seed.
 sql_paths = ["./seed.sql"]
 
 [db.network_restrictions]
@@ -171,6 +173,7 @@ enable_manual_linking = false
 minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
+# Aligné sur les critères affichés à l'inscription et à la réinitialisation.
 password_requirements = "lower_upper_letters_digits_symbols"
 
 [auth.rate_limit]
@@ -384,7 +387,7 @@ deno_version = 2
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"

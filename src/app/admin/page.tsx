@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminEventsClient } from "@/components/admin/admin-events-client";
 import { AdminCollectionsClient } from "@/components/admin/admin-collections-client";
 import { AdminFeedbackClient } from "@/components/admin/admin-feedback-client";
+import { AdminStoriesClient, type AdminStory } from "@/components/admin/admin-stories-client";
 import { AdminUsersClient } from "@/components/admin/admin-users-client";
 import { AdminProposalsClient, type AdminProposal } from "@/components/admin/admin-proposals-client";
 import { AdminProposalFeatureToggle } from "@/components/admin/admin-proposal-feature-toggle";
@@ -9,7 +10,13 @@ import { EVENT_PROPOSALS_FEATURE_KEY } from "@/lib/features";
 import { requireAdmin } from "@/lib/auth/assert-admin";
 import { parseSupabasePublicStorageUrl } from "@/lib/storage/urls";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Event, EventSubmissionContact, FeedbackEntry, SousEvent } from "@/lib/types/database";
+import type {
+  Event,
+  EventSubmissionContact,
+  FeedbackEntry,
+  SousEvent,
+  UserEventStory,
+} from "@/lib/types/database";
 import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 
 interface AdminPageProps {
@@ -122,6 +129,14 @@ const ADMIN_TABS = [
     description: "Gérez les comptes, les abonnements et les préférences applicatives.",
   },
   {
+    id: "stories",
+    label: "Récits",
+    eyebrow: "Modération",
+    title: "Récits d'expérience",
+    description:
+      "Relisez les récits écrits par la communauté avant qu'ils n'apparaissent sur les fiches.",
+  },
+  {
     id: "feedback",
     label: "Retours",
     eyebrow: "Produit",
@@ -181,6 +196,12 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .from("feedback_entries")
     .select("*")
     .order("created_at", { ascending: false });
+  // Les récits se lisent en tant qu'admin : c'est la policy de modération
+  // (20260905110000) qui ouvre la table au-delà de sa seule autrice.
+  const eventStoriesPromise = supabase
+    .from("user_event_stories")
+    .select("*")
+    .order("created_at", { ascending: false });
   const eventSubmissionContactsPromise = supabase
     .from("event_submission_contacts")
     .select("*")
@@ -205,6 +226,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     organisateursResult,
     favouritesCountResult,
     feedbackEntriesResult,
+    eventStoriesResult,
     eventSubmissionContactsResult,
     proposalRoutesResult,
     popularEventsResult,
@@ -219,6 +241,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     organisateursPromise,
     favouritesCountPromise,
     feedbackEntriesPromise,
+    eventStoriesPromise,
     eventSubmissionContactsPromise,
     proposalRoutesPromise,
     popularEventsPromise,
@@ -270,6 +293,37 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .filter((value): value is string => Boolean(value));
   const favouritesCount = favouritesCountResult.count ?? 0;
   const feedbackEntries = (feedbackEntriesResult.data ?? []) as FeedbackEntry[];
+
+  // Le récit ne porte que deux identifiants ; l'évènement et l'autrice sont
+  // recomposés depuis les listes déjà chargées plus haut, plutôt qu'avec deux
+  // requêtes de plus. `user_event_stories.user_id` pointe sur `auth.users` et
+  // non sur `public.users` : PostgREST ne sait pas les embarquer, la jointure
+  // se fait donc ici.
+  const userByUid = new Map(allUsers.map((row) => [row.uid, row]));
+  const eventStories: AdminStory[] = ((eventStoriesResult.data ?? []) as UserEventStory[]).map(
+    (row) => {
+      const event = eventById.get(row.event_id);
+      const author = userByUid.get(row.user_id);
+      const authorName = [author?.name, author?.surname].filter(Boolean).join(" ").trim();
+
+      return {
+        userId: row.user_id,
+        eventId: row.event_id,
+        eventName: (event?.nomEvent as string | null) || `Évènement ${row.event_id}`,
+        eventSlug: (event?.slug as string | null) ?? null,
+        authorName: authorName || `Membre ${row.user_id.slice(0, 8)}`,
+        authorEmail: author?.email ?? null,
+        story: row.story,
+        storyUrl: row.story_url,
+        status: row.status,
+        createdAt: row.created_at,
+        reviewedAt: row.reviewed_at,
+      };
+    }
+  );
+  const pendingStoriesCount = eventStories.filter((story) => story.status === "pending").length;
+  const approvedStoriesCount = eventStories.filter((story) => story.status === "approved").length;
+  const rejectedStoriesCount = eventStories.filter((story) => story.status === "rejected").length;
   const eventSubmissionContacts =
     (eventSubmissionContactsResult.data ?? []) as EventSubmissionContact[];
   const proposalRoutes = (proposalRoutesResult.data ?? []) as SousEvent[];
@@ -345,6 +399,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     proposals: proposals.filter(({ contact }) => contact.review_status === "pending").length,
     events: eventsList.length,
     users: allUsers.length,
+    stories: pendingStoriesCount,
     feedback: feedbackEntries.length,
   };
 
@@ -388,7 +443,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-semibold">{tab.label}</span>
                   <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    className={`rounded-full px-2.5 py-1 text-[13px] font-semibold ${
                       isActive
                         ? "bg-coral text-white"
                         : "bg-foreground/6 text-foreground/52"
@@ -397,7 +452,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     {tabCounts[tab.id]}
                   </span>
                 </div>
-                <p className="mt-2 text-[12px] leading-5 opacity-75">{tab.description}</p>
+                <p className="mt-2 text-[13px] leading-5 opacity-75">{tab.description}</p>
               </Link>
             );
           })}
@@ -446,7 +501,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       Espaces métier
                     </h3>
                   </div>
-                  <div className="text-right text-[12px] text-foreground/42">
+                  <div className="text-right text-[13px] text-foreground/42">
                     Navigation par onglets
                   </div>
                 </div>
@@ -474,6 +529,13 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     description="Retrouver les comptes applicatifs et gérer les abonnements."
                   />
                   <QuickAccessCard
+                    href="/admin?tab=stories"
+                    label="Récits"
+                    value={`${pendingStoriesCount}`}
+                    detail="à relire"
+                    description="Relire les récits avant qu'ils n'apparaissent sur les fiches."
+                  />
+                  <QuickAccessCard
                     href="/admin?tab=feedback"
                     label="Retours"
                     value={`${newFeedbackCount}`}
@@ -495,7 +557,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   </div>
                   <Link
                     href="/admin?tab=events"
-                    className="text-[12px] font-semibold text-coral transition-colors hover:text-coral-dark"
+                    className="text-[13px] font-semibold text-coral transition-colors hover:text-coral-dark"
                   >
                     Ouvrir le catalogue
                   </Link>
@@ -524,7 +586,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                               {event.verifie ? "Vérifié" : "À vérifier"}
                             </StatusPill>
                             {event.AlaUne !== null && (
-                              <span className="rounded-full bg-coral/12 px-2.5 py-1 text-[11px] font-semibold text-coral">
+                              <span className="rounded-full bg-coral/12 px-2.5 py-1 text-[13px] font-semibold text-coral">
                                 À la une
                               </span>
                             )}
@@ -562,7 +624,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                   </div>
                   <Link
                     href="/admin?tab=users"
-                    className="text-[12px] font-semibold text-coral transition-colors hover:text-coral-dark"
+                    className="text-[13px] font-semibold text-coral transition-colors hover:text-coral-dark"
                   >
                     Ouvrir les comptes
                   </Link>
@@ -578,7 +640,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         <p className="text-[14px] font-semibold text-foreground">
                           {formatAdminUserName(recentUser)}
                         </p>
-                        <p className="mt-1 text-[12px] text-foreground/45">
+                        <p className="mt-1 text-[13px] text-foreground/45">
                           Mis à jour le {formatAdminDate(recentUser.updated_at)}
                         </p>
                       </div>
@@ -669,6 +731,22 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           ]}
         >
           <AdminUsersClient users={allUsers} currentAdminId={user.id} />
+        </AdminSectionShell>
+      )}
+
+      {activeTab === "stories" && (
+        <AdminSectionShell
+          eyebrow="Modération"
+          title="Récits d'expérience"
+          description="Un récit reste invisible sur la fiche de son évènement tant qu'il n'est pas publié ici."
+          stats={[
+            { label: "Total", value: eventStories.length.toString() },
+            { label: "En attente", value: pendingStoriesCount.toString() },
+            { label: "Publiés", value: approvedStoriesCount.toString() },
+            { label: "Refusés", value: rejectedStoriesCount.toString() },
+          ]}
+        >
+          <AdminStoriesClient stories={eventStories} />
         </AdminSectionShell>
       )}
 
@@ -763,7 +841,7 @@ function QuickAccessCard({
       </p>
       <div className="mt-3 flex items-end justify-between gap-4">
         <p className="font-serif text-[34px] leading-none text-foreground">{value}</p>
-        <span className="rounded-full bg-coral/10 px-2.5 py-1 text-[11px] font-semibold text-coral">
+        <span className="rounded-full bg-coral/10 px-2.5 py-1 text-[13px] font-semibold text-coral">
           {detail}
         </span>
       </div>
@@ -801,7 +879,7 @@ function StatusPill({
 }) {
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+      className={`rounded-full px-2.5 py-1 text-[13px] font-semibold ${
         active
           ? "bg-green-100 text-green-700"
           : "bg-amber-100 text-amber-700"
@@ -867,6 +945,7 @@ function parseAdminTab(value: string | string[] | undefined): AdminTabId {
     normalized === "proposals" ||
     normalized === "events" ||
     normalized === "users" ||
+    normalized === "stories" ||
     normalized === "feedback"
   ) {
     return normalized;

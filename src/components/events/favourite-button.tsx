@@ -9,9 +9,10 @@ import { trackAnalyticsEvent } from "@/lib/analytics";
 
 interface FavouriteButtonProps {
   eventId: number;
+  eventTitle: string;
 }
 
-export function FavouriteButton({ eventId }: FavouriteButtonProps) {
+export function FavouriteButton({ eventId, eventTitle }: FavouriteButtonProps) {
   const { isFavorite, toggleFavorite, ready } = useFavorites();
   const { user } = useAuth();
   const isAuthenticated = user !== null;
@@ -33,7 +34,9 @@ export function FavouriteButton({ eventId }: FavouriteButtonProps) {
           authenticated: false,
           source: "icon_button",
         });
-        openAuthModal({ view: "login" });
+        openAuthModal({
+          title: `Rejoins la communauté Upcomi pour enregistrer « ${eventTitle} »`,
+        });
         return;
       }
 
@@ -58,16 +61,14 @@ export function FavouriteButton({ eventId }: FavouriteButtonProps) {
         });
       }
     },
-    [eventId, toggleFavorite, openAuthModal, ready, isAuthenticated, favorited, flyingHeart]
+    [eventId, eventTitle, toggleFavorite, openAuthModal, ready, isAuthenticated, favorited, flyingHeart]
   );
 
   return (
     <button
       onClick={handleClick}
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
-        favorited
-          ? "border-coral/40 bg-coral/10 text-coral"
-          : "border-white/45 bg-white/58 text-foreground/35 hover:border-coral/40 hover:text-coral"
+      className={`soft-ring flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white/70 backdrop-blur-sm transition-all active:scale-90 ${
+        favorited ? "text-coral" : "text-foreground/45 hover:bg-white/90 hover:text-coral"
       }`}
       aria-label={favorited ? "Retirer des favoris" : "Ajouter aux favoris"}
     >

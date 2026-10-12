@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { Field, FIELD_INPUT_CLASS, Muted } from "@/components/ui/field";
 
 interface ForgotPasswordFormProps {
   onSwitchToLogin?: () => void;
@@ -46,10 +47,10 @@ export function ForgotPasswordForm({
         <h3 className="font-serif text-xl font-bold text-foreground">
           Email envoyé
         </h3>
-        <p className="mt-2 text-sm leading-6 text-foreground/58">
+        <Muted className="mt-2">
           Si un compte existe avec {sentEmail}, tu recevras un lien pour
           réinitialiser ton mot de passe.
-        </p>
+        </Muted>
         {onSwitchToLogin ? (
           <button
             type="button"
@@ -79,34 +80,28 @@ export function ForgotPasswordForm({
           </div>
         )}
 
-        <div>
-          <label
-            htmlFor="forgot-password-email"
-            className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/40"
-          >
-            Email
-          </label>
+        <Field label="Email" htmlFor="forgot-password-email">
           <input
             id="forgot-password-email"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
-            className="soft-ring w-full rounded-[var(--radius-sm)] bg-white/58 px-3.5 py-2.5 text-sm text-foreground placeholder:text-foreground/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange/40"
+            className={FIELD_INPUT_CLASS}
             placeholder="ton@email.com"
           />
-        </div>
+        </Field>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-[var(--radius-sm)] bg-coral py-3 text-sm font-semibold text-white shadow-[0_4px_20px_rgba(255,94,65,0.35)] transition-all hover:bg-coral-dark hover:shadow-[0_6px_24px_rgba(255,94,65,0.45)] disabled:opacity-50"
+          className="btn-primary w-full"
         >
           {loading ? "Envoi..." : "Envoyer le lien"}
         </button>
       </form>
 
-      <div className="mt-5 text-center text-[13px] text-foreground/45">
+      <Muted className="mt-5 text-center">
         {onSwitchToLogin ? (
           <button
             type="button"
@@ -123,7 +118,7 @@ export function ForgotPasswordForm({
             Retour à la connexion
           </Link>
         )}
-      </div>
+      </Muted>
     </div>
   );
 }

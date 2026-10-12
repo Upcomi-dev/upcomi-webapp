@@ -122,7 +122,7 @@ export function AdminUsersClient({ users, currentAdminId }: AdminUsersClientProp
       </div>
 
       {isPending && (
-        <div className="text-[12px] text-foreground/50">Mise à jour des utilisateurs...</div>
+        <div className="text-[13px] text-foreground/50">Mise à jour des utilisateurs...</div>
       )}
 
       {showCreateForm && (
@@ -139,7 +139,7 @@ export function AdminUsersClient({ users, currentAdminId }: AdminUsersClientProp
             <button
               type="button"
               onClick={() => setShowCreateForm(false)}
-              className="rounded-full border border-foreground/12 px-4 py-2 text-[12px] text-foreground/60"
+              className="rounded-full border border-foreground/12 px-4 py-2 text-[13px] text-foreground/60"
             >
               Fermer
             </button>
@@ -167,12 +167,12 @@ export function AdminUsersClient({ users, currentAdminId }: AdminUsersClientProp
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-serif text-[24px] text-foreground">{label}</h3>
                     {user.premium && (
-                      <span className="rounded-full bg-coral/12 px-2.5 py-1 text-[11px] font-semibold text-coral">
+                      <span className="rounded-full bg-coral/12 px-2.5 py-1 text-[13px] font-semibold text-coral">
                         Premium
                       </span>
                     )}
                     {isCurrentAdmin && (
-                      <span className="rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-semibold text-green-700">
+                      <span className="rounded-full bg-green-100 px-2.5 py-1 text-[13px] font-semibold text-green-700">
                         Admin courant
                       </span>
                     )}
@@ -180,7 +180,7 @@ export function AdminUsersClient({ users, currentAdminId }: AdminUsersClientProp
                   <p className="mt-2 text-[14px] text-foreground/58">
                     {user.email || "Email indisponible"}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[12px] text-foreground/45">
+                  <div className="mt-3 flex flex-wrap gap-2 text-[13px] text-foreground/45">
                     {user.ville && <span>Ville: {user.ville}</span>}
                     {user.gender && <span>Genre: {user.gender}</span>}
                     {user.store && <span>Store: {user.store}</span>}
@@ -192,7 +192,7 @@ export function AdminUsersClient({ users, currentAdminId }: AdminUsersClientProp
                   <button
                     type="button"
                     onClick={() => setEditingId((current) => (current === user.uid ? null : user.uid))}
-                    className="rounded-full border border-foreground/12 px-4 py-2 text-[12px] font-semibold text-foreground/60 transition-colors hover:bg-foreground/5"
+                    className="rounded-full border border-foreground/12 px-4 py-2 text-[13px] font-semibold text-foreground/60 transition-colors hover:bg-foreground/5"
                   >
                     {isEditing ? "Fermer" : "Éditer"}
                   </button>
@@ -200,7 +200,7 @@ export function AdminUsersClient({ users, currentAdminId }: AdminUsersClientProp
                     type="button"
                     onClick={() => handleDelete(user.uid, label)}
                     disabled={isCurrentAdmin}
-                    className="rounded-full border border-red-200 px-4 py-2 text-[12px] font-semibold text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-45"
+                    className="rounded-full border border-red-200 px-4 py-2 text-[13px] font-semibold text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     Supprimer
                   </button>
@@ -224,7 +224,7 @@ export function AdminUsersClient({ users, currentAdminId }: AdminUsersClientProp
       {filteredUsers.length === 0 && (
         <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/36 px-6 py-12 text-center">
           <p className="text-sm font-semibold text-foreground">Aucun utilisateur trouvé</p>
-          <p className="mt-1 text-xs text-foreground/45">
+          <p className="mt-1 text-[13px] text-foreground/45">
             Ajustez votre recherche ou créez un nouveau compte.
           </p>
         </div>

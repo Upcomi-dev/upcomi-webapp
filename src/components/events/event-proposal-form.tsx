@@ -1,9 +1,10 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
+
 import { useId, useRef, useState, useTransition } from "react";
 import { Autocomplete } from "@base-ui/react/autocomplete";
-import { Select } from "@base-ui/react/select";
-import { Building2, Check, CheckCircle2, ChevronDown, HelpCircle, Loader2, Plus, Send, Trash2 } from "lucide-react";
+import { Building2, CheckCircle2, HelpCircle, Loader2, Plus, Send, Trash2 } from "lucide-react";
 import { submitEventProposal } from "@/app/proposer-un-evenement/actions";
 
 const EVENT_TYPES = ["Social Ride", "Aventure", "Brevet", "Course", "Ultra", "Événement", "Autre"];
@@ -80,7 +81,7 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
         <div className="space-y-3 rounded-[22px] border border-foreground/8 bg-white/45 p-4">
           <div>
             <h3 className="text-[14px] font-semibold text-foreground">Parcours</h3>
-            <p className="mt-1 text-[12px] text-foreground/48">Ajoutez une version complète pour chaque parcours proposé.</p>
+            <p className="mt-1 text-[13px] text-foreground/48">Ajoutez une version complète pour chaque parcours proposé.</p>
           </div>
 
           {routes.map((route, index) => (
@@ -131,7 +132,7 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
           <button
             type="button"
             onClick={() => setRoutes((current) => [...current, createRoute(nextRouteId.current++)])}
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-coral/20 bg-white px-3.5 text-[12px] font-semibold text-coral hover:bg-coral/5"
+            className="btn-secondary btn-small"
           >
             <Plus className="h-4 w-4" /> Ajouter un parcours
           </button>
@@ -148,7 +149,7 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
             className={`${fieldClassName} min-h-[180px] resize-y`}
             onChange={(event) => setDescriptionLength(event.target.value.length)}
           />
-          <span className="block text-right text-[11px] tabular-nums text-foreground/42">
+          <span className="block text-right text-[13px] tabular-nums text-foreground/42">
             {descriptionLength} / {DESCRIPTION_MAX_LENGTH} caractères
           </span>
         </label>
@@ -178,7 +179,7 @@ export function EventProposalForm({ organizers }: { organizers: string[] }) {
       {error ? <div className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">{error}</div> : null}
 
       <div className="flex justify-end">
-        <button type="submit" disabled={isPending} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-coral px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-coral-dark disabled:cursor-not-allowed disabled:opacity-70">
+        <button type="submit" disabled={isPending} className="btn-primary">
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           Envoyer la proposition
         </button>
@@ -275,16 +276,16 @@ function OrganizerAutocomplete({ organizers, value, onChange }: {
       </Autocomplete.Root>
       {trimmedValue ? (
         existingOrganizer ? (
-          <p className="flex items-center gap-1.5 text-[11px] font-medium text-green-700">
+          <p className="flex items-center gap-1.5 text-[13px] font-medium text-green-700">
             <CheckCircle2 className="h-3.5 w-3.5" /> Organisateur existant sélectionné
           </p>
         ) : (
-          <p className="text-[11px] leading-5 text-foreground/50">
+          <p className="text-[13px] leading-5 text-foreground/50">
             <span className="font-semibold text-coral">Nouveau :</span> « {trimmedValue} » sera créé comme organisateur lors de l’envoi.
           </p>
         )
       ) : (
-        <p className="text-[11px] leading-5 text-foreground/42">
+        <p className="text-[13px] leading-5 text-foreground/42">
           Commencez à saisir un nom pour rechercher un organisateur. S’il n’existe pas, il sera créé automatiquement.
         </p>
       )}
@@ -301,49 +302,19 @@ function SelectField({ label, name, options, value, required, onChange }: {
   onChange: (value: string) => void;
 }) {
   const labelId = useId();
-  const items = options.map((option) => ({ label: option, value: option }));
-
   return (
     <div className="space-y-2">
       <span id={labelId} className="block"><FieldLabel label={label} required={required} /></span>
-      <Select.Root
+      <Select
         name={name}
-        items={items}
+        aria-labelledby={labelId}
+        options={options.map((option) => ({ label: option, value: option }))}
+        value={value}
+        onValueChange={onChange}
         required={required}
-        value={value || null}
-        onValueChange={(nextValue) => onChange(nextValue ?? "")}
-      >
-        <Select.Trigger
-          aria-labelledby={labelId}
-          className="group flex min-h-12 w-full items-center justify-between gap-3 rounded-[18px] border border-white/80 bg-white/84 px-4 py-3 text-left text-[14px] text-foreground shadow-[var(--shadow-sm)] outline-none transition-all hover:border-coral/20 hover:bg-white focus-visible:border-coral/45 focus-visible:ring-3 focus-visible:ring-coral/12 data-[popup-open]:border-coral/35 data-[popup-open]:bg-white data-[popup-open]:ring-3 data-[popup-open]:ring-coral/10"
-        >
-          <Select.Value placeholder="Sélectionner" className="data-[placeholder]:text-foreground/35" />
-          <Select.Icon className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-coral/8 text-coral transition-transform duration-200 group-data-[popup-open]:rotate-180 group-data-[popup-open]:bg-coral/12">
-            <ChevronDown className="h-4 w-4" />
-          </Select.Icon>
-        </Select.Trigger>
-
-        <Select.Portal>
-          <Select.Positioner sideOffset={8} alignItemWithTrigger={false} className="z-50">
-            <Select.Popup className="min-w-[var(--anchor-width)] origin-[var(--transform-origin)] rounded-[20px] border border-coral/15 bg-[#fffaf4] p-1.5 text-foreground shadow-[0_20px_55px_rgba(80,48,32,0.22)] transition-[transform,opacity] duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0">
-              <Select.List className="max-h-72 overflow-y-auto py-1">
-                {options.map((option) => (
-                  <Select.Item
-                    key={option}
-                    value={option}
-                    className="group/item grid cursor-default grid-cols-[1fr_auto] items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-[14px] outline-none transition-colors data-[highlighted]:bg-coral/9 data-[highlighted]:text-coral-dark data-[selected]:font-semibold data-[selected]:text-coral"
-                  >
-                    <Select.ItemText>{option}</Select.ItemText>
-                    <Select.ItemIndicator className="flex h-6 w-6 items-center justify-center rounded-full bg-coral text-white shadow-sm">
-                      <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-                    </Select.ItemIndicator>
-                  </Select.Item>
-                ))}
-              </Select.List>
-            </Select.Popup>
-          </Select.Positioner>
-        </Select.Portal>
-      </Select.Root>
+        placeholder="Sélectionner"
+        className="min-h-12 rounded-[18px] px-4"
+      />
     </div>
   );
 }
@@ -355,7 +326,7 @@ function FileField() {
     <div className="flex flex-col gap-2">
       <FieldLabel label="Image" optional />
       <label className={`${fieldClassName} flex cursor-pointer items-center gap-3 p-1`}>
-        <span className="inline-flex h-10 shrink-0 items-center rounded-full bg-coral/10 px-4 text-[12px] font-semibold text-coral">
+        <span className="inline-flex h-10 shrink-0 items-center rounded-full bg-coral/10 px-4 text-[13px] font-semibold text-coral">
           Choisir un fichier
         </span>
         <span className="min-w-0 truncate px-1 text-[14px] text-foreground">{fileName}</span>
@@ -367,7 +338,7 @@ function FileField() {
           onChange={(event) => setFileName(event.target.files?.[0]?.name ?? "Aucun fichier choisi")}
         />
       </label>
-      <span className="block text-[11px] text-foreground/42">JPEG, PNG ou WebP · 6 Mo maximum</span>
+      <span className="block text-[13px] text-foreground/42">JPEG, PNG ou WebP · 6 Mo maximum</span>
     </div>
   );
 }
@@ -376,11 +347,11 @@ function CheckboxField({ label, name, help, optional = false, value }: { label: 
   return (
     <label className="flex items-center gap-2 rounded-[18px] border border-foreground/10 bg-white/72 px-4 py-3 text-[13px] font-medium text-foreground/68">
       <input name={name} value={value} type="checkbox" className="h-4 w-4" />
-      <span>{label}{optional ? <span className="ml-1.5 text-[11px] font-normal text-foreground/40">Facultatif</span> : null}</span>
+      <span>{label}{optional ? <span className="ml-1.5 text-[13px] font-normal text-foreground/40">Facultatif</span> : null}</span>
       {help ? (
         <span className="group relative ml-1 inline-flex" tabIndex={0} aria-label={help}>
           <HelpCircle className="h-4 w-4 text-foreground/40" />
-          <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-64 -translate-x-1/2 rounded-xl bg-foreground px-3 py-2 text-[12px] font-normal leading-5 text-white shadow-lg group-hover:block group-focus:block">{help}</span>
+          <span role="tooltip" className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-64 -translate-x-1/2 rounded-xl bg-foreground px-3 py-2 text-[13px] font-normal leading-5 text-white shadow-lg group-hover:block group-focus:block">{help}</span>
         </span>
       ) : null}
     </label>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/ui/select";
+
 import { useRef, useState, useTransition } from "react";
 import { Bug, Lightbulb, MessageSquarePlus } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -13,11 +15,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { trackAnalyticsEvent } from "@/lib/analytics";
-import { FEEDBACK_KIND_OPTIONS } from "@/lib/feedback";
+import { FEEDBACK_FIELD_CLASS, FEEDBACK_KIND_OPTIONS } from "@/lib/feedback";
 import type { FeedbackKind } from "@/lib/types/database";
 
-const fieldClassName =
-  "w-full rounded-[18px] border border-foreground/10 bg-white/85 px-4 py-3 text-[14px] text-foreground placeholder:text-foreground/35 focus:border-coral/35 focus:outline-none";
+const fieldClassName = FEEDBACK_FIELD_CLASS;
 
 const kindIcons = {
   idea: Lightbulb,
@@ -150,18 +151,13 @@ export function FeedbackDialog({
                   <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-foreground/44">
                     Type
                   </span>
-                  <select
+                  <Select
                     name="kind"
+                    aria-label="Type de retour"
                     value={selectedKind}
-                    onChange={(event) => setSelectedKind(event.target.value as FeedbackKind)}
-                    className={fieldClassName}
-                  >
-                    {FEEDBACK_KIND_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    onValueChange={(value) => setSelectedKind(value as FeedbackKind)}
+                    options={FEEDBACK_KIND_OPTIONS}
+                  />
                 </label>
 
                 <div className="rounded-[20px] border border-coral/14 bg-coral/6 px-4 py-3">
@@ -245,14 +241,14 @@ export function FeedbackDialog({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-full border border-foreground/12 px-4 py-2.5 text-[12px] font-semibold text-foreground/60 transition-colors hover:bg-foreground/5"
+                  className="btn-tertiary btn-small"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="rounded-full bg-coral px-5 py-2.5 text-[12px] font-semibold tracking-[0.12em] text-white uppercase transition-colors hover:bg-coral-dark disabled:cursor-not-allowed disabled:opacity-60"
+                  className="btn-primary btn-small"
                 >
                   {isPending ? "Envoi..." : "Envoyer"}
                 </button>

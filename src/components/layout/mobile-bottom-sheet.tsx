@@ -239,6 +239,8 @@ export function MobileBottomSheet({
                     type_event={event.type_event}
                     villeDepart={event.villeDepart}
                     paysDepart={event.paysDepart}
+                    distance={event.distance}
+                    maxElevation={event.maxElevation}
                     mint={event.mint}
                     variant="list"
                     onEventClick={onEventClick}
@@ -272,6 +274,8 @@ export function MobileBottomSheet({
                     type_event={event.type_event}
                     villeDepart={event.villeDepart}
                     paysDepart={event.paysDepart}
+                    distance={event.distance}
+                    maxElevation={event.maxElevation}
                     mint={event.mint}
                     variant="list"
                     onEventClick={onEventClick}

@@ -84,7 +84,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
 
   const openMobileAuth = useCallback(() => {
     closeMobileMenu();
-    openAuthModal();
+    openAuthModal({ view: "login" });
   }, [closeMobileMenu, openAuthModal]);
 
   const handleMobileLogout = useCallback(async () => {
@@ -169,7 +169,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
             ) : (
               <button
                 type="button"
-                onClick={() => openAuthModal()}
+                onClick={() => openAuthModal({ view: "login" })}
                 className="inline-flex h-10 items-center justify-center rounded-full border border-white/50 bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] px-4 text-[12px] font-semibold tracking-[0.18em] text-orange-dark uppercase transition-all hover:-translate-y-0.5 hover:border-orange/55 hover:text-coral"
               >
                 Connexion

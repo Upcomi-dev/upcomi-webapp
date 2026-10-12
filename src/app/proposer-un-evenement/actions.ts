@@ -2,6 +2,8 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sendEventProposalNotification } from "@/lib/email/event-proposal-notification";
 import { getUniqueEventSlug, isDuplicateEventSlugError } from "@/lib/events/slugs";
 import { buildSupabasePublicStorageUrl } from "@/lib/storage/urls";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -270,12 +272,32 @@ export async function submitEventProposal(formData: FormData): Promise<EventProp
       return proposalError(genericSubmissionError);
     }
 
+    const proposalEventId = createdEventId;
     createdEventId = null;
     uploadedImagePath = null;
     revalidatePath("/");
     revalidatePath("/admin");
     revalidatePath("/event/[slug]", "page");
     revalidatePath("/sitemap.xml");
+    try {
+      after(() => sendEventProposalNotification({
+        eventId: proposalEventId,
+        eventName,
+        startDate: dateEvent,
+        endDate: dateFin,
+        city: departureCity,
+        country: departureCountry,
+        organizer: organizerName,
+        contactName,
+        contactEmail,
+        routeCount: routes.length,
+      }));
+    } catch (error) {
+      console.error("Event proposal email scheduling failed", {
+        eventId: proposalEventId,
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
     return { ok: true };
   } catch (error) {
     if (error instanceof Error) return proposalError(error.message);

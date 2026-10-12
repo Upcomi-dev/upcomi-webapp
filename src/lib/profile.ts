@@ -10,11 +10,28 @@ export const PRACTICE_TYPE_OPTIONS = [
   "Loisir",
 ] as const;
 
+// Proposé à l'étape « identité » du parcours d'inscription. Facultatif : ne
+// pas répondre reste possible et se distingue de « Je préfère ne pas répondre ».
+export const GENDER_OPTIONS = [
+  "Féminin",
+  "Masculin",
+  "Autre",
+  "Je préfère ne pas répondre",
+] as const;
+
 export const PRACTICE_LEVEL_OPTIONS = [
   "Debutant",
   "Intermediaire",
   "Confirme",
   "Competition",
+] as const;
+
+// Les valeurs persistées restent inchangées ; seuls les libellés sont accentués.
+export const PRACTICE_LEVEL_SELECT_OPTIONS = [
+  { value: "Debutant", label: "Débutant" },
+  { value: "Intermediaire", label: "Intermédiaire" },
+  { value: "Confirme", label: "Confirmé" },
+  { value: "Competition", label: "Compétition" },
 ] as const;
 
 type MetadataRecord = Record<string, unknown>;
@@ -26,6 +43,7 @@ export interface UserProfileRow {
   ville?: string | null;
   pref1?: string[] | null;
   pref2?: string | null;
+  gender?: string | null;
 }
 
 export interface UserProfileFormValues {
@@ -35,6 +53,7 @@ export interface UserProfileFormValues {
   city: string;
   practiceTypes: string[];
   practiceLevel: string;
+  gender: string;
 }
 
 function getMetadataString(metadata: MetadataRecord, keys: string[]) {
@@ -62,6 +81,7 @@ function getMetadataStringArray(metadata: MetadataRecord, keys: string[]) {
 export function normalizeUserProfile(values: UserProfileFormValues): UserProfileFormValues {
   const allowedTypes = new Set<string>(PRACTICE_TYPE_OPTIONS);
   const allowedLevels = new Set<string>(PRACTICE_LEVEL_OPTIONS);
+  const allowedGenders = new Set<string>(GENDER_OPTIONS);
   const practiceTypes = values.practiceTypes
     .map((item) => item.trim())
     .filter((item) => allowedTypes.has(item));
@@ -73,6 +93,7 @@ export function normalizeUserProfile(values: UserProfileFormValues): UserProfile
     city: values.city.trim(),
     practiceTypes: Array.from(new Set(practiceTypes)),
     practiceLevel: allowedLevels.has(values.practiceLevel) ? values.practiceLevel : "",
+    gender: allowedGenders.has(values.gender) ? values.gender : "",
   };
 }
 
@@ -108,9 +129,15 @@ export function buildInitialUserProfile(
       profile?.pref2?.trim() ||
       getMetadataString(metadata, ["practice_level"]) ||
       "",
+    gender:
+      profile?.gender?.trim() ||
+      getMetadataString(metadata, ["gender", "genre"]) ||
+      "",
   });
 }
 
+// Le genre n'entre volontairement pas dans ce test : il est facultatif, et
+// l'exiger reviendrait à bloquer le parcours sur une donnée sensible.
 export function isUserProfileComplete(values: UserProfileFormValues) {
   const normalized = normalizeUserProfile(values);
 

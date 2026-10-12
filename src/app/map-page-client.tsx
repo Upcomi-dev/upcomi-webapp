@@ -594,6 +594,8 @@ function MapPageContent({
                     type_event={event.type_event}
                     villeDepart={event.villeDepart}
                     paysDepart={event.paysDepart}
+                    distance={event.distance}
+                    maxElevation={event.maxElevation}
                     mint={event.mint}
                     variant="list"
                     isSelected={event.id === panel.selectedEventId}
@@ -674,6 +676,8 @@ function MapPageContent({
                   type_event={event.type_event}
                   villeDepart={event.villeDepart}
                   paysDepart={event.paysDepart}
+                  distance={event.distance}
+                  maxElevation={event.maxElevation}
                   mint={event.mint}
                   variant="list"
                   isSelected={event.id === panel.selectedEventId}
@@ -761,7 +765,7 @@ function MapPageContent({
           <Filter className="h-4 w-4" />
           <span>Filtres</span>
           {activeFilterCount > 0 ? (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/18 px-1.5 text-[10px] text-white">
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white/18 px-1.5 text-[13px] text-white">
               {activeFilterCount}
             </span>
           ) : null}
@@ -855,7 +859,7 @@ function MapPageContent({
                   <button
                     type="button"
                     onClick={() => setMobileFiltersOpen(false)}
-                    className="flex-1 rounded-full bg-coral px-5 py-3 text-[13px] font-semibold text-white shadow-[0_10px_24px_rgba(235,95,59,0.28)]"
+                    className="btn-primary flex-1"
                   >
                     Afficher la sélection
                   </button>

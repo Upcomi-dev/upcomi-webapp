@@ -3,15 +3,14 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthModalDialog } from "./auth-modal";
+import type { AuthModalView } from "./auth-modal-context";
 
 interface RouteAuthModalProps {
-  initialView: "login" | "signup";
+  initialView: AuthModalView;
 }
 
 export function RouteAuthModal({ initialView }: RouteAuthModalProps) {
-  const [view, setView] = useState<"login" | "signup" | "forgot-password">(
-    initialView
-  );
+  const [view, setView] = useState<AuthModalView>(initialView);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/";

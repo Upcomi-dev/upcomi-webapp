@@ -1,5 +1,13 @@
 import type { FeedbackKind, FeedbackStatus } from "@/lib/types/database";
 
+/**
+ * Le champ de saisie des popins de remontée. Partagé entre le dialogue « idée,
+ * bug ou feedback » et celui de suggestion d'une mesure d'inclusion : ce sont
+ * deux formulations du même geste, elles ne doivent pas diverger à l'œil.
+ */
+export const FEEDBACK_FIELD_CLASS =
+  "w-full rounded-[18px] border border-foreground/10 bg-white/85 px-4 py-3 text-[14px] text-foreground placeholder:text-foreground/35 focus:border-coral/35 focus:outline-none";
+
 export const FEEDBACK_KIND_OPTIONS: Array<{
   value: FeedbackKind;
   label: string;

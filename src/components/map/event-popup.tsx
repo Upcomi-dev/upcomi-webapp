@@ -81,7 +81,7 @@ export function EventPopup({ event }: EventPopupProps) {
       <div className="panel-divider px-4 pt-3 pb-4">
         <div className="flex flex-col gap-1.5">
           {formattedDate && (
-            <div className="flex items-center gap-2 text-[12px] text-foreground/55">
+            <div className="flex items-center gap-2 text-[13px] text-foreground/55">
               <svg
                 width="14"
                 height="14"
@@ -102,7 +102,7 @@ export function EventPopup({ event }: EventPopupProps) {
             </div>
           )}
           {location && (
-            <div className="flex items-center gap-2 text-[12px] text-foreground/55">
+            <div className="flex items-center gap-2 text-[13px] text-foreground/55">
               <svg
                 width="14"
                 height="14"
@@ -124,7 +124,7 @@ export function EventPopup({ event }: EventPopupProps) {
 
         <Link
           href={`/event/${slug}`}
-          className="mt-3.5 block w-full rounded-[var(--radius-sm)] bg-coral py-2.5 text-center text-[13px] font-semibold text-white shadow-[0_4px_20px_rgba(255,94,65,0.3)] transition-all hover:bg-coral-dark hover:shadow-[0_6px_24px_rgba(255,94,65,0.4)]"
+          className="btn-primary btn-small mt-3.5 w-full"
         >
           Voir les détails
         </Link>

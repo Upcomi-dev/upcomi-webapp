@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AppFooter } from "@/components/layout/app-footer";
 import { buildEventTypeOptions } from "@/lib/events/filter-options";
+import { fetchEventMaxElevations } from "@/lib/events/elevations";
 import { isEventProposalFeatureEnabled } from "@/lib/features";
 import type { CollectionWithEvents, MapEvent } from "@/lib/types/database";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
@@ -90,7 +91,18 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
     );
   }
 
-  const allEvents = (events as MapEvent[]) || [];
+  const baseEvents = (events as MapEvent[]) || [];
+  // Le dénivelé est un repère de carte au même titre que la distance, mais il
+  // vit sur `sous_events` : une requête à part, sur les seuls évènements
+  // effectivement listés, alimente la carte comme les carrousels.
+  const elevations = await fetchEventMaxElevations(
+    supabase,
+    baseEvents.map((event) => event.id)
+  );
+  const allEvents: MapEvent[] = baseEvents.map((event) => ({
+    ...event,
+    maxElevation: elevations.get(event.id) ?? null,
+  }));
   const eventTypeOptions = buildEventTypeOptions(
     (eventTypeRows || []).map((row) => row.type_event)
   );
@@ -258,8 +270,16 @@ async function fetchCollections(
         .not("dateEvent", "is", null)
         .or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`);
 
+      // Une collection manuelle peut porter un évènement absent de la carte
+      // (hors filtres, sans coordonnées) : ceux-là ont leur propre requête, et
+      // donc leur propre lecture du dénivelé.
+      const manualElevations = await fetchEventMaxElevations(
+        supabase,
+        ((manualEventsData || []) as MapEvent[]).map((e) => e.id)
+      );
+
       for (const e of (manualEventsData || []) as MapEvent[]) {
-        manualEventsMap.set(e.id, e);
+        manualEventsMap.set(e.id, { ...e, maxElevation: manualElevations.get(e.id) ?? null });
       }
     }
 

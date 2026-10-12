@@ -6,3 +6,6 @@
 .env.keys
 .env.local
 .env.*.local
+
+# Seed de données locales — propre à chaque poste, pas versionné
+seed.sql

@@ -40,7 +40,7 @@ export function ProfilePageModal({ initialValues }: ProfilePageModalProps) {
           </DialogHeader>
 
           <div className="mt-6">
-            <UserProfileForm mode="profile" initialValues={initialValues} />
+            <UserProfileForm initialValues={initialValues} />
           </div>
         </div>
       </DialogContent>

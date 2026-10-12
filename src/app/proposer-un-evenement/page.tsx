@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { EventProposalForm } from "@/components/events/event-proposal-form";
 import { AppFooter } from "@/components/layout/app-footer";
 import { TopNav } from "@/components/layout/top-nav";
@@ -45,7 +46,8 @@ export default async function ProposerUnEvenementPage() {
           href="/"
           className="glass mb-5 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] text-foreground/55 transition-all hover:bg-white/80 hover:text-coral"
         >
-          ← Retour à la carte
+          <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+          Retour à la carte
         </Link>
 
         <section className="mb-7">

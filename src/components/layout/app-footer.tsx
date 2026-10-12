@@ -18,7 +18,7 @@ export function AppLegalInfo({
         "flex text-foreground/55",
         isMobileMenu
           ? "flex-col items-start gap-2 text-left text-[11px]"
-          : "mx-auto w-full max-w-7xl flex-col items-center justify-between gap-2 text-center text-[12px] sm:flex-row sm:text-left"
+          : "mx-auto w-full max-w-7xl flex-col items-center justify-between gap-2 text-center text-[13px] sm:flex-row sm:text-left"
       )}
     >
       <p>© {currentYear} Upcomi. Tous droits réservés.</p>
