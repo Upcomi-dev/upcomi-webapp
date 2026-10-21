@@ -12,6 +12,7 @@ import { fetchEventInclusionMeasures } from "@/lib/events/inclusion-measures";
 import { fetchEventRegistrationMeasures } from "@/lib/events/registration-measures";
 import { fetchEventPromoCode } from "@/lib/events/promo-code";
 import { getEventFactTags } from "@/lib/events/facts";
+import { buildCompatEvent } from "@/lib/compatibility/event-input";
 import { getEventPath, getEventUrl, serializeJsonLd, SITE_NAME } from "@/lib/seo";
 import { parseLegacyEventId } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
@@ -26,6 +27,7 @@ import { EventKeyDates } from "@/components/events/event-key-dates";
 import { EventViewTracker } from "@/components/events/event-view-tracker";
 import { InterestedPeopleProvider } from "@/components/events/interested-people-context";
 import { InterestedBlock } from "@/components/events/interested-block";
+import { CompatibilityCard } from "@/components/events/compatibility-card";
 import { InclusionMeasures } from "@/components/events/inclusion-measures";
 import { EventPromoCode } from "@/components/events/event-promo-code";
 import { MixiteBadge } from "@/components/events/mixite-badge";
@@ -152,6 +154,10 @@ export default async function EventPage({ params, searchParams }: PageProps) {
     registrationMeasures,
   });
 
+  // L'évènement tel que le score d'adéquation le lit : les `sous_events`
+  // tiennent lieu de « parcours », la durée se déduit des deux dates.
+  const compatEvent = buildCompatEvent(event, sousEvents);
+
   const formattedDate = event.dateEvent
     ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
         day: "numeric",
@@ -226,7 +232,8 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   return (
     // Les personnes intéressées sont chargées une seule fois pour toute la
     // fiche : le bloc du haut, celui de la colonne de droite, celui de la barre
-    // collante et la feuille de personnes lisent la même liste.
+    // collante, le score d'adéquation et la feuille de personnes lisent la même
+    // liste.
     <InterestedPeopleProvider eventId={event.id}>
       <div className="flex min-h-screen flex-col">
       <EventViewTracker
@@ -505,6 +512,15 @@ export default async function EventPage({ params, searchParams }: PageProps) {
                 </div>
               )}
             </div>
+
+            {/* Score d'adéquation — après « Qui organise ? », à la place que
+                lui donne le proto (`compat-slot-inline`). Un seul emplacement,
+                dans la colonne de lecture : le proto n'en rend pas d'autre. */}
+            <CompatibilityCard
+              eventId={event.id}
+              event={compatEvent}
+              eventDate={event.dateEvent}
+            />
           </div>
 
           {/* Colonne de droite — le bloc d'action quitte la barre collante du

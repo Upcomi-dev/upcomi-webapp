@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PRACTICE_LEVEL_OPTIONS } from "@/lib/profile";
+import {
+  getOnboardingTier,
+  isSimilarTier,
+  type CompatTier,
+} from "@/lib/compatibility/levels";
 
 /**
  * Les personnes qui se sont dites intéressées par un évènement — c'est-à-dire
@@ -69,6 +74,74 @@ export async function fetchInterestedCount(
 
   if (error || data == null) return 0;
   return Number(data) || 0;
+}
+
+/**
+ * Combien d'intéressé·es par palier d'expérience, moi exclue. La clé `null`
+ * regroupe celles dont le niveau n'est pas déclaré.
+ */
+export type InterestedTierCounts = Map<CompatTier | null, number>;
+
+interface LevelCountRow {
+  niveau: string | null;
+  nb: number;
+}
+
+/**
+ * Les paliers des personnes intéressées, sans leurs identités — et **sans
+ * compte** : exécutable par `anon`, contrairement à la liste des personnes
+ * (`get_event_interested_levels`, migration 20260904170000).
+ *
+ * Elle existe pour ça : déconnectée, `fetchInterestedPeople()` ne renvoie rien,
+ * et « X personnes avec une expérience similaire » — la promesse du
+ * questionnaire — tombait donc systématiquement à zéro.
+ *
+ * Le repliage des niveaux déclarés en paliers se fait ici, pas en SQL : c'est
+ * `levels.ts` qui décide que `Competition` compte comme `Confirme`, et deux
+ * niveaux bruts atterrissent alors sur la même clé — d'où l'accumulation
+ * plutôt qu'une affectation.
+ */
+export async function fetchInterestedTierCounts(
+  supabase: SupabaseClient,
+  eventId: number
+): Promise<InterestedTierCounts> {
+  const { data, error } = await supabase.rpc("get_event_interested_levels", {
+    p_event_id: eventId,
+  });
+
+  const counts: InterestedTierCounts = new Map();
+  if (error || !data) return counts;
+
+  for (const row of data as LevelCountRow[]) {
+    const tier = getOnboardingTier(row.niveau);
+    counts.set(tier, (counts.get(tier) ?? 0) + (Number(row.nb) || 0));
+  }
+  return counts;
+}
+
+/**
+ * Combien de personnes « avec une expérience similaire » sont déjà intéressées.
+ *
+ * En test, voir le niveau des participantes les plus aguerries décourageait
+ * plutôt que ça ne rassurait — d'où une sélection, et non le total. Le détail
+ * de la règle est dans `levels.ts`.
+ *
+ * On compte sur l'agrégat et jamais sur la liste des personnes, même connectée :
+ * un seul chemin, donc un seul nombre, identique avec et sans compte. Les
+ * paliers inconnus sont écartés par `isSimilarTier` — on ne peut rien affirmer
+ * de leur expérience.
+ */
+export function countSimilarPeople(
+  counts: InterestedTierCounts,
+  myTier: CompatTier | null
+): number {
+  if (myTier === null) return 0;
+
+  let total = 0;
+  for (const [tier, nb] of counts) {
+    if (isSimilarTier(myTier, tier)) total += nb;
+  }
+  return total;
 }
 
 /**
