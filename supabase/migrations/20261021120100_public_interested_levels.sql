@@ -1,5 +1,5 @@
 -- Le nombre d'intéressé·es par niveau, lisible sans compte — brique
--- `feat/score-adequation`, complément de 20260904120000_score_adequation.sql.
+-- `feat/score-adequation`, complément de 20261021120000_score_adequation.sql.
 --
 -- Le problème corrigé ici : `get_event_interested_people()` est réservée aux
 -- comptes connectés, et c'est elle qui portait le niveau des autres. Résultat,

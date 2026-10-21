@@ -90,7 +90,7 @@ interface LevelCountRow {
 /**
  * Les paliers des personnes intéressées, sans leurs identités — et **sans
  * compte** : exécutable par `anon`, contrairement à la liste des personnes
- * (`get_event_interested_levels`, migration 20260904170000).
+ * (`get_event_interested_levels`, migration 20261021120100).
  *
  * Elle existe pour ça : déconnectée, `fetchInterestedPeople()` ne renvoie rien,
  * et « X personnes avec une expérience similaire » — la promesse du

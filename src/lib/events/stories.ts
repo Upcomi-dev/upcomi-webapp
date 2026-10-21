@@ -71,14 +71,12 @@ export async function fetchEventStoryCount(
   supabase: SupabaseClient,
   eventId: number
 ): Promise<number> {
-  const { data, error } = await supabase.rpc("get_event_story_counts", {
-    p_event_ids: [eventId],
+  const { data, error } = await supabase.rpc("get_event_approved_story_count", {
+    p_event_id: eventId,
   });
 
-  if (error || !data) return 0;
-
-  const row = (data as { event_id: number; story_count: number }[])[0];
-  return row ? Number(row.story_count) || 0 : 0;
+  if (error || data == null) return 0;
+  return Number(data) || 0;
 }
 
 /**
