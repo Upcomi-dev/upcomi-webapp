@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Calendar, ChevronLeft, Euro, ExternalLink, Flag, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
-import { getLocalDateKey } from "@/lib/utils/event-dates";
+import { getLocalDateKey, isEventPast } from "@/lib/utils/event-dates";
 import { getEventKeyDates } from "@/lib/utils/event-key-dates";
 import { findNearestStation } from "@/lib/utils/stations";
 import { fetchEventInclusionMeasures } from "@/lib/events/inclusion-measures";
@@ -13,6 +13,7 @@ import { fetchEventRegistrationMeasures } from "@/lib/events/registration-measur
 import { fetchEventPromoCode } from "@/lib/events/promo-code";
 import { getEventFactTags } from "@/lib/events/facts";
 import { buildCompatEvent } from "@/lib/compatibility/event-input";
+import { fetchEventStories, fetchEventStoryCount } from "@/lib/events/stories";
 import { getEventPath, getEventUrl, serializeJsonLd, SITE_NAME } from "@/lib/seo";
 import { parseLegacyEventId } from "@/lib/utils/slugify";
 import { getEventTypeColor } from "@/lib/types/database";
@@ -25,6 +26,7 @@ import { EventCard } from "@/components/events/event-card";
 import { StickyActionBar } from "@/components/events/sticky-action-bar";
 import { EventKeyDates } from "@/components/events/event-key-dates";
 import { EventViewTracker } from "@/components/events/event-view-tracker";
+import { EventStories } from "@/components/events/event-stories";
 import { InterestedPeopleProvider } from "@/components/events/interested-people-context";
 import { InterestedBlock } from "@/components/events/interested-block";
 import { CompatibilityCard } from "@/components/events/compatibility-card";
@@ -136,7 +138,15 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   const canonicalUrl = getEventUrl(eventSlug);
   // Le compteur d'intéressé·es n'est plus lu ici : il fait partie du bloc
   // « qui est intéressé », traité dans sa propre brique.
-  const [relatedEvents, inclusionMeasures, registrationMeasures, promoCode] =
+
+  // Les récits ne sont lisibles que par les personnes connectées
+  // (`get_event_stories` n'est exécutable que par `authenticated`) ; le
+  // compteur, lui, est ouvert et sert le teaser affiché aux autres.
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser();
+
+  const [relatedEvents, inclusionMeasures, registrationMeasures, promoCode, stories, storyCount] =
     await Promise.all([
       event.organisateur
         ? fetchOrganizerEvents(supabase, event.organisateur, event.id)
@@ -144,6 +154,8 @@ export default async function EventPage({ params, searchParams }: PageProps) {
       fetchEventInclusionMeasures(supabase, event.id),
       fetchEventRegistrationMeasures(supabase, event.id),
       fetchEventPromoCode(supabase, event.id),
+      viewer ? fetchEventStories(supabase, event.id) : Promise.resolve([]),
+      fetchEventStoryCount(supabase, event.id),
     ]);
 
   // Gare la plus proche du départ, calculée au rendu depuis le référentiel
@@ -520,6 +532,21 @@ export default async function EventPage({ params, searchParams }: PageProps) {
               eventId={event.id}
               event={compatEvent}
               eventDate={event.dateEvent}
+            />
+
+            {/* Les retours d'expérience ferment la colonne, comme dans le
+                prototype : on les lit après avoir compris de quoi il s'agit
+                et qui organise. */}
+            <EventStories
+              event={{
+                id: event.id,
+                nomEvent: event.nomEvent,
+                image: event.image,
+                slug: eventSlug,
+              }}
+              stories={stories}
+              storyCount={storyCount}
+              isPast={isEventPast(event)}
             />
           </div>
 
