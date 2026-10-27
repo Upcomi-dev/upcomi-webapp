@@ -1,42 +1,37 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { CalendarPlus, Check, Heart, LogOut, Menu, User, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { CalendarPlus, Menu, User, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
 import { useFlyingHeart } from "@/components/favorites/flying-heart";
 import { AppLogo } from "@/components/layout/app-logo";
-import { FavoritesDropdown } from "@/components/favorites/favorites-dropdown";
-import { FavoritesSheet } from "@/components/favorites/favorites-sheet";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { AppLegalInfo } from "@/components/layout/app-footer";
 import { ProfileDropdown } from "@/components/layout/profile-dropdown";
+import { MAIN_NAV_ITEMS, isNavItemActive } from "@/components/layout/main-nav-items";
 import { NotificationsBell } from "@/components/social/notifications-bell";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled: boolean }) {
   const { openAuthModal } = useAuthModal();
-  const { user, ready, signOut } = useAuth();
-  const { count, participationCount } = useFavorites();
+  const { user, ready } = useAuth();
+  const pathname = usePathname();
+  const { count } = useFavorites();
   const flyingHeart = useFlyingHeart();
   const isAuthenticated = user !== null;
-  const favoritesButtonRef = useRef<HTMLButtonElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const [showFavorites, setShowFavorites] = useState(false);
-  const [favoritesInitialTab, setFavoritesInitialTab] = useState<"favorites" | "participations">("favorites");
   const [showProfile, setShowProfile] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
 
+  // Repasser en desktop referme le menu latéral : sans ça, il reste ouvert
+  // en arrière-plan et rend la page inerte au clic.
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
     const syncViewport = () => {
-      setIsMobile(mediaQuery.matches);
-      if (!mediaQuery.matches) {
-        setShowMobileMenu(false);
-      }
+      if (!mediaQuery.matches) setShowMobileMenu(false);
     };
 
     syncViewport();
@@ -45,18 +40,8 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
     return () => mediaQuery.removeEventListener("change", syncViewport);
   }, []);
 
-  const toggleFavorites = useCallback(() => {
-    setShowFavorites((prev) => !prev);
-    setShowProfile(false);
-  }, []);
-
-  const closeFavorites = useCallback(() => {
-    setShowFavorites(false);
-  }, []);
-
   const toggleProfile = useCallback(() => {
     setShowProfile((prev) => !prev);
-    setShowFavorites(false);
   }, []);
 
   const closeProfile = useCallback(() => {
@@ -74,83 +59,84 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
     handleMobileMenuChange(false);
   }, [handleMobileMenuChange]);
 
-  const openMobileFavorites = useCallback(
-    (tab: "favorites" | "participations") => {
-      closeMobileMenu();
-      setFavoritesInitialTab(tab);
-      setShowFavorites(true);
-    },
-    [closeMobileMenu]
-  );
-
   const openMobileAuth = useCallback(() => {
     closeMobileMenu();
     openAuthModal({ view: "login" });
   }, [closeMobileMenu, openAuthModal]);
-
-  const handleMobileLogout = useCallback(async () => {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    const { error } = await signOut();
-    setLoggingOut(false);
-    if (!error) {
-      closeMobileMenu();
-    }
-  }, [loggingOut, signOut, closeMobileMenu]);
 
   return (
     <>
       <nav className="glass-nav sticky top-0 z-50 border-b border-white/45">
         <div className="flex h-[75px] items-center gap-4 px-4 md:px-6">
           <AppLogo
-            href="https://www.upcomi.cc/"
+            href="https://upcomi.cc/"
             priority
             className="min-w-0"
             sizes="(max-width: 767px) 156px, 188px"
             imageClassName="h-12 md:h-14 w-auto"
             ariaLabel="Accéder au site Upcomi"
           />
-          <div className="ml-auto hidden items-center gap-2.5 md:flex">
+          {/* Les quatre espaces, au même niveau visuel. « Mes évènements »
+              n'ouvre plus un popover de favoris : c'est une page, comme les
+              trois autres — voir `main-nav-items`. */}
+          <nav className="ml-auto hidden items-center gap-0.5 md:flex" aria-label="Navigation principale">
+            {MAIN_NAV_ITEMS.map((item) => {
+              if (item.authOnly && (!ready || !isAuthenticated)) return null;
+              const Icon = item.icon;
+              const active = isNavItemActive(item, pathname);
+              const badgeCount = item.badge === "favorites" && isAuthenticated ? count : 0;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold transition-all ${
+                    active
+                      ? "bg-white/70 text-coral shadow-[var(--shadow-xs)]"
+                      : "text-foreground/60 hover:bg-white/58 hover:text-coral"
+                  }`}
+                >
+                  <span className="relative flex h-4 w-4 items-center justify-center">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    {item.badge === "favorites" ? (
+                      // Le compteur est toujours rendu — c'est la cible du
+                      // cœur volant — mais masqué aux lecteurs d'écran : sans
+                      // ça, le lien s'annonce « 0 Mes évènements ».
+                      <span
+                        ref={flyingHeart?.counterRef}
+                        aria-hidden="true"
+                        className={`absolute -top-2 -right-2.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[11px] font-bold leading-none text-white shadow-[0_2px_6px_rgba(235,95,59,0.4)] transition-transform ${badgeCount > 0 ? "scale-100" : "scale-0"}`}
+                      >
+                        {badgeCount}
+                      </span>
+                    ) : null}
+                  </span>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Les actions, séparées des espaces : proposer un évènement et
+              donner un retour ne sont pas des endroits où l'on navigue.
+              « Proposer » passe en icône — le libellé prenait la place que la
+              navigation réclame maintenant. */}
+          <div className="hidden items-center gap-2.5 md:flex">
             {eventProposalsEnabled ? (
               <Link
                 href="/proposer-un-evenement"
-                className="inline-flex h-10 items-center justify-center rounded-full border border-white/50 bg-white/58 px-4 text-[12px] font-semibold tracking-[0.08em] text-foreground/55 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-coral/30 hover:bg-white/80 hover:text-coral"
+                title="J'organise un évènement"
+                aria-label="J'organise un évènement"
+                className="soft-ring flex h-10 w-10 items-center justify-center rounded-full bg-white/58 text-foreground/55 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:text-coral"
               >
-                Proposer un événement
+                <CalendarPlus className="h-4 w-4" />
               </Link>
             ) : null}
             <FeedbackDialog />
 
-            <div className="relative">
-              <button
-                ref={favoritesButtonRef}
-                type="button"
-                onClick={toggleFavorites}
-                className="soft-ring relative flex h-10 w-10 items-center justify-center rounded-full bg-white/58 text-foreground/55 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:text-coral"
-                aria-label="Voir les favoris"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-                <span
-                  ref={!isMobile ? flyingHeart?.counterRef : undefined}
-                  className={`absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white shadow-[0_2px_6px_rgba(235,95,59,0.4)] transition-transform ${count > 0 ? "scale-100" : "scale-0"}`}
-                >
-                  {count}
-                </span>
-              </button>
-              {showFavorites && !isMobile ? (
-                <FavoritesDropdown
-                  anchorRef={favoritesButtonRef}
-                  onClose={closeFavorites}
-                />
-              ) : null}
-            </div>
-
             {/* MAQUETTE (feat/social) — demandes de suivi et nouveaux
-                abonné·es. Posée entre les favoris et « Mon compte » : c'est du
-                courrier reçu, pas une entrée de navigation. Ne s'affiche que
-                connectée. */}
+                abonné·es. Ne s'affiche que connectée. */}
             <NotificationsBell />
 
             {!ready ? (
@@ -184,33 +170,16 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
             )}
           </div>
 
-          <div className="ml-auto flex items-center gap-2 md:hidden">
-            <button
-              type="button"
-              onClick={() => openMobileFavorites("favorites")}
-              className="soft-ring relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/58 text-foreground/68 transition-colors hover:bg-white/80 hover:text-coral"
-              aria-label="Voir mes favoris"
-            >
-              <Heart className="h-5 w-5" />
-              <span
-                ref={isMobile ? flyingHeart?.counterRef : undefined}
-                className={`absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[11px] font-bold leading-none text-white shadow-[0_2px_6px_rgba(235,95,59,0.4)] transition-transform ${count > 0 ? "scale-100" : "scale-0"}`}
-              >
-                {count}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleMobileMenuChange(true)}
-              className="soft-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/58 text-foreground/68 transition-colors hover:bg-white/80 hover:text-coral"
-              aria-label="Ouvrir le menu"
-              aria-expanded={showMobileMenu}
-              aria-controls="mobile-header-menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => handleMobileMenuChange(true)}
+            className="soft-ring ml-auto inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/58 text-foreground/68 transition-colors hover:bg-white/80 hover:text-coral md:hidden"
+            aria-label="Ouvrir le menu"
+            aria-expanded={showMobileMenu}
+            aria-controls="mobile-header-menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
         </div>
       </nav>
 
@@ -220,7 +189,7 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
           showCloseButton={false}
           className="top-0 right-0 bottom-0 left-auto flex h-dvh max-h-dvh w-[min(88vw,380px)] max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-y-0 border-r-0 bg-[linear-gradient(180deg,rgba(255,251,246,0.98),rgba(243,235,223,0.97))] p-0 data-open:slide-in-from-right data-closed:slide-out-to-right md:hidden"
         >
-          <div className="flex h-[75px] shrink-0 items-center justify-end px-5">
+          <div className="flex h-[75px] shrink-0 items-center justify-end border-b border-foreground/8 px-5">
             <DialogTitle className="sr-only">
               Menu
             </DialogTitle>
@@ -236,98 +205,87 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
             <div className="space-y-1">
-              <button
-                type="button"
-                onClick={() => openMobileFavorites("favorites")}
-                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
-              >
-                <span className="flex items-center gap-3">
-                  <Heart className="h-[18px] w-[18px] shrink-0 text-coral" />
-                  Mes favoris
-                </span>
-                {count > 0 ? (
-                  <span className="rounded-full bg-coral/12 px-2 py-0.5 text-[11px] font-bold text-coral">
-                    {count}
-                  </span>
-                ) : null}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => openMobileFavorites("participations")}
-                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
-              >
-                <span className="flex items-center gap-3">
-                  <Check className="h-[18px] w-[18px] shrink-0 text-coral" />
-                  Mes participations
-                </span>
-                {participationCount > 0 ? (
-                  <span className="rounded-full bg-coral/12 px-2 py-0.5 text-[11px] font-bold text-coral">
-                    {participationCount}
-                  </span>
-                ) : null}
-              </button>
-            </div>
-
-            <div className="my-3 h-px bg-foreground/10" />
-
-            <div className="space-y-1">
               {!ready ? (
-                <div className="h-12 animate-pulse rounded-[14px] bg-white/45" aria-hidden="true" />
+                <div className="h-14 animate-pulse rounded-[18px] bg-white/45" aria-hidden="true" />
               ) : isAuthenticated ? (
-                <>
-                  <div className="px-3 pb-1 pt-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground/38">
-                      Connecté en tant que
-                    </p>
-                    <p className="mt-0.5 truncate text-[13px] font-medium text-foreground/80">
-                      {user?.email ?? "(email non renseigné)"}
-                    </p>
-                  </div>
-
-                  <Link
-                    href="/profil"
-                    onClick={closeMobileMenu}
-                    className="flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
-                  >
-                    <User className="h-[18px] w-[18px] shrink-0 text-coral" />
-                    Mon profil
-                  </Link>
-
+                <div className="space-y-2">
                   <button
                     type="button"
-                    onClick={handleMobileLogout}
-                    disabled={loggingOut}
-                    className="flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral disabled:opacity-60"
+                    onClick={() => setShowProfile((previous) => !previous)}
+                    className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-3 text-left text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
+                    aria-expanded={showProfile}
                   >
-                    <LogOut className="h-[18px] w-[18px] shrink-0 text-coral" />
-                    {loggingOut ? "Déconnexion..." : "Se déconnecter"}
+                    <span className="soft-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] text-orange-dark">
+                      <User className="h-4 w-4" />
+                    </span>
+                    Mon compte
                   </button>
-                </>
+                  {showProfile ? (
+                    <ProfileDropdown variant="inline" onClose={closeMobileMenu} />
+                  ) : null}
+                </div>
               ) : (
                 <button
                   type="button"
                   onClick={openMobileAuth}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-[14px] px-3 text-left text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
+                  className="flex min-h-14 w-full items-center gap-3 rounded-[18px] px-3 text-left text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
                 >
-                  <User className="h-[18px] w-[18px] shrink-0 text-coral" />
+                  <span className="soft-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(235,95,59,0.16),rgba(213,143,56,0.16))] text-orange-dark">
+                    <User className="h-4 w-4" />
+                  </span>
                   Connexion
                 </button>
               )}
+
             </div>
 
-            <div className="my-3 h-px bg-foreground/10" />
+            <div className="my-4 h-px bg-foreground/8" />
+
+            {/* Les mêmes quatre espaces que la barre du bas et l'en-tête. Le
+                menu ne montre pas autre chose que la navigation : il la répète
+                en toutes lettres, là où la barre du bas doit abréger. */}
+            <div className="space-y-1">
+              {MAIN_NAV_ITEMS.map((item) => {
+                if (item.authOnly && (!ready || !isAuthenticated)) return null;
+                const Icon = item.icon;
+                const badgeCount = item.badge === "favorites" && isAuthenticated ? count : 0;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMobileMenu}
+                    aria-current={isNavItemActive(item, pathname) ? "page" : undefined}
+                    className="flex min-h-14 items-center gap-3 rounded-[18px] px-3 text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
+                  >
+                    <span className="soft-ring relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/58 text-coral">
+                      <Icon className="h-4 w-4" />
+                      {badgeCount > 0 ? (
+                        <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-coral px-1 text-[10px] font-bold leading-none text-white">
+                          {badgeCount}
+                        </span>
+                      ) : null}
+                    </span>
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="my-4 h-px bg-foreground/8" />
 
             <div className="space-y-1">
-              <FeedbackDialog variant="menu-plain" />
+              <FeedbackDialog variant="menu" />
 
               {eventProposalsEnabled ? (
                 <Link
                   href="/proposer-un-evenement"
                   onClick={closeMobileMenu}
-                  className="flex min-h-12 items-center gap-3 rounded-[14px] px-3 text-[14px] font-medium text-foreground/78 transition-colors hover:bg-white/55 hover:text-coral"
+                  className="flex min-h-14 items-center gap-3 rounded-[18px] px-3 text-[14px] font-semibold text-foreground/72 transition-colors hover:bg-white/62 hover:text-coral"
                 >
-                  <CalendarPlus className="h-[18px] w-[18px] shrink-0 text-coral" />
+                  <span className="soft-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/58 text-coral">
+                    <CalendarPlus className="h-4 w-4" />
+                  </span>
                   Proposer un événement
                 </Link>
               ) : null}
@@ -343,13 +301,6 @@ export function TopNavClient({ eventProposalsEnabled }: { eventProposalsEnabled:
         </DialogContent>
       </Dialog>
 
-      {isMobile ? (
-        <FavoritesSheet
-          open={showFavorites}
-          onOpenChange={setShowFavorites}
-          initialTab={favoritesInitialTab}
-        />
-      ) : null}
     </>
   );
 }
