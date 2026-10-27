@@ -28,6 +28,7 @@ import { InterestedPeopleProvider } from "@/components/events/interested-people-
 import { InterestedBlock } from "@/components/events/interested-block";
 import { InclusionMeasures } from "@/components/events/inclusion-measures";
 import { EventPromoCode } from "@/components/events/event-promo-code";
+import { SimilarEvents } from "@/components/events/similar-events";
 import { MixiteBadge } from "@/components/events/mixite-badge";
 import { AppFooter } from "@/components/layout/app-footer";
 import { TopNav } from "@/components/layout/top-nav";
@@ -535,6 +536,12 @@ export default async function EventPage({ params, searchParams }: PageProps) {
             </div>
           </div>
         </div>
+
+        {/* Hors de la grille deux colonnes : le carrousel occupe toute la
+            largeur de la page, sous la colonne de lecture comme sous la
+            sidebar d'action. C'est le dernier bloc — on ne propose d'aller
+            voir ailleurs qu'une fois la fiche lue. */}
+        <SimilarEvents eventId={event.id} />
       </div>
 
       <AppFooter />
