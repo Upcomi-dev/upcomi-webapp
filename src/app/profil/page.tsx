@@ -1,13 +1,25 @@
 import { redirect } from "next/navigation";
 import { AppFooter } from "@/components/layout/app-footer";
 import { TopNav } from "@/components/layout/top-nav";
-import { UserProfileForm } from "@/components/profile/user-profile-form";
+import { MyProfile } from "@/components/social/my-profile";
 import { buildInitialUserProfile, type UserProfileRow } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/server";
 import { getPrivatePageMetadata } from "@/lib/seo";
 
 export const metadata = getPrivatePageMetadata("Mon profil", "/profil");
 
+/**
+ * Mon profil — la vitrine, pas le formulaire.
+ *
+ * L'éditeur n'a pas disparu : il s'ouvre en surimpression depuis « Modifier »
+ * (voir `MyProfile`). La route interceptée `@profile/(.)profil`, qui ouvrait
+ * l'éditeur en modale par-dessus la page courante, a été retirée : une même
+ * URL ne peut pas montrer une vitrine en navigation directe et un formulaire
+ * en navigation interne.
+ *
+ * MAQUETTE : identité réelle, tout le reste (abonné·es, abonnements, listes
+ * d'évènements) est en dur — voir `lib/social/mock-social`.
+ */
 export default async function ProfilePage() {
   const supabase = await createClient();
   const {
@@ -29,27 +41,8 @@ export default async function ProfilePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <TopNav />
-
-      <main className="mx-auto flex w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="w-full rounded-[30px] border border-white/65 bg-[linear-gradient(135deg,rgba(255,252,247,0.98),rgba(250,242,232,0.98)_52%,rgba(247,237,221,0.98))] p-6 shadow-[var(--shadow-lg)] sm:p-8">
-          <div className="border-b border-foreground/8 pb-6">
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/42">
-                Mon profil
-              </p>
-              <h1 className="font-serif text-[32px] leading-none tracking-tight text-foreground">
-                Mes informations
-              </h1>
-              <p className="max-w-[48ch] text-[14px] leading-6 text-foreground/62">
-                Mets à jour tes informations personnelles et ton type de pratique quand tu veux.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <UserProfileForm initialValues={initialValues} />
-          </div>
-        </section>
+      <main className="flex-1">
+        <MyProfile initialValues={initialValues} />
       </main>
       <AppFooter />
     </div>
