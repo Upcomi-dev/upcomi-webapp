@@ -22,13 +22,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <h1 className="font-serif text-[22px] text-foreground">Administration</h1>
             </div>
           </div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1 text-[13px] text-foreground/50 transition-colors hover:text-foreground"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
-            Retour à l&apos;app
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link
+              href="/admin/ffvelo"
+              className="text-[13px] text-foreground/50 transition-colors hover:text-foreground"
+            >
+              FFVélo
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 text-[13px] text-foreground/50 transition-colors hover:text-foreground"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              Retour à l&apos;app
+            </Link>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-6 py-8">
