@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { AdminFfveloClient } from "@/components/admin/admin-ffvelo-client";
 import { requireAdmin } from "@/lib/auth/assert-admin";
-import { getFfveloManifestations, type FfveloManifestations } from "@/lib/ffvelo";
+import { getFfveloManifestations, type FfveloEvent } from "@/lib/ffvelo";
 
 export default async function AdminFfveloPage() {
   await requireAdmin("/admin/ffvelo");
 
-  let data: FfveloManifestations | null = null;
+  let events: FfveloEvent[] | null = null;
   let error: string | null = null;
   try {
-    data = await getFfveloManifestations();
+    events = await getFfveloManifestations();
   } catch (err) {
     error = err instanceof Error ? err.message : "Erreur inconnue";
   }
@@ -25,8 +25,8 @@ export default async function AdminFfveloPage() {
         </p>
         <h2 className="mt-2 font-serif text-[32px] text-foreground">Manifestations FFVélo</h2>
         <p className="mt-2 max-w-2xl text-[14px] leading-6 text-foreground/62">
-          Données brutes de l&apos;API FFVélo (rafraîchies toutes les 12 h). Lecture seule : rien
-          n&apos;est importé dans l&apos;app.
+          Manifestations à venir publiées par la FFVélo, rafraîchies toutes les 12 h. Lecture seule :
+          rien n&apos;est importé dans l&apos;app.
         </p>
       </section>
 
@@ -35,7 +35,7 @@ export default async function AdminFfveloPage() {
           {error}
         </p>
       ) : (
-        data && <AdminFfveloClient fields={data.fields} rows={data.rows} />
+        events && <AdminFfveloClient events={events} today={new Date().toISOString().slice(0, 10)} />
       )}
     </div>
   );
