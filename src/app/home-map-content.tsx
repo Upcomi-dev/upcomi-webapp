@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 import { AppFooter } from "@/components/layout/app-footer";
 import { buildEventTypeOptions } from "@/lib/events/filter-options";
 import { fetchEventMaxElevations } from "@/lib/events/elevations";
@@ -59,8 +60,8 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
     { data: eventTypeRows },
     eventProposalsEnabled,
   ] = await Promise.all([
-    buildEventsQuery(supabase, params, today, includePastEvents, Boolean(searchQuery)),
-    eventTypeQuery,
+    fetchAllEvents(supabase, params, today, includePastEvents, Boolean(searchQuery)),
+    fetchAllRows((from, to) => eventTypeQuery.order("id", { ascending: true }).range(from, to)),
     isEventProposalFeatureEnabled(),
   ]);
 
@@ -68,7 +69,7 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
   let error = eventsResult.error;
 
   if (error && searchQuery && isMissingTextSearchMigrationError(error)) {
-    const retryResult = await buildEventsQuery(supabase, params, today, includePastEvents, false);
+    const retryResult = await fetchAllEvents(supabase, params, today, includePastEvents, false);
     events = retryResult.data;
     error = retryResult.error;
   }
@@ -121,6 +122,20 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
       eventProposalsEnabled={eventProposalsEnabled}
       footer={<AppFooter />}
     />
+  );
+}
+
+function fetchAllEvents(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  params: HomeSearchParams,
+  today: string,
+  includePastEvents: boolean,
+  includeTextSearch: boolean
+) {
+  return fetchAllRows((from, to) =>
+    buildEventsQuery(supabase, params, today, includePastEvents, includeTextSearch)
+      .order("id", { ascending: true })
+      .range(from, to)
   );
 }
 

@@ -7,6 +7,7 @@ import {
   PASSWORD_RECOVERY_CODE_VERIFIER_SUFFIX,
   PASSWORD_RECOVERY_PENDING_KEY,
 } from "@/lib/auth/recovery";
+import { truncationGuardFetch } from "@/lib/supabase/fetch-all";
 
 let client: ReturnType<typeof createBrowserClient> | null = null;
 
@@ -21,6 +22,7 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   client = createBrowserClient(supabaseUrl, supabasePublishableKey, {
+    global: { fetch: truncationGuardFetch },
     cookies: {
       encode: "tokens-only",
       getAll() {

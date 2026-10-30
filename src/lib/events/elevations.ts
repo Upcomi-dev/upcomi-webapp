@@ -1,4 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 /**
  * PostgREST passe les identifiants dans l'URL : au-delà de quelques centaines,
@@ -34,7 +35,14 @@ export async function fetchEventMaxElevations(
 
   const results = await Promise.all(
     chunk([...new Set(eventIds)], ID_CHUNK_SIZE).map((ids) =>
-      supabase.from("sous_events").select("event_id, elevation").in("event_id", ids)
+      fetchAllRows((from, to) =>
+        supabase
+          .from("sous_events")
+          .select("event_id, elevation")
+          .in("event_id", ids)
+          .order("sousEventID", { ascending: true })
+          .range(from, to)
+      )
     )
   );
 

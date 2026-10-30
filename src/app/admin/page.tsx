@@ -10,6 +10,7 @@ import { EVENT_PROPOSALS_FEATURE_KEY } from "@/lib/features";
 import { requireAdmin } from "@/lib/auth/assert-admin";
 import { parseSupabasePublicStorageUrl } from "@/lib/storage/urls";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 import type {
   Event,
   EventSubmissionContact,
@@ -162,10 +163,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .from("collections")
     .select("*, collection_events(event_id, order)")
     .order("order", { ascending: true });
-  const allEventsPromise = supabase
-    .from("events")
-    .select("*")
-    .order("dateEvent", { ascending: true });
+  const allEventsPromise = fetchAllRows((from, to) =>
+    supabase
+      .from("events")
+      .select("*")
+      .order("dateEvent", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
   const upcomingEventsPromise = supabase
     .from("events")
     .select("id, slug, nomEvent, dateEvent, type_event, villeDepart, verifie, AlaUne")
@@ -180,33 +185,55 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     .select("uid, name, surname, updated_at")
     .order("updated_at", { ascending: false })
     .limit(8);
-  const allUsersPromise = supabase
-    .from("users")
-    .select("*")
-    .order("created_at", { ascending: false });
-  const organisateursPromise = supabase
-    .from("organisateurs")
-    .select("nom_orga")
-    .not("nom_orga", "is", null)
-    .order("nom_orga", { ascending: true });
+  const allUsersPromise = fetchAllRows((from, to) =>
+    supabase
+      .from("users")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("uid", { ascending: true })
+      .range(from, to)
+  );
+  const organisateursPromise = fetchAllRows((from, to) =>
+    supabase
+      .from("organisateurs")
+      .select("nom_orga")
+      .not("nom_orga", "is", null)
+      .order("nom_orga", { ascending: true })
+      .range(from, to)
+  );
   const favouritesCountPromise = supabase
     .from("favourite_events")
     .select("id", { count: "exact", head: true });
-  const feedbackEntriesPromise = supabase
-    .from("feedback_entries")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const feedbackEntriesPromise = fetchAllRows((from, to) =>
+    supabase
+      .from("feedback_entries")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
   // Les récits se lisent en tant qu'admin : c'est la policy de modération
   // (20260905110000) qui ouvre la table au-delà de sa seule autrice.
-  const eventStoriesPromise = supabase
-    .from("user_event_stories")
-    .select("*")
-    .order("created_at", { ascending: false });
-  const eventSubmissionContactsPromise = supabase
-    .from("event_submission_contacts")
-    .select("*")
-    .order("submitted_at", { ascending: false });
-  const proposalRoutesPromise = supabase.from("sous_events").select("*").order("sousEventID", { ascending: true });
+  const eventStoriesPromise = fetchAllRows((from, to) =>
+    supabase
+      .from("user_event_stories")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("user_id", { ascending: true })
+      .order("event_id", { ascending: true })
+      .range(from, to)
+  );
+  const eventSubmissionContactsPromise = fetchAllRows((from, to) =>
+    supabase
+      .from("event_submission_contacts")
+      .select("*")
+      .order("submitted_at", { ascending: false })
+      .order("event_id", { ascending: true })
+      .range(from, to)
+  );
+  const proposalRoutesPromise = fetchAllRows((from, to) =>
+    supabase.from("sous_events").select("*").order("sousEventID", { ascending: true }).range(from, to)
+  );
   const popularEventsPromise = supabase.rpc("get_popular_events", {
     p_limit: POPULAR_COLLECTION_LIMIT,
   });
