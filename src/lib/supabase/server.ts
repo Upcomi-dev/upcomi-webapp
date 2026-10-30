@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { truncationGuardFetch } from "@/lib/supabase/fetch-all";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -12,6 +13,7 @@ export async function createClient() {
     supabaseUrl,
     supabasePublishableKey,
     {
+      global: { fetch: truncationGuardFetch },
       cookies: {
         encode: "tokens-only",
         getAll() {
