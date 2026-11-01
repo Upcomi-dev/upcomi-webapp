@@ -57,12 +57,53 @@ const textAreaClassName =
 const checkboxClassName =
   "flex items-center gap-2 rounded-xl border border-foreground/10 bg-white/72 px-3 py-2 text-[13px] text-foreground/72";
 
+const FILTERS = [
+  { key: "year", label: "Année" },
+  { key: "type_event", label: "Type" },
+  { key: "bike_type", label: "Vélo" },
+  { key: "paysDepart", label: "Pays" },
+  { key: "region", label: "Région" },
+] as const;
+type FilterKey = (typeof FILTERS)[number]["key"] | "proposal";
+const EMPTY_FILTERS: Record<FilterKey, string> = {
+  year: "",
+  type_event: "",
+  bike_type: "",
+  paysDepart: "",
+  region: "",
+  proposal: "",
+};
+const FILTER_VALUE: Record<(typeof FILTERS)[number]["key"], (event: AdminEventRecord) => string | null> = {
+  year: (event) => event.dateEvent?.slice(0, 4) || null,
+  type_event: (event) => event.type_event,
+  bike_type: (event) => event.bike_type,
+  paysDepart: (event) => event.paysDepart,
+  region: (event) => event.region,
+};
+
 export function AdminEventsClient({ events, organisateurs, submissionContacts }: AdminEventsClientProps) {
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlyPending, setShowOnlyPending] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [filters, setFilters] = useState<Record<FilterKey, string>>(EMPTY_FILTERS);
+  const hasFilters = Object.values(filters).some(Boolean);
+
+  const filterOptions = useMemo(() => {
+    const options = {} as Record<FilterKey, string[]>;
+    for (const { key } of FILTERS) {
+      const values = new Set<string>();
+      for (const event of events) {
+        const value = FILTER_VALUE[key](event);
+        if (value) values.add(value);
+      }
+      options[key] = [...values].sort((a, b) =>
+        key === "year" ? b.localeCompare(a) : a.localeCompare(b, "fr")
+      );
+    }
+    return options;
+  }, [events]);
 
   const contactsByEventId = useMemo(() => {
     return new Map(submissionContacts.map((contact) => [contact.event_id, contact]));
@@ -92,29 +133,28 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
       return (left.dateEvent ?? "").localeCompare(right.dateEvent ?? "");
     });
 
-    const scopedEvents = showOnlyPending
-      ? rankedEvents.filter((event) => !event.verifie)
-      : rankedEvents;
+    const activeFilters = FILTERS.filter(({ key }) => filters[key]);
 
-    if (!normalizedQuery) {
-      return scopedEvents.slice(0, 40);
-    }
-
-    return scopedEvents
-      .filter((event) =>
-        [
-          event.nomEvent,
-          event.villeDepart,
-          event.paysDepart,
-          event.type_event,
-          event.organisateur,
-          event.region,
-        ]
-          .filter(Boolean)
-          .some((value) => value!.toLowerCase().includes(normalizedQuery))
-      )
-      .slice(0, 40);
-  }, [contactsByEventId, events, searchQuery, showOnlyPending]);
+    return rankedEvents.filter(
+      (event) =>
+        (!showOnlyPending || !event.verifie) &&
+        (!filters.proposal ||
+          (filters.proposal === "oui") === contactsByEventId.has(event.id)) &&
+        activeFilters.every(({ key }) => FILTER_VALUE[key](event) === filters[key]) &&
+        (!normalizedQuery ||
+          [
+            event.nomEvent,
+            event.villeDepart,
+            event.paysDepart,
+            event.type_event,
+            event.organisateur,
+            event.region,
+          ]
+            .filter(Boolean)
+            .some((value) => value!.toLowerCase().includes(normalizedQuery)))
+    );
+  }, [contactsByEventId, events, filters, searchQuery, showOnlyPending]);
+  const visibleEvents = filteredEvents.slice(0, 40);
 
   const handleCreate = (formData: FormData) => {
     startTransition(async () => {
@@ -177,6 +217,56 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        {FILTERS.map(({ key, label }) => (
+          <select
+            key={key}
+            aria-label={label}
+            value={filters[key]}
+            onChange={(event) => setFilters((current) => ({ ...current, [key]: event.target.value }))}
+            className={`rounded-full border px-3 py-2 text-[13px] focus:border-coral/40 focus:outline-none ${
+              filters[key]
+                ? "border-coral/30 bg-coral/10 font-semibold text-coral-dark"
+                : "border-foreground/12 bg-white/60 text-foreground/62"
+            }`}
+          >
+            <option value="">{label} : tous</option>
+            {filterOptions[key].map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        ))}
+        <select
+          aria-label="Proposition"
+          value={filters.proposal}
+          onChange={(event) => setFilters((current) => ({ ...current, proposal: event.target.value }))}
+          className={`rounded-full border px-3 py-2 text-[13px] focus:border-coral/40 focus:outline-none ${
+            filters.proposal
+              ? "border-coral/30 bg-coral/10 font-semibold text-coral-dark"
+              : "border-foreground/12 bg-white/60 text-foreground/62"
+          }`}
+        >
+          <option value="">Proposition : toutes</option>
+          <option value="oui">Propositions uniquement</option>
+          <option value="non">Hors propositions</option>
+        </select>
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={() => setFilters(EMPTY_FILTERS)}
+            className="rounded-full px-3 py-2 text-[13px] text-foreground/55 underline-offset-2 hover:underline"
+          >
+            Réinitialiser
+          </button>
+        )}
+        <span className="ml-auto text-[13px] text-foreground/50">
+          {filteredEvents.length} résultat{filteredEvents.length > 1 ? "s" : ""}
+          {filteredEvents.length > visibleEvents.length && ` · ${visibleEvents.length} affichés`}
+        </span>
+      </div>
+
       {isPending && (
         <div className="text-[13px] text-foreground/50">Mise à jour des événements...</div>
       )}
@@ -209,7 +299,7 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
       )}
 
       <div className="grid gap-4">
-        {filteredEvents.map((event) => {
+        {visibleEvents.map((event) => {
           const label = event.nomEvent || `Événement #${event.id}`;
           const isEditing = editingId === event.id;
           const submissionContact = contactsByEventId.get(event.id);
