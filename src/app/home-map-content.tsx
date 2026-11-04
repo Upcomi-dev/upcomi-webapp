@@ -55,6 +55,16 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
     eventTypeQuery = eventTypeQuery.or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`);
   }
 
+  // Les collections ne dépendent de la liste qu'à l'assemblage final : leurs
+  // requêtes partent tout de suite, en parallèle de la liste et des dénivelés.
+  // (En cas d'erreur, la promesse reste simplement en suspens.)
+  let resolveAllEvents: (value: MapEvent[]) => void = () => {};
+  const allEventsPromise = new Promise<MapEvent[]>((resolve) => {
+    resolveAllEvents = resolve;
+  });
+  const collectionsPromise = hasFilters
+    ? Promise.resolve<CollectionWithEvents[]>([])
+    : fetchCollections(supabase, allEventsPromise);
   const [
     eventsResult,
     { data: eventTypeRows },
@@ -104,14 +114,11 @@ export async function HomeMapContent({ params }: HomeMapContentProps) {
     ...event,
     maxElevation: elevations.get(event.id) ?? null,
   }));
+  resolveAllEvents(allEvents);
   const eventTypeOptions = buildEventTypeOptions(
     (eventTypeRows || []).map((row) => row.type_event)
   );
-
-  let collections: CollectionWithEvents[] = [];
-  if (!hasFilters) {
-    collections = await fetchCollections(supabase, allEvents);
-  }
+  const collections = await collectionsPromise;
 
   return (
     <MapPageClient
@@ -229,87 +236,102 @@ function isMissingTextSearchMigrationError(error: { code?: string; message?: str
 
 async function fetchCollections(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  allEvents: MapEvent[]
+  allEventsPromise: Promise<MapEvent[]>
 ): Promise<CollectionWithEvents[]> {
-  const results: CollectionWithEvents[] = [];
-
   const { data: collectionsData } = await supabase
     .from("collections")
     .select("*")
     .eq("is_active", true)
     .order("order", { ascending: true });
 
-  if (!collectionsData || collectionsData.length === 0) return results;
+  if (!collectionsData || collectionsData.length === 0) return [];
 
   const manualCollections = collectionsData.filter((c) => !c.is_auto);
-  const autoCollections = collectionsData.filter((c) => c.is_auto);
+  const popularCollections = collectionsData.filter(
+    (c) => c.is_auto && c.auto_type === "popular"
+  );
 
-  for (const col of autoCollections) {
-    if (col.auto_type === "popular") {
-      const { data: popularData } = await supabase.rpc("get_popular_events", {
-        p_limit: POPULAR_COLLECTION_LIMIT,
-      });
+  const [popularEventIds, manual] = await Promise.all([
+    popularCollections.length > 0 ? fetchPopularEventIds(supabase) : Promise.resolve([]),
+    fetchManualCollectionEvents(
+      supabase,
+      manualCollections.map((c) => c.id as string)
+    ),
+  ]);
+  const allEvents = await allEventsPromise;
+  const allEventsById = new Map(allEvents.map((event) => [event.id, event]));
+  const pick = (ids: number[]) =>
+    ids
+      .map((id) => manual.eventsById.get(id) || allEventsById.get(id))
+      .filter((e): e is MapEvent => e != null);
 
-      const eventIds: number[] = [...((popularData || []) as Array<{ event_id: number; fav_count: number }>)]
-        .filter((row) => Number(row.fav_count) > 0)
-        .sort((a, b) => Number(b.fav_count) - Number(a.fav_count))
-        .slice(0, POPULAR_COLLECTION_LIMIT)
-        .map((r) => r.event_id);
-
-      const collectionEvents = eventIds
-        .map((id) => allEvents.find((e) => e.id === id))
-        .filter((e): e is MapEvent => e != null);
-
-      results.push({ ...col, events: collectionEvents });
-    }
-  }
-
-  if (manualCollections.length > 0) {
-    const today = getLocalDateKey();
-    const manualIds = manualCollections.map((c) => c.id);
-    const { data: junctionData } = await supabase
-      .from("collection_events")
-      .select("collection_id, event_id")
-      .in("collection_id", manualIds)
-      .order("order", { ascending: true });
-
-    const allManualEventIds = [...new Set((junctionData || []).map((j) => j.event_id as number))];
-
-    const manualEventsMap = new Map<number, MapEvent>();
-    if (allManualEventIds.length > 0) {
-      const { data: manualEventsData } = await supabase
-        .from("events")
-        .select(MAP_EVENT_SELECT)
-        .in("id", allManualEventIds)
-        .eq("verifie", true)
-        .not("dateEvent", "is", null)
-        .or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`);
-
-      // Une collection manuelle peut porter un évènement absent de la carte
-      // (hors filtres, sans coordonnées) : ceux-là ont leur propre requête, et
-      // donc leur propre lecture du dénivelé.
-      const manualElevations = await fetchEventMaxElevations(
-        supabase,
-        ((manualEventsData || []) as MapEvent[]).map((e) => e.id)
-      );
-
-      for (const e of (manualEventsData || []) as MapEvent[]) {
-        manualEventsMap.set(e.id, { ...e, maxElevation: manualElevations.get(e.id) ?? null });
-      }
-    }
-
-    for (const col of manualCollections) {
-      const eventIds = (junctionData || [])
-        .filter((j) => j.collection_id === col.id)
-        .map((j) => j.event_id as number);
-
-      const collectionEvents = eventIds
-        .map((id) => manualEventsMap.get(id) || allEvents.find((e) => e.id === id))
-        .filter((e): e is MapEvent => e != null);
-
-      results.push({ ...col, events: collectionEvents });
-    }
-  }
+  const results: CollectionWithEvents[] = [
+    ...popularCollections.map((col) => ({
+      ...col,
+      events: popularEventIds
+        .map((id) => allEventsById.get(id))
+        .filter((e): e is MapEvent => e != null),
+    })),
+    ...manualCollections.map((col) => ({
+      ...col,
+      events: pick(
+        manual.junction.filter((j) => j.collection_id === col.id).map((j) => j.event_id)
+      ),
+    })),
+  ];
 
   return results.sort((a, b) => a.order - b.order);
+}
+
+async function fetchPopularEventIds(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data: popularData } = await supabase.rpc("get_popular_events", {
+    p_limit: POPULAR_COLLECTION_LIMIT,
+  });
+
+  return [...((popularData || []) as Array<{ event_id: number; fav_count: number }>)]
+    .filter((row) => Number(row.fav_count) > 0)
+    .sort((a, b) => Number(b.fav_count) - Number(a.fav_count))
+    .slice(0, POPULAR_COLLECTION_LIMIT)
+    .map((r) => r.event_id);
+}
+
+async function fetchManualCollectionEvents(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  collectionIds: string[]
+) {
+  const eventsById = new Map<number, MapEvent>();
+  if (collectionIds.length === 0) return { junction: [], eventsById };
+
+  const today = getLocalDateKey();
+  const { data: junctionData } = await supabase
+    .from("collection_events")
+    .select("collection_id, event_id")
+    .in("collection_id", collectionIds)
+    .order("order", { ascending: true });
+  const junction = (junctionData || []) as Array<{ collection_id: string; event_id: number }>;
+
+  const eventIds = [...new Set(junction.map((j) => j.event_id))];
+  if (eventIds.length === 0) return { junction, eventsById };
+
+  const { data: manualEventsData } = await supabase
+    .from("events")
+    .select(MAP_EVENT_SELECT)
+    .in("id", eventIds)
+    .eq("verifie", true)
+    .not("dateEvent", "is", null)
+    .or(`dateFin.gte.${today},and(dateFin.is.null,dateEvent.gte.${today})`);
+
+  // Une collection manuelle peut porter un évènement absent de la carte
+  // (hors filtres, sans coordonnées) : ceux-là ont leur propre requête, et
+  // donc leur propre lecture du dénivelé.
+  const manualEvents = (manualEventsData || []) as MapEvent[];
+  const elevations = await fetchEventMaxElevations(
+    supabase,
+    manualEvents.map((e) => e.id)
+  );
+  for (const e of manualEvents) {
+    eventsById.set(e.id, { ...e, maxElevation: elevations.get(e.id) ?? null });
+  }
+
+  return { junction, eventsById };
 }

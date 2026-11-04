@@ -2,7 +2,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, ChevronLeft, Euro, ExternalLink, Flag, MapPin } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import type { createClient } from "@/lib/supabase/server";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
 import { getEventKeyDates } from "@/lib/utils/event-key-dates";
 import { findNearestStation } from "@/lib/utils/stations";
@@ -10,10 +10,10 @@ import { fetchEventInclusionMeasures } from "@/lib/events/inclusion-measures";
 import { fetchEventRegistrationMeasures } from "@/lib/events/registration-measures";
 import { fetchEventPromoCode } from "@/lib/events/promo-code";
 import { getEventFactTags } from "@/lib/events/facts";
-import { parseLegacyEventId } from "@/lib/utils/slugify";
+import { getEventBySlug } from "@/lib/events/get-event-by-slug";
 import { getEventTypeColor } from "@/lib/types/database";
 import { getAppStorageImage, getAppStorageImageUrl } from "@/lib/storage/urls";
-import type { Event, SousEvent } from "@/lib/types/database";
+import type { SousEvent } from "@/lib/types/database";
 import { ShareButton } from "@/components/events/share-button";
 import { ExternalRegistrationLink } from "@/components/events/external-registration-link";
 import { EventActions } from "@/components/events/event-actions";
@@ -44,49 +44,27 @@ interface EventFicheProps {
 export async function EventFiche({ slug, returnTo, inModal = false }: EventFicheProps) {
   const backLabel = getEventBackLabel(returnTo);
 
-  const supabase = await createClient();
-
-  const { data: eventData, error: eventError } = await supabase
-    .from("events")
-    .select("*")
-    .eq("slug", slug)
-    .eq("verifie", true)
-    .maybeSingle();
-
-  if (!eventData) {
-    const legacyId = parseLegacyEventId(slug);
-    if (legacyId != null) {
-      const legacyResult = await supabase
-        .from("events")
-        .select("slug")
-        .eq("id", legacyId)
-        .eq("verifie", true)
-        .maybeSingle();
-
-      if (legacyResult.data?.slug) {
-        permanentRedirect(getEventPath(legacyResult.data.slug));
-      }
-    }
-  }
-
-  if (eventError || !eventData) notFound();
-
-  const event = eventData as Event;
-  const { data: sousEventsData } = await supabase
-      .from("sous_events")
-      .select("*")
-      .eq("event_id", event.id)
-      .order("distance", { ascending: true });
+  // Lecture partagée avec `generateMetadata` et le layout (une requête par
+  // rendu). Sur `/event/[slug]`, introuvable et ancien slug sont déjà traités
+  // par le layout ; ces gardes servent à la popup, qui n'y passe pas.
+  const { supabase, event, isLegacy } = await getEventBySlug(slug);
+  if (!event) notFound();
+  if (isLegacy) permanentRedirect(getEventPath(event.slug));
 
   const eventImage = getAppStorageImage(event.image);
-  const sousEvents = (sousEventsData as SousEvent[]) || [];
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = event.slug;
   const canonicalUrl = getEventUrl(eventSlug);
   // Le compteur d'intéressé·es n'est plus lu ici : il fait partie du bloc
   // « qui est intéressé », traité dans sa propre brique.
-  const [relatedEvents, inclusionMeasures, registrationMeasures, promoCode] =
+  // Tout ne dépend que de l'id : une seule vague de requêtes en parallèle.
+  const [sousEventsResult, relatedEvents, inclusionMeasures, registrationMeasures, promoCode] =
     await Promise.all([
+      supabase
+        .from("sous_events")
+        .select("*")
+        .eq("event_id", event.id)
+        .order("distance", { ascending: true }),
       event.organisateur
         ? fetchOrganizerEvents(supabase, event.organisateur, event.id)
         : Promise.resolve([]),
@@ -94,6 +72,7 @@ export async function EventFiche({ slug, returnTo, inModal = false }: EventFiche
       fetchEventRegistrationMeasures(supabase, event.id),
       fetchEventPromoCode(supabase, event.id),
     ]);
+  const sousEvents = (sousEventsResult.data as SousEvent[] | null) ?? [];
 
   // Gare la plus proche du départ, calculée au rendu depuis le référentiel
   // embarqué : venir sans voiture est un critère de décision relevé en test.

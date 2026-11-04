@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import type { PostgrestError } from "@supabase/supabase-js";
 import { AdminEventsClient } from "@/components/admin/admin-events-client";
 import { AdminCollectionsClient } from "@/components/admin/admin-collections-client";
 import { AdminFeedbackClient } from "@/components/admin/admin-feedback-client";
@@ -150,285 +152,19 @@ type AdminTabId = (typeof ADMIN_TABS)[number]["id"];
 
 const POPULAR_COLLECTION_LIMIT = 10;
 
+type AdminSupabase = Awaited<ReturnType<typeof requireAdmin>>["supabase"];
+
+// Chaque onglet ne charge que ses propres données : avant, chaque clic d'onglet
+// relisait tout le back-office (tous les événements, tous les comptes, une URL
+// signée par proposition…). Le bandeau d'onglets s'affiche tout de suite, le
+// contenu arrive en streaming derrière un Suspense.
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const params = await searchParams;
   const activeTab = parseAdminTab(params.tab);
   const activeTabMeta = ADMIN_TABS.find((tab) => tab.id === activeTab) ?? ADMIN_TABS[0];
 
   const { supabase, user } = await requireAdmin("/admin");
-  const adminStorage = createAdminClient();
-  const today = new Date().toISOString().split("T")[0];
-
-  const collectionsPromise = supabase
-    .from("collections")
-    .select("*, collection_events(event_id, order)")
-    .order("order", { ascending: true });
-  const allEventsPromise = fetchAllRows((from, to) =>
-    supabase
-      .from("events")
-      .select("*")
-      .order("dateEvent", { ascending: true })
-      .order("id", { ascending: true })
-      .range(from, to)
-  );
-  const upcomingEventsPromise = supabase
-    .from("events")
-    .select("id, slug, nomEvent, dateEvent, type_event, villeDepart, verifie, AlaUne")
-    .gte("dateEvent", today)
-    .order("dateEvent", { ascending: true })
-    .limit(8);
-  const publicProfilesCountPromise = supabase
-    .from("user_public")
-    .select("uid", { count: "exact", head: true });
-  const recentUsersPromise = supabase
-    .from("user_public")
-    .select("uid, name, surname, updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(8);
-  const allUsersPromise = fetchAllRows((from, to) =>
-    supabase
-      .from("users")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .order("uid", { ascending: true })
-      .range(from, to)
-  );
-  const organisateursPromise = fetchAllRows((from, to) =>
-    supabase
-      .from("organisateurs")
-      .select("nom_orga")
-      .not("nom_orga", "is", null)
-      .order("nom_orga", { ascending: true })
-      .range(from, to)
-  );
-  const favouritesCountPromise = supabase
-    .from("favourite_events")
-    .select("id", { count: "exact", head: true });
-  const feedbackEntriesPromise = fetchAllRows((from, to) =>
-    supabase
-      .from("feedback_entries")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: true })
-      .range(from, to)
-  );
-  // Les récits se lisent en tant qu'admin : c'est la policy de modération
-  // (20260905110000) qui ouvre la table au-delà de sa seule autrice.
-  const eventStoriesPromise = fetchAllRows((from, to) =>
-    supabase
-      .from("user_event_stories")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .order("user_id", { ascending: true })
-      .order("event_id", { ascending: true })
-      .range(from, to)
-  );
-  const eventSubmissionContactsPromise = fetchAllRows((from, to) =>
-    supabase
-      .from("event_submission_contacts")
-      .select("*")
-      .order("submitted_at", { ascending: false })
-      .order("event_id", { ascending: true })
-      .range(from, to)
-  );
-  const proposalRoutesPromise = fetchAllRows((from, to) =>
-    supabase.from("sous_events").select("*").order("sousEventID", { ascending: true }).range(from, to)
-  );
-  const popularEventsPromise = supabase.rpc("get_popular_events", {
-    p_limit: POPULAR_COLLECTION_LIMIT,
-  });
-  const eventProposalFeaturePromise = adminStorage
-    .from("app_features")
-    .select("enabled")
-    .eq("key", EVENT_PROPOSALS_FEATURE_KEY)
-    .maybeSingle();
-
-  const [
-    collectionsResult,
-    allEventsResult,
-    upcomingEventsResult,
-    publicProfilesCountResult,
-    recentUsersResult,
-    allUsersResult,
-    organisateursResult,
-    favouritesCountResult,
-    feedbackEntriesResult,
-    eventStoriesResult,
-    eventSubmissionContactsResult,
-    proposalRoutesResult,
-    popularEventsResult,
-    eventProposalFeatureResult,
-  ] = await Promise.all([
-    collectionsPromise,
-    allEventsPromise,
-    upcomingEventsPromise,
-    publicProfilesCountPromise,
-    recentUsersPromise,
-    allUsersPromise,
-    organisateursPromise,
-    favouritesCountPromise,
-    feedbackEntriesPromise,
-    eventStoriesPromise,
-    eventSubmissionContactsPromise,
-    proposalRoutesPromise,
-    popularEventsPromise,
-    eventProposalFeaturePromise,
-  ]);
-
-  const collections = collectionsResult.data ?? [];
-  const allEvents = (allEventsResult.data ?? []) as Event[];
-  const eventById = new Map(allEvents.map((event) => [event.id as number, event]));
-  const popularRows = normalizePopularRows(popularEventsResult.data);
-  const manualCollectionEventIds = [
-    ...new Set(
-      collections.flatMap((collection) =>
-        Array.isArray(collection.collection_events)
-          ? (collection.collection_events as Array<{ event_id: number }>).map((ce) => ce.event_id)
-          : []
-      )
-    ),
-  ];
-  const collectionEventIds = [...new Set([...manualCollectionEventIds, ...popularRows.map((row) => row.event_id)])];
-  const favouriteCountsByEventId = new Map<number, number>(
-    popularRows.map((row) => [row.event_id, row.fav_count])
-  );
-
-  if (collectionEventIds.length > 0) {
-    const { data: favouriteCountRows } = await supabase.rpc("get_event_favourite_counts", {
-      p_event_ids: collectionEventIds,
-    });
-
-    for (const row of normalizeFavouriteCountRows(favouriteCountRows)) {
-      favouriteCountsByEventId.set(row.event_id, row.fav_count);
-    }
-  }
-
-  const upcomingEvents = (upcomingEventsResult.data ?? []) as Array<{
-    id: number;
-    nomEvent: string | null;
-    dateEvent: string | null;
-    type_event: string | null;
-    villeDepart: string | null;
-    verifie: boolean;
-    AlaUne: number | null;
-  }>;
-  const publicProfilesCount = publicProfilesCountResult.count ?? 0;
-  const recentUsers = (recentUsersResult.data ?? []) as AdminPublicUser[];
-  const allUsers = (allUsersResult.data ?? []) as AdminAppUser[];
-  const organisateurs = (organisateursResult.data ?? [])
-    .map((row) => row.nom_orga as string | null)
-    .filter((value): value is string => Boolean(value));
-  const favouritesCount = favouritesCountResult.count ?? 0;
-  const feedbackEntries = (feedbackEntriesResult.data ?? []) as FeedbackEntry[];
-
-  // Le récit ne porte que deux identifiants ; l'évènement et l'autrice sont
-  // recomposés depuis les listes déjà chargées plus haut, plutôt qu'avec deux
-  // requêtes de plus. `user_event_stories.user_id` pointe sur `auth.users` et
-  // non sur `public.users` : PostgREST ne sait pas les embarquer, la jointure
-  // se fait donc ici.
-  const userByUid = new Map(allUsers.map((row) => [row.uid, row]));
-  const eventStories: AdminStory[] = ((eventStoriesResult.data ?? []) as UserEventStory[]).map(
-    (row) => {
-      const event = eventById.get(row.event_id);
-      const author = userByUid.get(row.user_id);
-      const authorName = [author?.name, author?.surname].filter(Boolean).join(" ").trim();
-
-      return {
-        userId: row.user_id,
-        eventId: row.event_id,
-        eventName: (event?.nomEvent as string | null) || `Évènement ${row.event_id}`,
-        eventSlug: (event?.slug as string | null) ?? null,
-        authorName: authorName || `Membre ${row.user_id.slice(0, 8)}`,
-        authorEmail: author?.email ?? null,
-        story: row.story,
-        storyUrl: row.story_url,
-        status: row.status,
-        createdAt: row.created_at,
-        reviewedAt: row.reviewed_at,
-      };
-    }
-  );
-  const pendingStoriesCount = eventStories.filter((story) => story.status === "pending").length;
-  const approvedStoriesCount = eventStories.filter((story) => story.status === "approved").length;
-  const rejectedStoriesCount = eventStories.filter((story) => story.status === "rejected").length;
-  const eventSubmissionContacts =
-    (eventSubmissionContactsResult.data ?? []) as EventSubmissionContact[];
-  const proposalRoutes = (proposalRoutesResult.data ?? []) as SousEvent[];
-  const proposals: AdminProposal[] = await Promise.all(eventSubmissionContacts.map(async (contact) => {
-    const event = eventById.get(contact.event_id)!;
-    let imagePreviewUrl: string | null = null;
-    const parsedImage = parseSupabasePublicStorageUrl(event?.image);
-    if (parsedImage) {
-      const { data } = await adminStorage.storage.from(parsedImage.bucket).createSignedUrl(parsedImage.objectPath, 3600);
-      imagePreviewUrl = data?.signedUrl ?? null;
-    } else {
-      imagePreviewUrl = event?.image ?? null;
-    }
-    return {
-      event,
-      contact,
-      routes: proposalRoutes.filter((route) => route.event_id === contact.event_id),
-      imagePreviewUrl,
-    };
-  })).then((items) => items.filter((item) => Boolean(item.event)));
-
-  const collectionsWithCounts: AdminCollection[] = collections.map((c) => {
-    const isAuto = c.is_auto as boolean;
-    const autoType = c.auto_type as string | null;
-    const manualEventIds = Array.isArray(c.collection_events)
-      ? [...(c.collection_events as Array<{ event_id: number; order: number | null }>)]
-          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-          .map((ce) => ce.event_id)
-      : [];
-    const eventIds = isAuto && autoType === "popular"
-      ? popularRows.map((row) => row.event_id).filter((id) => eventById.has(id))
-      : manualEventIds;
-    const events = buildAdminCollectionEvents(eventIds, eventById, favouriteCountsByEventId);
-
-    return {
-      id: c.id as string,
-      name: c.name as string,
-      description: c.description as string | null,
-      order: c.order as number,
-      is_auto: isAuto,
-      is_active: (c.is_active ?? false) as boolean,
-      auto_type: autoType,
-      eventCount: events.length,
-      eventIds,
-      events,
-    };
-  });
-
-  const eventsList: AdminEvent[] = allEvents.map((e) => ({
-    id: e.id as number,
-    name: (e.nomEvent || "Sans nom") as string,
-    date: e.dateEvent as string | null,
-    type: e.type_event as string | null,
-    city: e.villeDepart as string | null,
-    verified: Boolean(e.verifie),
-    featuredOrder: (e.AlaUne ?? null) as number | null,
-    favouriteCount: favouriteCountsByEventId.get(e.id as number) ?? 0,
-  }));
-
-  const activeCollectionsCount = collectionsWithCounts.filter((collection) => collection.is_active).length;
-  const automaticCollectionsCount = collectionsWithCounts.filter((collection) => collection.is_auto).length;
-  const verifiedEventsCount = eventsList.filter((event) => event.verified).length;
-  const featuredEventsCount = eventsList.filter((event) => event.featuredOrder !== null).length;
-  const pendingReviewCount = eventsList.length - verifiedEventsCount;
-  const premiumUsersCount = allUsers.filter((userRecord) => userRecord.premium).length;
-  const newFeedbackCount = feedbackEntries.filter((entry) => entry.status === "new").length;
-  const reviewingFeedbackCount = feedbackEntries.filter((entry) => entry.status === "reviewing").length;
-  const closedFeedbackCount = feedbackEntries.filter((entry) => entry.status === "closed").length;
-
-  const tabCounts: Record<AdminTabId, number> = {
-    overview: eventsList.length + collectionsWithCounts.length + allUsers.length + feedbackEntries.length,
-    collections: collectionsWithCounts.length,
-    proposals: proposals.filter(({ contact }) => contact.review_status === "pending").length,
-    events: eventsList.length,
-    users: allUsers.length,
-    stories: pendingStoriesCount,
-    feedback: feedbackEntries.length,
-  };
+  const tabCountsPromise = loadTabCounts(supabase);
 
   return (
     <div className="space-y-8">
@@ -476,7 +212,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         : "bg-foreground/6 text-foreground/52"
                     }`}
                   >
-                    {tabCounts[tab.id]}
+                    <Suspense fallback="…">
+                      <TabCount countsPromise={tabCountsPromise} tab={tab.id} />
+                    </Suspense>
                   </span>
                 </div>
                 <p className="mt-2 text-[13px] leading-5 opacity-75">{tab.description}</p>
@@ -486,313 +224,752 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </nav>
       </section>
 
-      {activeTab === "overview" && (
+      <Suspense key={activeTab} fallback={<TabLoading />}>
+        {activeTab === "overview" && <OverviewTab supabase={supabase} />}
+        {activeTab === "collections" && <CollectionsTab supabase={supabase} />}
+        {activeTab === "proposals" && <ProposalsTab supabase={supabase} />}
+        {activeTab === "events" && <EventsTab supabase={supabase} />}
+        {activeTab === "users" && <UsersTab supabase={supabase} currentAdminId={user.id} />}
+        {activeTab === "stories" && <StoriesTab supabase={supabase} />}
+        {activeTab === "feedback" && <FeedbackTab supabase={supabase} />}
+      </Suspense>
+    </div>
+  );
+}
+
+async function TabCount({
+  countsPromise,
+  tab,
+}: {
+  countsPromise: Promise<Record<AdminTabId, number>>;
+  tab: AdminTabId;
+}) {
+  const counts = await countsPromise;
+  return counts[tab];
+}
+
+function TabLoading() {
+  return (
+    <div className="rounded-[28px] border border-white/60 bg-white/70 px-6 py-16 text-center text-[14px] text-foreground/45 shadow-[var(--shadow-sm)]">
+      Chargement…
+    </div>
+  );
+}
+
+// Compte des lignes sans les rapatrier (`head: true`).
+function countRows(query: PromiseLike<{ count: number | null }>) {
+  return Promise.resolve(query).then((result) => result.count ?? 0);
+}
+
+async function loadTabCounts(supabase: AdminSupabase): Promise<Record<AdminTabId, number>> {
+  const head = { count: "exact", head: true } as const;
+  const [events, collections, users, feedback, proposals, stories] = await Promise.all([
+    countRows(supabase.from("events").select("id", head)),
+    countRows(supabase.from("collections").select("id", head)),
+    countRows(supabase.from("users").select("uid", head)),
+    countRows(supabase.from("feedback_entries").select("id", head)),
+    countRows(
+      supabase.from("event_submission_contacts").select("event_id", head).eq("review_status", "pending")
+    ),
+    countRows(supabase.from("user_event_stories").select("event_id", head).eq("status", "pending")),
+  ]);
+
+  return {
+    overview: events + collections + users + feedback,
+    collections,
+    proposals,
+    events,
+    users,
+    stories,
+    feedback,
+  };
+}
+
+/**
+ * Lecture par lots d'identifiants (`.in()`), pour ne pas faire exploser
+ * l'URL PostgREST, chaque lot étant lui-même paginé.
+ */
+async function fetchByIds<T, Id>(
+  ids: Id[],
+  page: (chunk: Id[], from: number, to: number) => PromiseLike<{ data: T[] | null; error: PostgrestError | null }>
+): Promise<T[]> {
+  const chunks: Id[][] = [];
+  for (let index = 0; index < ids.length; index += 200) chunks.push(ids.slice(index, index + 200));
+  const results = await Promise.all(
+    chunks.map((chunk) => fetchAllRows<T>((from, to) => page(chunk, from, to)))
+  );
+  return results.flatMap((result) => result.data ?? []);
+}
+
+function fetchOrganisateurs(supabase: AdminSupabase) {
+  return fetchAllRows((from, to) =>
+    supabase
+      .from("organisateurs")
+      .select("nom_orga")
+      .not("nom_orga", "is", null)
+      .order("nom_orga", { ascending: true })
+      .range(from, to)
+  ).then((result) =>
+    (result.data ?? [])
+      .map((row) => row.nom_orga as string | null)
+      .filter((value): value is string => Boolean(value))
+  );
+}
+
+function fetchSubmissionContacts(supabase: AdminSupabase) {
+  return fetchAllRows((from, to) =>
+    supabase
+      .from("event_submission_contacts")
+      .select("*")
+      .order("submitted_at", { ascending: false })
+      .order("event_id", { ascending: true })
+      .range(from, to)
+  ).then((result) => (result.data ?? []) as EventSubmissionContact[]);
+}
+
+async function OverviewTab({ supabase }: { supabase: AdminSupabase }) {
+  const head = { count: "exact", head: true } as const;
+  const today = new Date().toISOString().split("T")[0];
+
+  const [
+    eventsCount,
+    verifiedEventsCount,
+    featuredEventsCount,
+    collectionsResult,
+    publicProfilesCount,
+    favouritesCount,
+    feedbackCount,
+    newFeedbackCount,
+    reviewingFeedbackCount,
+    premiumUsersCount,
+    pendingStoriesCount,
+    upcomingEventsResult,
+    recentUsersResult,
+  ] = await Promise.all([
+    countRows(supabase.from("events").select("id", head)),
+    countRows(supabase.from("events").select("id", head).eq("verifie", true)),
+    countRows(supabase.from("events").select("id", head).not("AlaUne", "is", null)),
+    supabase.from("collections").select("is_active, is_auto"),
+    countRows(supabase.from("user_public").select("uid", head)),
+    countRows(supabase.from("favourite_events").select("id", head)),
+    countRows(supabase.from("feedback_entries").select("id", head)),
+    countRows(supabase.from("feedback_entries").select("id", head).eq("status", "new")),
+    countRows(supabase.from("feedback_entries").select("id", head).eq("status", "reviewing")),
+    countRows(supabase.from("users").select("uid", head).eq("premium", true)),
+    countRows(supabase.from("user_event_stories").select("event_id", head).eq("status", "pending")),
+    supabase
+      .from("events")
+      .select("id, slug, nomEvent, dateEvent, type_event, villeDepart, verifie, AlaUne")
+      .gte("dateEvent", today)
+      .order("dateEvent", { ascending: true })
+      .limit(8),
+    supabase
+      .from("user_public")
+      .select("uid, name, surname, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(8),
+  ]);
+
+  const collections = collectionsResult.data ?? [];
+  const collectionsCount = collections.length;
+  const activeCollectionsCount = collections.filter((collection) => collection.is_active).length;
+  const automaticCollectionsCount = collections.filter((collection) => collection.is_auto).length;
+  const pendingReviewCount = eventsCount - verifiedEventsCount;
+  const upcomingEvents = (upcomingEventsResult.data ?? []) as Array<{
+    id: number;
+    slug: string | null;
+    nomEvent: string | null;
+    dateEvent: string | null;
+    type_event: string | null;
+    villeDepart: string | null;
+    verifie: boolean;
+    AlaUne: number | null;
+  }>;
+  const recentUsers = (recentUsersResult.data ?? []) as AdminPublicUser[];
+
+  return (
+    <div className="space-y-6">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <MetricCard
+          label="Événements"
+          value={eventsCount}
+          detail={`${verifiedEventsCount} vérifiés · ${pendingReviewCount} à vérifier`}
+        />
+        <MetricCard
+          label="Collections"
+          value={collectionsCount}
+          detail={`${activeCollectionsCount} actives · ${automaticCollectionsCount} automatiques`}
+        />
+        <MetricCard
+          label="Profils publics"
+          value={publicProfilesCount}
+          detail="Profils visibles par la communauté"
+        />
+        <MetricCard
+          label="Favoris"
+          value={favouritesCount}
+          detail={`${featuredEventsCount} événements mis à la une`}
+        />
+        <MetricCard
+          label="Retours"
+          value={feedbackCount}
+          detail={`${newFeedbackCount} nouveaux · ${reviewingFeedbackCount} en cours`}
+        />
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
         <div className="space-y-6">
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <MetricCard
-              label="Événements"
-              value={eventsList.length}
-              detail={`${verifiedEventsCount} vérifiés · ${pendingReviewCount} à vérifier`}
-            />
-            <MetricCard
-              label="Collections"
-              value={collectionsWithCounts.length}
-              detail={`${activeCollectionsCount} actives · ${automaticCollectionsCount} automatiques`}
-            />
-            <MetricCard
-              label="Profils publics"
-              value={publicProfilesCount}
-              detail="Profils visibles par la communauté"
-            />
-            <MetricCard
-              label="Favoris"
-              value={favouritesCount}
-              detail={`${featuredEventsCount} événements mis à la une`}
-            />
-            <MetricCard
-              label="Retours"
-              value={feedbackEntries.length}
-              detail={`${newFeedbackCount} nouveaux · ${reviewingFeedbackCount} en cours`}
-            />
-          </section>
-
-          <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-            <div className="space-y-6">
-              <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-                      Accès rapide
-                    </p>
-                    <h3 className="mt-1 font-serif text-[24px] text-foreground">
-                      Espaces métier
-                    </h3>
-                  </div>
-                  <div className="text-right text-[13px] text-foreground/42">
-                    Navigation par onglets
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <QuickAccessCard
-                    href="/admin?tab=collections"
-                    label="Collections"
-                    value={`${activeCollectionsCount}/${collectionsWithCounts.length}`}
-                    detail="actives"
-                    description="Réordonner les sélections éditoriales et gérer leur contenu."
-                  />
-                  <QuickAccessCard
-                    href="/admin?tab=events"
-                    label="Événements"
-                    value={`${pendingReviewCount}`}
-                    detail="à vérifier"
-                    description="Ouvrir le catalogue complet pour créer, éditer ou supprimer."
-                  />
-                  <QuickAccessCard
-                    href="/admin?tab=users"
-                    label="Utilisateurs"
-                    value={`${premiumUsersCount}`}
-                    detail="premium"
-                    description="Retrouver les comptes applicatifs et gérer les abonnements."
-                  />
-                  <QuickAccessCard
-                    href="/admin?tab=stories"
-                    label="Récits"
-                    value={`${pendingStoriesCount}`}
-                    detail="à relire"
-                    description="Relire les récits avant qu'ils n'apparaissent sur les fiches."
-                  />
-                  <QuickAccessCard
-                    href="/admin?tab=feedback"
-                    label="Retours"
-                    value={`${newFeedbackCount}`}
-                    detail="nouveaux"
-                    description="Traiter les idées, bugs et feedbacks remontés depuis le header."
-                  />
-                </div>
+          <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
+                  Accès rapide
+                </p>
+                <h3 className="mt-1 font-serif text-[24px] text-foreground">
+                  Espaces métier
+                </h3>
               </div>
-
-              <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-                      Events
-                    </p>
-                    <h3 className="mt-1 font-serif text-[24px] text-foreground">
-                      Prochains événements
-                    </h3>
-                  </div>
-                  <Link
-                    href="/admin?tab=events"
-                    className="text-[13px] font-semibold text-coral transition-colors hover:text-coral-dark"
-                  >
-                    Ouvrir le catalogue
-                  </Link>
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  {upcomingEvents.length > 0 ? (
-                    upcomingEvents.map((event) => (
-                      <Link
-                        key={event.id}
-                        href={`/event/${(event as { slug?: string | null }).slug || makeLegacyEventSlug(event.id, event.nomEvent)}`}
-                        className="flex flex-col gap-3 rounded-[22px] border border-foreground/8 bg-white/70 px-4 py-4 transition-colors hover:border-coral/20 hover:bg-white"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="truncate text-[15px] font-semibold text-foreground">
-                              {event.nomEvent || "Sans nom"}
-                            </p>
-                            <p className="mt-1 text-[13px] text-foreground/48">
-                              {formatAdminDate(event.dateEvent)}
-                              {event.villeDepart ? ` · ${event.villeDepart}` : ""}
-                            </p>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <StatusPill active={event.verifie}>
-                              {event.verifie ? "Vérifié" : "À vérifier"}
-                            </StatusPill>
-                            {event.AlaUne !== null && (
-                              <span className="rounded-full bg-coral/12 px-2.5 py-1 text-[13px] font-semibold text-coral">
-                                À la une
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {event.type_event && (
-                          <p className="text-[12px] uppercase tracking-[0.14em] text-foreground/36">
-                            {event.type_event}
-                          </p>
-                        )}
-                      </Link>
-                    ))
-                  ) : (
-                    <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/50 px-6 py-12 text-center">
-                      <p className="font-medium text-foreground">Aucun événement à venir</p>
-                      <p className="mt-1 text-sm text-foreground/45">
-                        Les prochains événements apparaîtront ici.
-                      </p>
-                    </div>
-                  )}
-                </div>
+              <div className="text-right text-[13px] text-foreground/42">
+                Navigation par onglets
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-                      Users
-                    </p>
-                    <h3 className="mt-1 font-serif text-[24px] text-foreground">
-                      Profils récemment mis à jour
-                    </h3>
-                  </div>
-                  <Link
-                    href="/admin?tab=users"
-                    className="text-[13px] font-semibold text-coral transition-colors hover:text-coral-dark"
-                  >
-                    Ouvrir les comptes
-                  </Link>
-                </div>
+            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <QuickAccessCard
+                href="/admin?tab=collections"
+                label="Collections"
+                value={`${activeCollectionsCount}/${collectionsCount}`}
+                detail="actives"
+                description="Réordonner les sélections éditoriales et gérer leur contenu."
+              />
+              <QuickAccessCard
+                href="/admin?tab=events"
+                label="Événements"
+                value={`${pendingReviewCount}`}
+                detail="à vérifier"
+                description="Ouvrir le catalogue complet pour créer, éditer ou supprimer."
+              />
+              <QuickAccessCard
+                href="/admin?tab=users"
+                label="Utilisateurs"
+                value={`${premiumUsersCount}`}
+                detail="premium"
+                description="Retrouver les comptes applicatifs et gérer les abonnements."
+              />
+              <QuickAccessCard
+                href="/admin?tab=stories"
+                label="Récits"
+                value={`${pendingStoriesCount}`}
+                detail="à relire"
+                description="Relire les récits avant qu'ils n'apparaissent sur les fiches."
+              />
+              <QuickAccessCard
+                href="/admin?tab=feedback"
+                label="Retours"
+                value={`${newFeedbackCount}`}
+                detail="nouveaux"
+                description="Traiter les idées, bugs et feedbacks remontés depuis le header."
+              />
+            </div>
+          </div>
 
-                <div className="mt-5 space-y-3">
-                  {recentUsers.length > 0 ? (
-                    recentUsers.map((recentUser) => (
-                      <div
-                        key={recentUser.uid}
-                        className="rounded-[20px] border border-foreground/8 bg-white/68 px-4 py-3"
-                      >
-                        <p className="text-[14px] font-semibold text-foreground">
-                          {formatAdminUserName(recentUser)}
+          <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
+                  Events
+                </p>
+                <h3 className="mt-1 font-serif text-[24px] text-foreground">
+                  Prochains événements
+                </h3>
+              </div>
+              <Link
+                href="/admin?tab=events"
+                className="text-[13px] font-semibold text-coral transition-colors hover:text-coral-dark"
+              >
+                Ouvrir le catalogue
+              </Link>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {upcomingEvents.length > 0 ? (
+                upcomingEvents.map((event) => (
+                  <Link
+                    key={event.id}
+                    href={`/event/${event.slug || makeLegacyEventSlug(event.id, event.nomEvent)}`}
+                    className="flex flex-col gap-3 rounded-[22px] border border-foreground/8 bg-white/70 px-4 py-4 transition-colors hover:border-coral/20 hover:bg-white"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-semibold text-foreground">
+                          {event.nomEvent || "Sans nom"}
                         </p>
-                        <p className="mt-1 text-[13px] text-foreground/45">
-                          Mis à jour le {formatAdminDate(recentUser.updated_at)}
+                        <p className="mt-1 text-[13px] text-foreground/48">
+                          {formatAdminDate(event.dateEvent)}
+                          {event.villeDepart ? ` · ${event.villeDepart}` : ""}
                         </p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="rounded-[22px] border border-dashed border-foreground/12 bg-white/50 px-4 py-6 text-sm text-foreground/45">
-                      Aucun profil public accessible pour le moment.
+                      <div className="flex shrink-0 items-center gap-2">
+                        <StatusPill active={event.verifie}>
+                          {event.verifie ? "Vérifié" : "À vérifier"}
+                        </StatusPill>
+                        {event.AlaUne !== null && (
+                          <span className="rounded-full bg-coral/12 px-2.5 py-1 text-[13px] font-semibold text-coral">
+                            À la une
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  )}
+                    {event.type_event && (
+                      <p className="text-[12px] uppercase tracking-[0.14em] text-foreground/36">
+                        {event.type_event}
+                      </p>
+                    )}
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-[24px] border border-dashed border-foreground/12 bg-white/50 px-6 py-12 text-center">
+                  <p className="font-medium text-foreground">Aucun événement à venir</p>
+                  <p className="mt-1 text-sm text-foreground/45">
+                    Les prochains événements apparaîtront ici.
+                  </p>
                 </div>
-              </div>
-
-              <div className="rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(248,239,228,0.92))] p-6 shadow-[var(--shadow-sm)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
-                  Sécurité
-                </p>
-                <h3 className="mt-1 font-serif text-[24px] text-foreground">Accès verrouillé</h3>
-                <p className="mt-3 text-[14px] leading-6 text-foreground/62">
-                  `/admin` est contrôlé à deux niveaux: `proxy.ts` redirige les non-admins
-                  hors du back-office, et le layout serveur bloque aussi tout rendu côté
-                  App Router.
-                </p>
-              </div>
+              )}
             </div>
-          </section>
+          </div>
         </div>
-      )}
 
-      {activeTab === "collections" && (
-        <AdminSectionShell
-          eyebrow="Gestion éditoriale"
-          title="Collections"
-          description="Retrouvez ici toute la gestion des collections sans être noyé par les événements et les comptes."
-          stats={[
-            { label: "Total", value: collectionsWithCounts.length.toString() },
-            { label: "Actives", value: activeCollectionsCount.toString() },
-            { label: "Automatiques", value: automaticCollectionsCount.toString() },
-          ]}
-        >
-          <AdminCollectionsClient collections={collectionsWithCounts} events={eventsList} />
-        </AdminSectionShell>
-      )}
+        <div className="space-y-6">
+          <div className="rounded-[28px] border border-white/60 bg-white/72 p-6 shadow-[var(--shadow-sm)]">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
+                  Users
+                </p>
+                <h3 className="mt-1 font-serif text-[24px] text-foreground">
+                  Profils récemment mis à jour
+                </h3>
+              </div>
+              <Link
+                href="/admin?tab=users"
+                className="text-[13px] font-semibold text-coral transition-colors hover:text-coral-dark"
+              >
+                Ouvrir les comptes
+              </Link>
+            </div>
 
-      {activeTab === "proposals" && (
-        <AdminSectionShell
-          eyebrow="Modération"
-          title="Propositions d’événements"
-          description="Modifiez les informations et les parcours avant de décider de leur publication."
-          stats={[
-            { label: "Total", value: proposals.length.toString() },
-            { label: "En attente", value: proposals.filter(({ contact }) => contact.review_status === "pending").length.toString() },
-            { label: "Refusées", value: proposals.filter(({ contact }) => contact.review_status === "rejected").length.toString() },
-          ]}
-        >
-          <AdminProposalFeatureToggle enabled={eventProposalFeatureResult.data?.enabled === true} />
-          <AdminProposalsClient proposals={proposals} organizers={organisateurs} />
-        </AdminSectionShell>
-      )}
+            <div className="mt-5 space-y-3">
+              {recentUsers.length > 0 ? (
+                recentUsers.map((recentUser) => (
+                  <div
+                    key={recentUser.uid}
+                    className="rounded-[20px] border border-foreground/8 bg-white/68 px-4 py-3"
+                  >
+                    <p className="text-[14px] font-semibold text-foreground">
+                      {formatAdminUserName(recentUser)}
+                    </p>
+                    <p className="mt-1 text-[13px] text-foreground/45">
+                      Mis à jour le {formatAdminDate(recentUser.updated_at)}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[22px] border border-dashed border-foreground/12 bg-white/50 px-4 py-6 text-sm text-foreground/45">
+                  Aucun profil public accessible pour le moment.
+                </div>
+              )}
+            </div>
+          </div>
 
-      {activeTab === "events" && (
-        <AdminSectionShell
-          eyebrow="Catalogue"
-          title="Événements"
-          description="Concentrez-vous sur le catalogue complet, la modération et l'édition des fiches."
-          stats={[
-            { label: "Total", value: eventsList.length.toString() },
-            { label: "Vérifiés", value: verifiedEventsCount.toString() },
-            { label: "À vérifier", value: pendingReviewCount.toString() },
-          ]}
-        >
-          <AdminEventsClient
-            events={allEvents}
-            organisateurs={organisateurs}
-            submissionContacts={eventSubmissionContacts}
-          />
-        </AdminSectionShell>
-      )}
-
-      {activeTab === "users" && (
-        <AdminSectionShell
-          eyebrow="Comptes"
-          title="Utilisateurs"
-          description="Travaillez sur les comptes et abonnements dans un espace dédié, sans interférer avec le reste du back-office."
-          stats={[
-            { label: "Comptes", value: allUsers.length.toString() },
-            { label: "Premium", value: premiumUsersCount.toString() },
-            { label: "Profils publics", value: publicProfilesCount.toString() },
-          ]}
-        >
-          <AdminUsersClient users={allUsers} currentAdminId={user.id} />
-        </AdminSectionShell>
-      )}
-
-      {activeTab === "stories" && (
-        <AdminSectionShell
-          eyebrow="Modération"
-          title="Récits d'expérience"
-          description="Un récit reste invisible sur la fiche de son évènement tant qu'il n'est pas publié ici."
-          stats={[
-            { label: "Total", value: eventStories.length.toString() },
-            { label: "En attente", value: pendingStoriesCount.toString() },
-            { label: "Publiés", value: approvedStoriesCount.toString() },
-            { label: "Refusés", value: rejectedStoriesCount.toString() },
-          ]}
-        >
-          <AdminStoriesClient stories={eventStories} />
-        </AdminSectionShell>
-      )}
-
-      {activeTab === "feedback" && (
-        <AdminSectionShell
-          eyebrow="Produit"
-          title="Retours utilisateurs"
-          description="Traitez les bugs, idées et feedbacks collectés depuis l'interface publique dans un espace dédié."
-          stats={[
-            { label: "Total", value: feedbackEntries.length.toString() },
-            { label: "Nouveaux", value: newFeedbackCount.toString() },
-            { label: "En cours", value: reviewingFeedbackCount.toString() },
-            { label: "Clôturés", value: closedFeedbackCount.toString() },
-          ]}
-        >
-          <AdminFeedbackClient entries={feedbackEntries} />
-        </AdminSectionShell>
-      )}
+          <div className="rounded-[28px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(248,239,228,0.92))] p-6 shadow-[var(--shadow-sm)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/38">
+              Sécurité
+            </p>
+            <h3 className="mt-1 font-serif text-[24px] text-foreground">Accès verrouillé</h3>
+            <p className="mt-3 text-[14px] leading-6 text-foreground/62">
+              `/admin` est contrôlé à deux niveaux: `proxy.ts` redirige les non-admins
+              hors du back-office, et le layout serveur bloque aussi tout rendu côté
+              App Router.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
+  );
+}
+
+async function CollectionsTab({ supabase }: { supabase: AdminSupabase }) {
+  const [collectionsResult, eventsResult, popularEventsResult] = await Promise.all([
+    supabase
+      .from("collections")
+      .select("*, collection_events(event_id, order)")
+      .order("order", { ascending: true }),
+    fetchAllRows((from, to) =>
+      supabase
+        .from("events")
+        .select("id, nomEvent, dateEvent, type_event, villeDepart, verifie, AlaUne")
+        .order("dateEvent", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to)
+    ),
+    supabase.rpc("get_popular_events", { p_limit: POPULAR_COLLECTION_LIMIT }),
+  ]);
+
+  const collections = collectionsResult.data ?? [];
+  const allEvents = (eventsResult.data ?? []) as Event[];
+  const eventById = new Map(allEvents.map((event) => [event.id as number, event]));
+  const popularRows = normalizePopularRows(popularEventsResult.data);
+  const manualCollectionEventIds = collections.flatMap((collection) =>
+    Array.isArray(collection.collection_events)
+      ? (collection.collection_events as Array<{ event_id: number }>).map((ce) => ce.event_id)
+      : []
+  );
+  const collectionEventIds = [
+    ...new Set([...manualCollectionEventIds, ...popularRows.map((row) => row.event_id)]),
+  ];
+  const favouriteCountsByEventId = new Map<number, number>(
+    popularRows.map((row) => [row.event_id, row.fav_count])
+  );
+
+  if (collectionEventIds.length > 0) {
+    const { data: favouriteCountRows } = await supabase.rpc("get_event_favourite_counts", {
+      p_event_ids: collectionEventIds,
+    });
+
+    for (const row of normalizeFavouriteCountRows(favouriteCountRows)) {
+      favouriteCountsByEventId.set(row.event_id, row.fav_count);
+    }
+  }
+
+  const collectionsWithCounts: AdminCollection[] = collections.map((c) => {
+    const isAuto = c.is_auto as boolean;
+    const autoType = c.auto_type as string | null;
+    const manualEventIds = Array.isArray(c.collection_events)
+      ? [...(c.collection_events as Array<{ event_id: number; order: number | null }>)]
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          .map((ce) => ce.event_id)
+      : [];
+    const eventIds = isAuto && autoType === "popular"
+      ? popularRows.map((row) => row.event_id).filter((id) => eventById.has(id))
+      : manualEventIds;
+    const events = buildAdminCollectionEvents(eventIds, eventById, favouriteCountsByEventId);
+
+    return {
+      id: c.id as string,
+      name: c.name as string,
+      description: c.description as string | null,
+      order: c.order as number,
+      is_auto: isAuto,
+      is_active: (c.is_active ?? false) as boolean,
+      auto_type: autoType,
+      eventCount: events.length,
+      eventIds,
+      events,
+    };
+  });
+
+  const eventsList: AdminEvent[] = allEvents.map((e) => ({
+    id: e.id as number,
+    name: (e.nomEvent || "Sans nom") as string,
+    date: e.dateEvent as string | null,
+    type: e.type_event as string | null,
+    city: e.villeDepart as string | null,
+    verified: Boolean(e.verifie),
+    featuredOrder: (e.AlaUne ?? null) as number | null,
+    favouriteCount: favouriteCountsByEventId.get(e.id as number) ?? 0,
+  }));
+
+  const activeCollectionsCount = collectionsWithCounts.filter((collection) => collection.is_active).length;
+  const automaticCollectionsCount = collectionsWithCounts.filter((collection) => collection.is_auto).length;
+
+  return (
+    <AdminSectionShell
+      eyebrow="Gestion éditoriale"
+      title="Collections"
+      description="Retrouvez ici toute la gestion des collections sans être noyé par les événements et les comptes."
+      stats={[
+        { label: "Total", value: collectionsWithCounts.length.toString() },
+        { label: "Actives", value: activeCollectionsCount.toString() },
+        { label: "Automatiques", value: automaticCollectionsCount.toString() },
+      ]}
+    >
+      <AdminCollectionsClient collections={collectionsWithCounts} events={eventsList} />
+    </AdminSectionShell>
+  );
+}
+
+async function ProposalsTab({ supabase }: { supabase: AdminSupabase }) {
+  const adminStorage = createAdminClient();
+  const [contacts, organisateurs, eventProposalFeatureResult] = await Promise.all([
+    fetchSubmissionContacts(supabase),
+    fetchOrganisateurs(supabase),
+    adminStorage
+      .from("app_features")
+      .select("enabled")
+      .eq("key", EVENT_PROPOSALS_FEATURE_KEY)
+      .maybeSingle(),
+  ]);
+
+  const eventIds = [...new Set(contacts.map((contact) => contact.event_id))];
+  const [events, routes] = await Promise.all([
+    fetchByIds<Event, number>(eventIds, (chunk, from, to) =>
+      supabase.from("events").select("*").in("id", chunk).order("id", { ascending: true }).range(from, to)
+    ),
+    fetchByIds<SousEvent, number>(eventIds, (chunk, from, to) =>
+      supabase
+        .from("sous_events")
+        .select("*")
+        .in("event_id", chunk)
+        .order("sousEventID", { ascending: true })
+        .range(from, to)
+    ),
+  ]);
+  const eventById = new Map(events.map((event) => [event.id as number, event]));
+  const imagePreviewUrlByEventId = await signEventImages(adminStorage, events);
+
+  const proposals: AdminProposal[] = contacts
+    .filter((contact) => eventById.has(contact.event_id))
+    .map((contact) => {
+      const event = eventById.get(contact.event_id)!;
+      return {
+        event,
+        contact,
+        routes: routes.filter((route) => route.event_id === contact.event_id),
+        imagePreviewUrl: imagePreviewUrlByEventId.get(event.id as number) ?? null,
+      };
+    });
+
+  return (
+    <AdminSectionShell
+      eyebrow="Modération"
+      title="Propositions d’événements"
+      description="Modifiez les informations et les parcours avant de décider de leur publication."
+      stats={[
+        { label: "Total", value: proposals.length.toString() },
+        { label: "En attente", value: proposals.filter(({ contact }) => contact.review_status === "pending").length.toString() },
+        { label: "Refusées", value: proposals.filter(({ contact }) => contact.review_status === "rejected").length.toString() },
+      ]}
+    >
+      <AdminProposalFeatureToggle enabled={eventProposalFeatureResult.data?.enabled === true} />
+      <AdminProposalsClient proposals={proposals} organizers={organisateurs} />
+    </AdminSectionShell>
+  );
+}
+
+// Une requête de signature par bucket (createSignedUrls) au lieu d'une par image.
+async function signEventImages(
+  adminStorage: ReturnType<typeof createAdminClient>,
+  events: Event[]
+) {
+  const urlByEventId = new Map<number, string | null>();
+  const pathsByBucket = new Map<string, Array<{ eventId: number; objectPath: string }>>();
+
+  for (const event of events) {
+    const parsedImage = parseSupabasePublicStorageUrl(event.image);
+    if (!parsedImage) {
+      urlByEventId.set(event.id as number, event.image ?? null);
+      continue;
+    }
+    const entries = pathsByBucket.get(parsedImage.bucket) ?? [];
+    entries.push({ eventId: event.id as number, objectPath: parsedImage.objectPath });
+    pathsByBucket.set(parsedImage.bucket, entries);
+  }
+
+  await Promise.all(
+    [...pathsByBucket].map(async ([bucket, entries]) => {
+      const { data } = await adminStorage.storage
+        .from(bucket)
+        .createSignedUrls(entries.map((entry) => entry.objectPath), 3600);
+      entries.forEach((entry, index) => {
+        urlByEventId.set(entry.eventId, data?.[index]?.signedUrl ?? null);
+      });
+    })
+  );
+
+  return urlByEventId;
+}
+
+async function EventsTab({ supabase }: { supabase: AdminSupabase }) {
+  const [eventsResult, organisateurs, submissionContacts] = await Promise.all([
+    fetchAllRows((from, to) =>
+      supabase
+        .from("events")
+        .select("*")
+        .order("dateEvent", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to)
+    ),
+    fetchOrganisateurs(supabase),
+    fetchSubmissionContacts(supabase),
+  ]);
+  const allEvents = (eventsResult.data ?? []) as Event[];
+  const verifiedEventsCount = allEvents.filter((event) => event.verifie).length;
+
+  return (
+    <AdminSectionShell
+      eyebrow="Catalogue"
+      title="Événements"
+      description="Concentrez-vous sur le catalogue complet, la modération et l'édition des fiches."
+      stats={[
+        { label: "Total", value: allEvents.length.toString() },
+        { label: "Vérifiés", value: verifiedEventsCount.toString() },
+        { label: "À vérifier", value: (allEvents.length - verifiedEventsCount).toString() },
+      ]}
+    >
+      <AdminEventsClient
+        events={allEvents}
+        organisateurs={organisateurs}
+        submissionContacts={submissionContacts}
+      />
+    </AdminSectionShell>
+  );
+}
+
+async function UsersTab({
+  supabase,
+  currentAdminId,
+}: {
+  supabase: AdminSupabase;
+  currentAdminId: string;
+}) {
+  const [usersResult, publicProfilesCount] = await Promise.all([
+    fetchAllRows((from, to) =>
+      supabase
+        .from("users")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .order("uid", { ascending: true })
+        .range(from, to)
+    ),
+    countRows(supabase.from("user_public").select("uid", { count: "exact", head: true })),
+  ]);
+  const allUsers = (usersResult.data ?? []) as AdminAppUser[];
+  const premiumUsersCount = allUsers.filter((userRecord) => userRecord.premium).length;
+
+  return (
+    <AdminSectionShell
+      eyebrow="Comptes"
+      title="Utilisateurs"
+      description="Travaillez sur les comptes et abonnements dans un espace dédié, sans interférer avec le reste du back-office."
+      stats={[
+        { label: "Comptes", value: allUsers.length.toString() },
+        { label: "Premium", value: premiumUsersCount.toString() },
+        { label: "Profils publics", value: publicProfilesCount.toString() },
+      ]}
+    >
+      <AdminUsersClient users={allUsers} currentAdminId={currentAdminId} />
+    </AdminSectionShell>
+  );
+}
+
+async function StoriesTab({ supabase }: { supabase: AdminSupabase }) {
+  // Les récits se lisent en tant qu'admin : c'est la policy de modération
+  // (20260905110000) qui ouvre la table au-delà de sa seule autrice.
+  const storiesResult = await fetchAllRows((from, to) =>
+    supabase
+      .from("user_event_stories")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("user_id", { ascending: true })
+      .order("event_id", { ascending: true })
+      .range(from, to)
+  );
+  const storyRows = (storiesResult.data ?? []) as UserEventStory[];
+
+  // Le récit ne porte que deux identifiants ; l'évènement et l'autrice sont
+  // recomposés ici. `user_event_stories.user_id` pointe sur `auth.users` et
+  // non sur `public.users` : PostgREST ne sait pas les embarquer.
+  const [events, authors] = await Promise.all([
+    fetchByIds<Pick<Event, "id" | "nomEvent" | "slug">, number>(
+      [...new Set(storyRows.map((row) => row.event_id))],
+      (chunk, from, to) =>
+        supabase
+          .from("events")
+          .select("id, nomEvent, slug")
+          .in("id", chunk)
+          .order("id", { ascending: true })
+          .range(from, to)
+    ),
+    fetchByIds<Pick<AdminAppUser, "uid" | "name" | "surname" | "email">, string>(
+      [...new Set(storyRows.map((row) => row.user_id))],
+      (chunk, from, to) =>
+        supabase
+          .from("users")
+          .select("uid, name, surname, email")
+          .in("uid", chunk)
+          .order("uid", { ascending: true })
+          .range(from, to)
+    ),
+  ]);
+  const eventById = new Map(events.map((event) => [event.id as number, event]));
+  const userByUid = new Map(authors.map((row) => [row.uid, row]));
+
+  const eventStories: AdminStory[] = storyRows.map((row) => {
+    const event = eventById.get(row.event_id);
+    const author = userByUid.get(row.user_id);
+    const authorName = [author?.name, author?.surname].filter(Boolean).join(" ").trim();
+
+    return {
+      userId: row.user_id,
+      eventId: row.event_id,
+      eventName: (event?.nomEvent as string | null) || `Évènement ${row.event_id}`,
+      eventSlug: (event?.slug as string | null) ?? null,
+      authorName: authorName || `Membre ${row.user_id.slice(0, 8)}`,
+      authorEmail: author?.email ?? null,
+      story: row.story,
+      storyUrl: row.story_url,
+      status: row.status,
+      createdAt: row.created_at,
+      reviewedAt: row.reviewed_at,
+    };
+  });
+  const countStatus = (status: string) =>
+    eventStories.filter((story) => story.status === status).length.toString();
+
+  return (
+    <AdminSectionShell
+      eyebrow="Modération"
+      title="Récits d'expérience"
+      description="Un récit reste invisible sur la fiche de son évènement tant qu'il n'est pas publié ici."
+      stats={[
+        { label: "Total", value: eventStories.length.toString() },
+        { label: "En attente", value: countStatus("pending") },
+        { label: "Publiés", value: countStatus("approved") },
+        { label: "Refusés", value: countStatus("rejected") },
+      ]}
+    >
+      <AdminStoriesClient stories={eventStories} />
+    </AdminSectionShell>
+  );
+}
+
+async function FeedbackTab({ supabase }: { supabase: AdminSupabase }) {
+  const feedbackResult = await fetchAllRows((from, to) =>
+    supabase
+      .from("feedback_entries")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
+  const feedbackEntries = (feedbackResult.data ?? []) as FeedbackEntry[];
+  const countStatus = (status: string) =>
+    feedbackEntries.filter((entry) => entry.status === status).length.toString();
+
+  return (
+    <AdminSectionShell
+      eyebrow="Produit"
+      title="Retours utilisateurs"
+      description="Traitez les bugs, idées et feedbacks collectés depuis l'interface publique dans un espace dédié."
+      stats={[
+        { label: "Total", value: feedbackEntries.length.toString() },
+        { label: "Nouveaux", value: countStatus("new") },
+        { label: "En cours", value: countStatus("reviewing") },
+        { label: "Clôturés", value: countStatus("closed") },
+      ]}
+    >
+      <AdminFeedbackClient entries={feedbackEntries} />
+    </AdminSectionShell>
   );
 }
 

@@ -45,10 +45,11 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Refresh the auth token
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Rafraîchit le token si besoin. `getClaims` vérifie la signature du JWT en
+  // local (JWKS mis en cache) au lieu d'un aller-retour vers Supabase Auth à
+  // chaque requête ; il retombe sur `getUser()` si le projet signe en HS256.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub } : null;
 
   const pathname = request.nextUrl.pathname;
   const currentPath = `${pathname}${request.nextUrl.search}`;

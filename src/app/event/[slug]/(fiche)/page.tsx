@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
 import { sanitizeReturnTo } from "@/lib/utils/navigation";
 import { getEventPath, getEventUrl, SITE_NAME } from "@/lib/seo";
-import { parseLegacyEventId } from "@/lib/utils/slugify";
+import { getEventBySlug } from "@/lib/events/get-event-by-slug";
 import { getAppStorageImageUrl } from "@/lib/storage/urls";
 import { EventFiche } from "@/components/events/event-fiche";
 
@@ -13,8 +12,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
-  const event = await fetchEventForMetadata(supabase, slug);
+  const { event } = await getEventBySlug(slug);
 
   if (!event) return { title: "Événement non trouvé" };
 
@@ -67,33 +65,6 @@ export default async function EventPage({ params, searchParams }: PageProps) {
   ) ?? "/";
 
   return <EventFiche slug={slug} returnTo={returnTo} />;
-}
-
-async function fetchEventForMetadata(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  slug: string
-) {
-  const baseSelect = "id, slug, nomEvent, dateEvent, villeDepart, paysDepart, description, image";
-  const { data: event } = await supabase
-    .from("events")
-    .select(baseSelect)
-    .eq("slug", slug)
-    .eq("verifie", true)
-    .maybeSingle();
-
-  if (event) return event;
-
-  const legacyId = parseLegacyEventId(slug);
-  if (legacyId == null) return null;
-
-  const { data: legacyEvent } = await supabase
-    .from("events")
-    .select(baseSelect)
-    .eq("id", legacyId)
-    .eq("verifie", true)
-    .maybeSingle();
-
-  return legacyEvent;
 }
 
 function buildMetadataDescription(event: {
