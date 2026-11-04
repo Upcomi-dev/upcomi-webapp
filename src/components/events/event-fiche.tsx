@@ -1,10 +1,8 @@
-import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, ChevronLeft, Euro, ExternalLink, Flag, MapPin } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
-import { getEventBackLabel, sanitizeReturnTo } from "@/lib/utils/navigation";
+import type { createClient } from "@/lib/supabase/server";
 import { getLocalDateKey } from "@/lib/utils/event-dates";
 import { getEventKeyDates } from "@/lib/utils/event-key-dates";
 import { findNearestStation } from "@/lib/utils/stations";
@@ -12,11 +10,10 @@ import { fetchEventInclusionMeasures } from "@/lib/events/inclusion-measures";
 import { fetchEventRegistrationMeasures } from "@/lib/events/registration-measures";
 import { fetchEventPromoCode } from "@/lib/events/promo-code";
 import { getEventFactTags } from "@/lib/events/facts";
-import { getEventPath, getEventUrl, serializeJsonLd, SITE_NAME } from "@/lib/seo";
-import { parseLegacyEventId } from "@/lib/utils/slugify";
+import { getEventBySlug } from "@/lib/events/get-event-by-slug";
 import { getEventTypeColor } from "@/lib/types/database";
 import { getAppStorageImage, getAppStorageImageUrl } from "@/lib/storage/urls";
-import type { Event, SousEvent } from "@/lib/types/database";
+import type { SousEvent } from "@/lib/types/database";
 import { ShareButton } from "@/components/events/share-button";
 import { ExternalRegistrationLink } from "@/components/events/external-registration-link";
 import { EventActions } from "@/components/events/event-actions";
@@ -32,110 +29,42 @@ import { MixiteBadge } from "@/components/events/mixite-badge";
 import { AppFooter } from "@/components/layout/app-footer";
 import { TopNav } from "@/components/layout/top-nav";
 
-interface PageProps {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+import { getEventBackLabel } from "@/lib/utils/navigation";
+import { getEventPath, getEventUrl, serializeJsonLd } from "@/lib/seo";
+
+interface EventFicheProps {
+  slug: string;
+  returnTo: string;
+  /** Rendu dans la popup ouverte depuis les favoris : sans en-tête, pied de
+      page, lien retour ni barre collante, que la popup remplace. */
+  inModal?: boolean;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const supabase = await createClient();
-  const event = await fetchEventForMetadata(supabase, slug);
-
-  if (!event) return { title: "Événement non trouvé" };
-
-  const title = event.nomEvent || "Événement";
-  const description = buildMetadataDescription(event);
-  const metadataImage = getAppStorageImageUrl(event.image, { absolute: true });
-  const canonicalPath = getEventPath(event.slug);
-  const canonicalUrl = getEventUrl(event.slug);
-
-  return {
-    title,
-    description,
-    alternates: {
-      canonical: canonicalPath,
-    },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-image-preview": "large",
-        "max-snippet": -1,
-        "max-video-preview": -1,
-      },
-    },
-    openGraph: {
-      title: event.nomEvent || "Événement Upcomi",
-      description,
-      url: canonicalUrl,
-      siteName: SITE_NAME,
-      images: metadataImage ? [{ url: metadataImage }] : [],
-      locale: "fr_FR",
-      type: "website",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: event.nomEvent || "Événement Upcomi",
-      description,
-      images: metadataImage ? [metadataImage] : [],
-    },
-  };
-}
-
-export default async function EventPage({ params, searchParams }: PageProps) {
-  const { slug } = await params;
-  const query = await searchParams;
-  const returnTo = sanitizeReturnTo(
-    typeof query.returnTo === "string" ? query.returnTo : null
-  ) ?? "/";
+/** Fiche d'un évènement, partagée par la page `/event/[slug]` et la popup. */
+export async function EventFiche({ slug, returnTo, inModal = false }: EventFicheProps) {
   const backLabel = getEventBackLabel(returnTo);
 
-  const supabase = await createClient();
-
-  const { data: eventData, error: eventError } = await supabase
-    .from("events")
-    .select("*")
-    .eq("slug", slug)
-    .eq("verifie", true)
-    .maybeSingle();
-
-  if (!eventData) {
-    const legacyId = parseLegacyEventId(slug);
-    if (legacyId != null) {
-      const legacyResult = await supabase
-        .from("events")
-        .select("slug")
-        .eq("id", legacyId)
-        .eq("verifie", true)
-        .maybeSingle();
-
-      if (legacyResult.data?.slug) {
-        permanentRedirect(getEventPath(legacyResult.data.slug));
-      }
-    }
-  }
-
-  if (eventError || !eventData) notFound();
-
-  const event = eventData as Event;
-  const { data: sousEventsData } = await supabase
-      .from("sous_events")
-      .select("*")
-      .eq("event_id", event.id)
-      .order("distance", { ascending: true });
+  // Lecture partagée avec `generateMetadata` et le layout (une requête par
+  // rendu). Sur `/event/[slug]`, introuvable et ancien slug sont déjà traités
+  // par le layout ; ces gardes servent à la popup, qui n'y passe pas.
+  const { supabase, event, isLegacy } = await getEventBySlug(slug);
+  if (!event) notFound();
+  if (isLegacy) permanentRedirect(getEventPath(event.slug));
 
   const eventImage = getAppStorageImage(event.image);
-  const sousEvents = (sousEventsData as SousEvent[]) || [];
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = event.slug;
   const canonicalUrl = getEventUrl(eventSlug);
   // Le compteur d'intéressé·es n'est plus lu ici : il fait partie du bloc
   // « qui est intéressé », traité dans sa propre brique.
-  const [relatedEvents, inclusionMeasures, registrationMeasures, promoCode] =
+  // Tout ne dépend que de l'id : une seule vague de requêtes en parallèle.
+  const [sousEventsResult, relatedEvents, inclusionMeasures, registrationMeasures, promoCode] =
     await Promise.all([
+      supabase
+        .from("sous_events")
+        .select("*")
+        .eq("event_id", event.id)
+        .order("distance", { ascending: true }),
       event.organisateur
         ? fetchOrganizerEvents(supabase, event.organisateur, event.id)
         : Promise.resolve([]),
@@ -143,6 +72,7 @@ export default async function EventPage({ params, searchParams }: PageProps) {
       fetchEventRegistrationMeasures(supabase, event.id),
       fetchEventPromoCode(supabase, event.id),
     ]);
+  const sousEvents = (sousEventsResult.data as SousEvent[] | null) ?? [];
 
   // Gare la plus proche du départ, calculée au rendu depuis le référentiel
   // embarqué : venir sans voiture est un critère de décision relevé en test.
@@ -228,32 +158,43 @@ export default async function EventPage({ params, searchParams }: PageProps) {
     // fiche : le bloc du haut, celui de la colonne de droite, celui de la barre
     // collante et la feuille de personnes lisent la même liste.
     <InterestedPeopleProvider eventId={event.id}>
-      <div className="flex min-h-screen flex-col">
+      <div className={inModal ? "flex flex-col" : "flex min-h-screen flex-col"}>
       <EventViewTracker
         eventId={event.id}
         eventType={event.type_event}
         bikeType={event.bike_type}
         organizer={event.organisateur}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
-      />
-
-      <TopNav />
+      {!inModal && (
+        <>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+          />
+          <TopNav />
+        </>
+      )}
 
       {/* La barre collante en mobile est là quelle que soit la présence d'un
           lien d'inscription — « Ça m'intéresse » y figure toujours : la page
           lui réserve sa place en bas à toutes les fiches. */}
-      <div className="mx-auto w-full max-w-[1040px] flex-1 px-4 pt-8 pb-40 md:px-6 lg:pb-8">
+      <div
+        className={
+          inModal
+            ? "w-full px-4 pt-5 pb-8 md:px-8 md:pt-8"
+            : "mx-auto w-full max-w-[1040px] flex-1 px-4 pt-8 pb-40 md:px-6 lg:pb-8"
+        }
+      >
         {/* Back */}
-        <Link
-          href={returnTo}
-          className="mb-2 inline-flex items-center gap-1.5 py-1 text-[13px] text-foreground/55 transition-colors hover:text-foreground"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          {backLabel}
-        </Link>
+        {!inModal && (
+          <Link
+            href={returnTo}
+            className="mb-2 inline-flex items-center gap-1.5 py-1 text-[13px] text-foreground/55 transition-colors hover:text-foreground"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            {backLabel}
+          </Link>
+        )}
 
         {/* Hero — le titre est dans l'image, les repères (durée, distance,
             dénivelé) juste au-dessus, dans le flux : posés à un offset
@@ -537,35 +478,40 @@ export default async function EventPage({ params, searchParams }: PageProps) {
         </div>
       </div>
 
-      <AppFooter />
+      {!inModal && <AppFooter />}
 
       {/* Barre collante en mobile : les mêmes actions qu'en haut de fiche,
           à portée quel que soit l'endroit où on est dans la lecture. */}
-      <StickyActionBar>
-        <div
-          className="mx-auto w-full max-w-[1040px] px-4 pt-3 md:px-6"
-          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
-        >
+      {/* La popup défile dans son propre conteneur : la barre, qui suit le
+          défilement de la fenêtre, n'y apparaîtrait jamais. Les actions du
+          haut de fiche restent là. */}
+      {!inModal && (
+        <StickyActionBar>
           <div
-            className="glass rounded-[var(--radius)] p-4"
-            style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
+            className="mx-auto w-full max-w-[1040px] px-4 pt-3 md:px-6"
+            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
           >
-            <InterestedBlock
-              eventId={event.id}
-              eventName={event.nomEvent || "cet évènement"}
-              size="compact"
-              className="mb-2.5"
-            />
-            <EventActions
-              eventId={event.id}
-              registrationUrl={event.URL}
-              eventType={event.type_event}
-              organizer={event.organisateur}
-              source="detail_sticky"
-            />
+            <div
+              className="glass rounded-[var(--radius)] p-4"
+              style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)" }}
+            >
+              <InterestedBlock
+                eventId={event.id}
+                eventName={event.nomEvent || "cet évènement"}
+                size="compact"
+                className="mb-2.5"
+              />
+              <EventActions
+                eventId={event.id}
+                registrationUrl={event.URL}
+                eventType={event.type_event}
+                organizer={event.organisateur}
+                source="detail_sticky"
+              />
+            </div>
           </div>
-        </div>
-      </StickyActionBar>
+        </StickyActionBar>
+      )}
       </div>
     </InterestedPeopleProvider>
   );
@@ -596,44 +542,6 @@ async function fetchOrganizerEvents(
     .limit(6);
 
   return data ?? [];
-}
-
-async function fetchEventForMetadata(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  slug: string
-) {
-  const baseSelect = "id, slug, nomEvent, dateEvent, villeDepart, paysDepart, description, image";
-  const { data: event } = await supabase
-    .from("events")
-    .select(baseSelect)
-    .eq("slug", slug)
-    .eq("verifie", true)
-    .maybeSingle();
-
-  if (event) return event;
-
-  const legacyId = parseLegacyEventId(slug);
-  if (legacyId == null) return null;
-
-  const { data: legacyEvent } = await supabase
-    .from("events")
-    .select(baseSelect)
-    .eq("id", legacyId)
-    .eq("verifie", true)
-    .maybeSingle();
-
-  return legacyEvent;
-}
-
-function buildMetadataDescription(event: {
-  nomEvent: string | null;
-  villeDepart: string | null;
-  description: string | null;
-}) {
-  const description = event.description?.replace(/\s+/g, " ").trim();
-  if (description) return description.slice(0, 160);
-
-  return `${event.nomEvent || "Événement vélo"} à ${event.villeDepart || "France"}`;
 }
 
 function getTodayDateKey() {

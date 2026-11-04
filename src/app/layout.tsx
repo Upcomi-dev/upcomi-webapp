@@ -84,9 +84,11 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
   profile,
+  eventPopup,
 }: Readonly<{
   children: React.ReactNode;
   profile: React.ReactNode;
+  eventPopup: React.ReactNode;
 }>) {
   const supabase = await createClient();
   const {
@@ -130,6 +132,7 @@ export default async function RootLayout({
                 {children}
               </div>
               {profile}
+              {eventPopup}
               {showOnboardingModal && initialOnboardingValues ? (
                 <OnboardingModal initialValues={initialOnboardingValues} />
               ) : null}

@@ -1,9 +1,11 @@
 import "server-only";
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const EVENT_PROPOSALS_FEATURE_KEY = "event_proposals";
 
-export async function isEventProposalFeatureEnabled() {
+// `cache` : lu par la page et la barre de navigation dans le même rendu.
+export const isEventProposalFeatureEnabled = cache(async () => {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("app_features")
@@ -17,4 +19,4 @@ export async function isEventProposalFeatureEnabled() {
   }
 
   return data?.enabled === true;
-}
+});
