@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 
 export const SITE_URL = "https://app.upcomi.cc";
 export const SITE_NAME = "Upcomi";
+// Piège à scrapers : interdit dans robots.txt, lien caché dans le layout,
+// bloqué par la règle Vercel Firewall « Honeypot ». Changer les trois ensemble.
+export const HONEYPOT_PATH = "/export-evenements";
 export const DEFAULT_SEO_DESCRIPTION =
   "Découvre les courses, aventures, brevets et social rides vélo en France et à l'étranger.";
 

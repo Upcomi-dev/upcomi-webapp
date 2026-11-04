@@ -4,14 +4,13 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Search, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { getAppStorageImage } from "@/lib/storage/urls";
+import {
+  searchRecommendableEvents,
+  type RecommendableEvent,
+} from "./search-recommendable-events";
 
-export interface RecommendableEvent {
-  id: number;
-  nomEvent: string | null;
-  image: string | null;
-}
+export type { RecommendableEvent };
 
 interface RecommendedEventsPickerProps {
   selected: RecommendableEvent[];
@@ -22,14 +21,6 @@ interface RecommendedEventsPickerProps {
 const SEARCH_DEBOUNCE_MS = 250;
 const MAX_RESULTS = 6;
 const MIN_QUERY_LENGTH = 2;
-
-/**
- * `ilike` prend le motif tel quel : `%` et `_` saisis par l'utilisatrice
- * seraient interprétés comme des jokers et feraient remonter n'importe quoi.
- */
-function escapeLikePattern(value: string) {
-  return value.replace(/[%_\\]/g, (match) => `\\${match}`);
-}
 
 export function RecommendedEventsPicker({
   selected,
@@ -93,18 +84,13 @@ export function RecommendedEventsPicker({
 
     setSearching(true);
     timeoutRef.current = setTimeout(async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("events")
-        .select("id, nomEvent, image")
-        .eq("verifie", true)
-        .ilike("nomEvent", `%${escapeLikePattern(trimmedQuery)}%`)
-        .order("dateEvent", { ascending: false })
-        .limit(MAX_RESULTS * 2);
+      const data = await searchRecommendableEvents(trimmedQuery).catch(
+        () => []
+      );
 
       if (requestId !== requestIdRef.current) return;
 
-      setResults((data as RecommendableEvent[] | null) ?? []);
+      setResults(data);
       setSearching(false);
     }, SEARCH_DEBOUNCE_MS);
   };

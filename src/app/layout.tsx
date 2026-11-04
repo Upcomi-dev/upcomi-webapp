@@ -19,6 +19,7 @@ import {
   DEFAULT_SEO_DESCRIPTION,
   SEO_KEYWORDS,
   SITE_NAME,
+  HONEYPOT_PATH,
   SITE_URL,
 } from "@/lib/seo";
 
@@ -138,6 +139,19 @@ export default async function RootLayout({
           </AuthModalProvider>
         </AuthProvider>
         <Analytics />
+        {/* Piège à scrapers : interdit dans robots.txt, invisible pour les
+            humains et les lecteurs d'écran. Un robot qui le suit ignore
+            robots.txt → bloqué par la règle Vercel Firewall « Honeypot ».
+            <a> et pas <Link> : pas de prefetch par les vrais navigateurs. */}
+        <a
+          href={HONEYPOT_PATH}
+          rel="nofollow"
+          aria-hidden="true"
+          tabIndex={-1}
+          style={{ display: "none" }}
+        >
+          Export des événements
+        </a>
       </body>
     </html>
   );

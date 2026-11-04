@@ -13,7 +13,15 @@ export async function createClient() {
     supabaseUrl,
     supabasePublishableKey,
     {
-      global: { fetch: truncationGuardFetch },
+      global: {
+        fetch: truncationGuardFetch,
+        // La RLS ne laisse lire le catalogue qu'aux requêtes portant cette clé
+        // (cf. public.is_upcomi_web_server) : la clé publique seule ne suffit
+        // plus à aspirer la base. Ne jamais l'envoyer au navigateur.
+        headers: {
+          "x-upcomi-server-key": process.env.SUPABASE_SERVER_READ_KEY ?? "",
+        },
+      },
       cookies: {
         encode: "tokens-only",
         getAll() {
