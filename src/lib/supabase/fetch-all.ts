@@ -33,13 +33,23 @@ export async function fetchAllRows<T>(
   }
 }
 
+/** Au-delà, une requête Supabase est signalée dans les logs (cf. AGENTS.md). */
+const SLOW_QUERY_MS = 300;
+
 /**
  * `fetch` passé aux clients Supabase : signale toute lecture non paginée qui
  * revient pile à `max_rows` lignes — c'est le symptôme d'une liste tronquée.
  * Une requête avec `.limit()` / `.range()` est volontairement bornée et ignorée.
+ * Signale aussi toute requête plus lente que `SLOW_QUERY_MS`.
  */
 export const truncationGuardFetch: typeof fetch = async (input, init) => {
+  const startedAt = Date.now();
   const response = await fetch(input, init);
+  const elapsed = Date.now() - startedAt;
+  if (elapsed > SLOW_QUERY_MS && typeof window === "undefined") {
+    const url = input instanceof Request ? input.url : String(input);
+    console.warn(`[supabase] Requête lente (${elapsed} ms) : ${url.split("?")[0]}`);
+  }
   const match = response.headers.get("content-range")?.match(/^(\d+)-(\d+)\//);
   if (match && Number(match[2]) - Number(match[1]) + 1 === POSTGREST_MAX_ROWS) {
     const url = input instanceof Request ? input.url : String(input);
