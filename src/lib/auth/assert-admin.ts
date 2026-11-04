@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
 
-async function getAdminContext() {
+// `cache` : le layout et la page /admin partagent la même vérification par requête.
+const getAdminContext = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -22,7 +24,7 @@ async function getAdminContext() {
     supabase,
     isAdmin: Boolean(adminRecord),
   };
-}
+});
 
 export async function assertAdmin() {
   const { user, supabase, isAdmin } = await getAdminContext();
