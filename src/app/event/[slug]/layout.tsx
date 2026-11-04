@@ -1,6 +1,6 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import { getEventPath } from "@/lib/seo";
-import { getEventBySlug } from "./get-event";
+import { getEventBySlug } from "@/lib/events/get-event-by-slug";
 
 // L'existence de l'évènement se vérifie ici, au-dessus de `loading.tsx` : une
 // fois le squelette streamé, `notFound()` / la redirection ne pourraient plus

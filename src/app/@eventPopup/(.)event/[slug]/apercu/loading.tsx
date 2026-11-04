@@ -1,12 +1,10 @@
-import { TopNav } from "@/components/layout/top-nav";
+import { EventPopup } from "@/components/events/event-popup";
 
-// Affiché dès le clic sur un évènement, le temps que la fiche se charge.
-export default function EventLoading() {
+// La popup s'ouvre dès le clic ; la fiche s'y affiche une fois chargée.
+export default function EventPopupLoading() {
   return (
-    <div className="flex min-h-screen flex-col" aria-busy="true">
-      <TopNav />
-      <div className="mx-auto w-full max-w-[1040px] flex-1 animate-pulse px-4 pt-8 md:px-6">
-        <div className="mb-2 h-6 w-24 rounded-full bg-foreground/8" />
+    <EventPopup>
+      <div className="animate-pulse p-4 md:p-6" aria-busy="true">
         <div className="mb-5 h-[320px] rounded-[var(--radius)] bg-foreground/8" />
         <div className="mb-6 h-5 w-2/3 rounded-full bg-foreground/8" />
         <div className="space-y-3">
@@ -16,6 +14,6 @@ export default function EventLoading() {
         </div>
         <span className="sr-only">Chargement de l&apos;évènement…</span>
       </div>
-    </div>
+    </EventPopup>
   );
 }
