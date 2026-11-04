@@ -1,5 +1,4 @@
 import { EventFiche } from "@/components/events/event-fiche";
-import { EventPopup } from "@/components/events/event-popup";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -10,9 +9,6 @@ interface PageProps {
 export default async function InterceptedEventPopupPage({ params }: PageProps) {
   const { slug } = await params;
 
-  return (
-    <EventPopup>
-      <EventFiche slug={slug} returnTo="/" inModal />
-    </EventPopup>
-  );
+  // La popup elle-même est dans layout.tsx.
+  return <EventFiche slug={slug} returnTo="/" inModal />;
 }
