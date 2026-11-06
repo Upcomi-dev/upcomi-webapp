@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState, type MouseEvent } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
 import { CalendarDays, Check, Heart, PenLine } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { FavouriteButton } from "@/components/events/favourite-button";
@@ -18,21 +17,16 @@ import {
 } from "@/lib/utils/event-dates";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getAppStorageImage } from "@/lib/storage/urls";
-import { buildRelativeUrl, withReturnTo } from "@/lib/utils/navigation";
 import { makeLegacyEventSlug } from "@/lib/utils/slugify";
 import { getPastFavoriteEvents, PAST_FAVORITES_PAGE_SIZE } from "@/lib/utils/favorites";
 import { type FavoriteEvent, useFavorites } from "./favorites-context";
 
 interface FavoritesPanelBodyProps {
-  onNavigate?: () => void;
-  onEventOpen?: (event: FavoriteEvent) => void;
   className?: string;
   initialTab?: "favorites" | "participations";
 }
 
 export function FavoritesPanelBody({
-  onNavigate,
-  onEventOpen,
   className,
   initialTab = "favorites",
 }: FavoritesPanelBodyProps) {
@@ -44,12 +38,9 @@ export function FavoritesPanelBody({
     toggleParticipation,
   } = useFavorites();
   const { user } = useAuth();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<"favorites" | "participations">(initialTab);
   const [pastVisibleCount, setPastVisibleCount] = useState(PAST_FAVORITES_PAGE_SIZE);
   const isAuthenticated = user !== null;
-  const returnTo = buildRelativeUrl(pathname, searchParams.toString());
   const activeAllEvents =
     activeTab === "favorites" ? allFavoriteEvents : allParticipationEvents;
   const activeVisibleEvents =
@@ -136,9 +127,6 @@ export function FavoritesPanelBody({
                     key={event.id}
                     event={event}
                     activeTab={activeTab}
-                    onEventOpen={onEventOpen}
-                    onNavigate={onNavigate}
-                    returnTo={returnTo}
                     toggleParticipation={toggleParticipation}
                   />
                 ))}
@@ -156,9 +144,6 @@ export function FavoritesPanelBody({
                         key={event.id}
                         event={event}
                         activeTab={activeTab}
-                        onEventOpen={onEventOpen}
-                        onNavigate={onNavigate}
-                        returnTo={returnTo}
                         toggleParticipation={toggleParticipation}
                       />
                     ))}
@@ -188,34 +173,23 @@ export function FavoritesPanelBody({
 function FavoritePanelEventRow({
   event,
   activeTab,
-  onEventOpen,
-  onNavigate,
-  returnTo,
   toggleParticipation,
 }: {
   event: FavoriteEvent;
   activeTab: "favorites" | "participations";
-  onEventOpen?: (event: FavoriteEvent) => void;
-  onNavigate?: () => void;
-  returnTo: string;
   toggleParticipation: (eventId: number) => Promise<boolean>;
 }) {
   const typeColor = getEventTypeColor(event.type_event);
   const eventSlug = event.slug || makeLegacyEventSlug(event.id, event.nomEvent);
-  const eventHref = withReturnTo(`/event/${eventSlug}`, returnTo);
+  // Ouverte en popup par-dessus la page (route interceptée) : le panneau
+  // reste ouvert dessous et la fermer y ramène.
+  const eventHref = `/event/${eventSlug}/apercu`;
   const past = isEventPast(event);
-  const handleEventClick = (clickEvent: MouseEvent<HTMLAnchorElement>) => {
-    if (!onEventOpen) return;
-    clickEvent.preventDefault();
-    onEventOpen(event);
-  };
 
   return (
     <div className="group flex w-full min-w-0 items-center gap-3 overflow-hidden py-3.5">
       <Link
         href={eventHref}
-        onNavigate={onNavigate}
-        onClick={handleEventClick}
         className="flex min-w-0 flex-1 items-center gap-4 overflow-hidden"
       >
         <EventThumb event={event} typeColor={typeColor} />
