@@ -1,14 +1,10 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/auth-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
-import {
-  fetchInterestedCount,
-  fetchInterestedPeople,
-  type InterestedPerson,
-} from "@/lib/events/interested-people";
+import { getInterestedPeople } from "@/components/events/get-interested-people";
+import type { InterestedPerson } from "@/lib/events/interested-people";
 
 /**
  * Les personnes intéressées par l'évènement affiché, chargées **une fois** pour
@@ -19,6 +15,8 @@ import {
  * **nombre** est public (`get_event_interested_count`), les **personnes** ne le
  * sont pas (`get_event_interested_people`, réservée aux comptes connectés). Une
  * personne déconnectée voit donc combien elles sont, jamais qui elles sont.
+ * Les deux passent par le serveur (`getInterestedPeople`) : le navigateur ne
+ * lit que ses propres favoris.
  */
 
 interface InterestedPeopleContextValue {
@@ -63,14 +61,12 @@ export function InterestedPeopleProvider({
     if (!authReady || !favoritesReady) return;
 
     let cancelled = false;
-    const supabase = createClient();
 
     void (async () => {
       // Le nombre se charge toujours ; seules les personnes attendent un compte.
-      const [count, people] = await Promise.all([
-        fetchInterestedCount(supabase, eventId),
-        userId ? fetchInterestedPeople(supabase, eventId) : Promise.resolve([]),
-      ]);
+      const { count, people } = await getInterestedPeople(eventId, Boolean(userId)).catch(
+        () => ({ count: 0, people: [] as InterestedPerson[] })
+      );
       if (cancelled) return;
       setSnapshot({
         count,
