@@ -21,7 +21,8 @@ create index if not exists events_serie_date_idx
   on public.events (serie, "dateEvent")
   where serie is not null;
 
--- L'édition elle-même et les éditions antérieures de sa série.
+-- L'édition elle-même et les éditions antérieures **vérifiées** de sa série :
+-- une édition non vérifiée n'est pas publiée, ses récits non plus.
 create or replace function upcomi_private.event_story_edition_ids(p_event_id bigint)
   returns table(event_id bigint, edition_date date)
   language sql
@@ -35,6 +36,7 @@ create or replace function upcomi_private.event_story_edition_ids(p_event_id big
       or (
         e.serie = current_edition.serie
         and e."dateEvent" < current_edition."dateEvent"
+        and e.verifie
       )
     where current_edition.id = p_event_id;
   $$;
