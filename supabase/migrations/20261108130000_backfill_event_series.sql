@@ -1,7 +1,8 @@
 -- Rattachement des éditions déjà au catalogue à leur série (après
 -- 20261108120000_event_series.sql). 65 séries repérées par le nom sans
 -- l'année, plus trois éditions renommées rattachées par leur URL
--- (#4099 Desertus 2027, #4120 TCR No13, #3929 Les Géants Ultra Race 2027).
+-- (#4099 Desertus 2027, #4120 TCR No13, #3929 Les Géants Ultra Race 2027),
+-- puis 20 séries et 3 rattachements qui touchent des fiches non vérifiées.
 -- Ne touche que les fiches sans série : rejouable, et ne défait pas une
 -- correction faite entre-temps dans /admin.
 update public.events set serie = 'atlas-mountain-race' where id in (10, 1519, 4102) and serie is null;
@@ -69,3 +70,30 @@ update public.events set serie = 'transpyrenees' where id in (23, 3287) and seri
 update public.events set serie = 'tuscany-trail' where id in (3201, 4125) and serie is null;
 update public.events set serie = 'ultraia' where id in (3191, 4101) and serie is null;
 update public.events set serie = 'zone64' where id in (3184, 3728) and serie is null;
+
+-- Fiches non vérifiées (leurs récits ne s'affichent qu'une fois la fiche vérifiée).
+-- Rejoignent une série ci-dessus :
+update public.events set serie = 'granguanche-audax-trail' where id in (1488) and serie is null;
+update public.events set serie = 'istra-land' where id in (63) and serie is null;
+update public.events set serie = 'bikingman-alpes-maritimes' where id in (1293) and serie is null;
+-- Nouvelles séries (une édition vérifiée ou non + une autre) :
+update public.events set serie = 'montenegro-mountain-madness' where id in (25, 4107) and serie is null;
+update public.events set serie = 'mother-north' where id in (42, 3199) and serie is null;
+update public.events set serie = 'race-across-switzerland' where id in (46, 3217) and serie is null;
+update public.events set serie = 'dead-ends-cake' where id in (1285, 4117) and serie is null;
+update public.events set serie = 'the-goats' where id in (1290, 3725) and serie is null;
+update public.events set serie = 'ride-across-girona' where id in (1401, 3717) and serie is null;
+update public.events set serie = 'graval-bikepacking-adventure' where id in (1481, 3174) and serie is null;
+update public.events set serie = 'northcape-tarifa-bike-race' where id in (1497, 4076) and serie is null;
+update public.events set serie = 'brm-400-bocage-et-volcans' where id in (1510, 3653) and serie is null;
+update public.events set serie = 'super-brevet-scandinavia' where id in (1781, 4077) and serie is null;
+update public.events set serie = 'seven-serpents-illyrian-loop' where id in (1793, 3724) and serie is null;
+update public.events set serie = 'munich-milan-gravel' where id in (1821, 3716) and serie is null;
+update public.events set serie = 'le-tour-du-lot-feminin' where id in (1841, 3171) and serie is null;
+update public.events set serie = 'pommes-de-terre-breizhees' where id in (1857, 3099) and serie is null;
+update public.events set serie = 'dodecaudax-200-km-aout' where id in (1858, 3655) and serie is null;
+update public.events set serie = 'ardeche-endurance-challenge' where id in (1861, 3297) and serie is null;
+update public.events set serie = 'dodecaudax-200-km-septembre' where id in (1864, 3673) and serie is null;
+update public.events set serie = 'ultra-nuit-des-fruits' where id in (1865, 3674) and serie is null;
+update public.events set serie = 'brevet-actc-200-km' where id in (1867, 3691) and serie is null;
+update public.events set serie = 'dodecaudax-200-km-octobre' where id in (1869, 3697) and serie is null;
