@@ -6,6 +6,8 @@ export type RecommendableEvent = {
   id: number;
   nomEvent: string | null;
   image: string | null;
+  /** Distingue les éditions d'un même évènement annuel dans la recherche. */
+  dateEvent?: string | null;
 };
 
 const MAX_RESULTS = 12;
@@ -29,7 +31,7 @@ export async function searchRecommendableEvents(
   const supabase = await createClient();
   const { data } = await supabase
     .from("events")
-    .select("id, nomEvent, image")
+    .select("id, nomEvent, image, dateEvent")
     .eq("verifie", true)
     .ilike("nomEvent", `%${escapeLikePattern(query)}%`)
     .order("dateEvent", { ascending: false })

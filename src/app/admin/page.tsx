@@ -21,6 +21,7 @@ import type {
   UserEventStory,
 } from "@/lib/types/database";
 import { makeLegacyEventSlug } from "@/lib/utils/slugify";
+import { formatEventEdition } from "@/lib/utils/event-dates";
 
 interface AdminPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -880,12 +881,12 @@ async function StoriesTab({ supabase }: { supabase: AdminSupabase }) {
   // recomposés ici. `user_event_stories.user_id` pointe sur `auth.users` et
   // non sur `public.users` : PostgREST ne sait pas les embarquer.
   const [events, authors] = await Promise.all([
-    fetchByIds<Pick<Event, "id" | "nomEvent" | "slug">, number>(
+    fetchByIds<Pick<Event, "id" | "nomEvent" | "slug" | "dateEvent">, number>(
       [...new Set(storyRows.map((row) => row.event_id))],
       (chunk, from, to) =>
         supabase
           .from("events")
-          .select("id, nomEvent, slug")
+          .select("id, nomEvent, slug, dateEvent")
           .in("id", chunk)
           .order("id", { ascending: true })
           .range(from, to)
@@ -912,7 +913,12 @@ async function StoriesTab({ supabase }: { supabase: AdminSupabase }) {
     return {
       userId: row.user_id,
       eventId: row.event_id,
-      eventName: (event?.nomEvent as string | null) || `Évènement ${row.event_id}`,
+      eventName: [
+        (event?.nomEvent as string | null) || `Évènement ${row.event_id}`,
+        formatEventEdition(event?.dateEvent as string | null),
+      ]
+        .filter(Boolean)
+        .join(" · "),
       eventSlug: (event?.slug as string | null) ?? null,
       authorName: authorName || `Membre ${row.user_id.slice(0, 8)}`,
       authorEmail: author?.email ?? null,

@@ -18,6 +18,9 @@ export interface EventStory {
   status: EventStoryStatus;
   authorName: string | null;
   authorAvatarUrl: string | null;
+  /** L'édition racontée : celle de la fiche, ou une édition précédente de la même série. */
+  eventId: number;
+  editionDate: string | null;
 }
 
 interface EventStoryRow {
@@ -28,14 +31,17 @@ interface EventStoryRow {
   status: EventStoryStatus;
   author_name: string | null;
   author_avatar_url: string | null;
+  event_id: number;
+  edition_date: string | null;
 }
 
 /** Nom affiché quand le profil n'a pas encore de prénom. */
 export const ANONYMOUS_STORY_AUTHOR = "Un·e participant·e";
 
 /**
- * Les récits **validés** d'un évènement, du plus récent au plus ancien — plus
- * le sien, quel que soit son état de relecture.
+ * Les récits **validés** d'un évènement et de ses éditions précédentes (même
+ * `serie`), de l'édition la plus récente à la plus ancienne — plus le sien,
+ * quel que soit son état de relecture.
  *
  * La fonction n'est exécutable que par `authenticated` : appelée sans session,
  * elle répond « permission denied ». C'est un cas normal, pas une panne — on
@@ -59,6 +65,8 @@ export async function fetchEventStories(
     status: row.status,
     authorName: row.author_name,
     authorAvatarUrl: row.author_avatar_url,
+    eventId: row.event_id,
+    editionDate: row.edition_date,
   }));
 }
 

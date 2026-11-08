@@ -35,6 +35,7 @@ import { EventStoryForm } from "./event-story-form";
 import { GoogleAuthButton } from "./google-auth-button";
 import { PasswordRequirements } from "./password-requirements";
 import {
+  EventEditionDate,
   EventThumb,
   RecommendedEventsPicker,
   type RecommendableEvent,
@@ -713,6 +714,7 @@ export function SignupWizard({
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-sm font-medium">{event.nomEvent || "Événement"}</p>
                       </div>
+                      <EventEditionDate event={event} />
                       <CircleCheck role="img" aria-label="Récit enregistré" className="size-5 shrink-0" />
                     </div>
                   ) : (
@@ -721,6 +723,7 @@ export function SignupWizard({
                       <span className="min-w-0 flex-1 break-words text-sm font-medium text-foreground">
                         {event.nomEvent || "Événement"}
                       </span>
+                      <EventEditionDate event={event} />
                       <input
                         type="radio"
                         name="signup-story-event"
