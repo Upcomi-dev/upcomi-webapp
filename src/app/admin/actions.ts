@@ -111,6 +111,7 @@ function buildEventPayload(formData: FormData) {
     URL: getNullableText(formData, "URL"),
     description: getNullableText(formData, "description"),
     organisateur: getNullableText(formData, "organisateur"),
+    serie: getNullableText(formData, "serie"),
     image: getNullableText(formData, "image"),
     bike_type: getNullableText(formData, "bike_type"),
     distance: getNullableText(formData, "distance"),

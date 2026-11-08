@@ -62,7 +62,12 @@ export function EventStories({ event, stories, storyCount, isPast }: EventStorie
         stories.length > 0 ? (
           <div className="divide-y divide-black/8">
             {stories.filter(hasStoryContent).map((story) => (
-              <StoryRow key={story.userId} story={story} isOwn={story.userId === user.id} />
+              <StoryRow
+                key={`${story.eventId}-${story.userId}`}
+                story={story}
+                isOwn={story.userId === user.id}
+                otherEdition={story.eventId !== event.id}
+              />
             ))}
           </div>
         ) : (
@@ -98,7 +103,16 @@ export function EventStories({ event, stories, storyCount, isPast }: EventStorie
   );
 }
 
-function StoryRow({ story, isOwn }: { story: EventStory; isOwn: boolean }) {
+function StoryRow({
+  story,
+  isOwn,
+  otherEdition,
+}: {
+  story: EventStory;
+  isOwn: boolean;
+  /** Récit d'une édition précédente de la même série. */
+  otherEdition: boolean;
+}) {
   const authorName = story.authorName || ANONYMOUS_STORY_AUTHOR;
   const text = story.story?.trim();
 
@@ -110,6 +124,11 @@ function StoryRow({ story, isOwn }: { story: EventStory; isOwn: boolean }) {
         <div className="text-sm font-semibold text-foreground">
           {authorName}
           {isOwn && <span className="ml-1.5 font-normal text-foreground/45">(toi)</span>}
+          {otherEdition && (
+            <span className="ml-1.5 font-normal text-foreground/45">
+              · {story.editionDate ? `Édition ${story.editionDate.slice(0, 4)}` : "Édition précédente"}
+            </span>
+          )}
           {/* Son propre récit est le seul qui remonte avant d'être relu : sans
               cette mention, il se lirait comme déjà publié. */}
           {isOwn && story.status !== "approved" && (

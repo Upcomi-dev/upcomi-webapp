@@ -2,6 +2,8 @@ export interface Event {
   id: number;
   slug: string;
   nomEvent: string | null;
+  /** Série d'éditions annuelles : même valeur = même évènement. */
+  serie: string | null;
   dateEvent: string | null;
   dateEvent2: string | null;
   dateEventLongue: string | null;

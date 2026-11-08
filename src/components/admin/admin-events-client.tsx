@@ -21,6 +21,7 @@ interface AdminEventRecord {
   URL: string | null;
   description: string | null;
   organisateur: string | null;
+  serie: string | null;
   image: string | null;
   bike_type: string | null;
   distance: string | null;
@@ -89,6 +90,10 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
   const [editingId, setEditingId] = useState<number | null>(null);
   const [filters, setFilters] = useState<Record<FilterKey, string>>(EMPTY_FILTERS);
   const hasFilters = Object.values(filters).some(Boolean);
+  const series = useMemo(
+    () => [...new Set(events.map((event) => event.serie).filter((serie): serie is string => Boolean(serie)))].sort(),
+    [events]
+  );
 
   const filterOptions = useMemo(() => {
     const options = {} as Record<FilterKey, string[]>;
@@ -294,6 +299,7 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
             action={handleCreate}
             submitLabel="Créer l'événement"
             organisateurs={organisateurs}
+            series={series}
           />
         </div>
       )}
@@ -395,6 +401,7 @@ export function AdminEventsClient({ events, organisateurs, submissionContacts }:
                     action={(formData) => handleUpdate(event.id, formData)}
                     submitLabel="Enregistrer les modifications"
                     organisateurs={organisateurs}
+                    series={series}
                   />
                 </div>
               )}
@@ -420,11 +427,13 @@ function EventForm({
   action,
   submitLabel,
   organisateurs,
+  series,
 }: {
   event?: AdminEventRecord;
   action: (formData: FormData) => void;
   submitLabel: string;
   organisateurs: string[];
+  series: string[];
 }) {
   return (
     <form action={action} className="space-y-5">
@@ -441,6 +450,7 @@ function EventForm({
           defaultValue={event?.organisateur}
           listId="admin-organisateurs"
         />
+        <Field label="Série (éditions annuelles)" name="serie" defaultValue={event?.serie} listId="admin-series" />
         <Field label="URL" name="URL" type="url" defaultValue={event?.URL} />
         <Field label="Image" name="image" type="url" defaultValue={event?.image} />
         <Field label="Bike type" name="bike_type" defaultValue={event?.bike_type} />
@@ -493,6 +503,12 @@ function EventForm({
         <CheckboxField label="Notified" name="notified" defaultChecked={Boolean(event?.notified)} />
         <CheckboxField label="Mint" name="mint" defaultChecked={Boolean(event?.mint)} />
       </div>
+
+      <datalist id="admin-series">
+        {series.map((serie) => (
+          <option key={serie} value={serie} />
+        ))}
+      </datalist>
 
       <datalist id="admin-organisateurs">
         {organisateurs.map((organisateur) => (

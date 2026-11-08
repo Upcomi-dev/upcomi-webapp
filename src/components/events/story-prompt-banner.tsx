@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useFavorites, type FavoriteEvent } from "@/components/favorites/favorites-context";
 import { trackAnalyticsEvent } from "@/lib/analytics";
-import { getEventEndDateKey, isEventPast } from "@/lib/utils/event-dates";
+import { getEventEndDateKey, isEventPast, withEditionYear } from "@/lib/utils/event-dates";
 import { useEventStories } from "./event-stories-context";
 
 /**
@@ -99,7 +99,7 @@ export function StoryPromptBanner() {
     <div className="relative flex w-full bg-orange px-4 py-3 pr-12 text-white md:px-6 md:pr-14">
       <div className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2.5 text-center">
         <p className="text-sm font-medium">
-          <strong className="font-bold">{candidate.nomEvent || "Ton évènement"}</strong>{" "}
+          <strong className="font-bold">{candidate.nomEvent ? withEditionYear(candidate.nomEvent, candidate.dateEvent) : "Ton évènement"}</strong>{" "}
           est passé. Peux-tu partager ton expérience avec la communauté&nbsp;?
         </p>
         <button
