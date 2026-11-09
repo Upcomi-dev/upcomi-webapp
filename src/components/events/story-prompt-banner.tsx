@@ -96,7 +96,7 @@ export function StoryPromptBanner() {
   if (!candidate) return null;
 
   return (
-    <div className="relative flex w-full bg-orange px-4 py-3 pr-12 text-white md:px-6 md:pr-14">
+    <div className="relative flex w-full bg-orange px-12 py-3 text-white md:px-14">
       <div className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2.5 text-center">
         <p className="text-sm font-medium">
           <strong className="font-bold">{candidate.nomEvent ? withEditionYear(candidate.nomEvent, candidate.dateEvent) : "Ton évènement"}</strong>{" "}
