@@ -4,6 +4,7 @@ import { getEventPath, getEventUrl, SITE_NAME } from "@/lib/seo";
 import { getEventBySlug } from "@/lib/events/get-event-by-slug";
 import { getAppStorageImageUrl } from "@/lib/storage/urls";
 import { EventFiche } from "@/components/events/event-fiche";
+import { withEditionYear } from "@/lib/utils/event-dates";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -16,7 +17,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!event) return { title: "Événement non trouvé" };
 
-  const title = event.nomEvent || "Événement";
+  // L'année distingue les éditions d'un évènement annuel dans Google et les aperçus de lien.
+  const title = withEditionYear(event.nomEvent || "Événement", event.dateEvent);
   const description = buildMetadataDescription(event);
   const metadataImage = getAppStorageImageUrl(event.image, { absolute: true });
   const canonicalPath = getEventPath(event.slug);
@@ -40,7 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       },
     },
     openGraph: {
-      title: event.nomEvent || "Événement Upcomi",
+      title,
       description,
       url: canonicalUrl,
       siteName: SITE_NAME,
@@ -50,7 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     twitter: {
       card: "summary_large_image",
-      title: event.nomEvent || "Événement Upcomi",
+      title,
       description,
       images: metadataImage ? [metadataImage] : [],
     },

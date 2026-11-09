@@ -4,7 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import {
   fetchInterestedCount,
   fetchInterestedPeople,
+  fetchInterestedTierCounts,
   type InterestedPerson,
+  type InterestedTierCounts,
 } from "@/lib/events/interested-people";
 
 // Côté serveur : depuis l'anti-aspiration, le navigateur ne lit plus que ses
@@ -14,11 +16,12 @@ import {
 export async function getInterestedPeople(
   eventId: number,
   withPeople: boolean
-): Promise<{ count: number; people: InterestedPerson[] }> {
+): Promise<{ count: number; tierCounts: InterestedTierCounts; people: InterestedPerson[] }> {
   const supabase = await createClient();
-  const [count, people] = await Promise.all([
+  const [count, tierCounts, people] = await Promise.all([
     fetchInterestedCount(supabase, eventId),
+    fetchInterestedTierCounts(supabase, eventId),
     withPeople ? fetchInterestedPeople(supabase, eventId) : Promise.resolve([]),
   ]);
-  return { count, people };
+  return { count, tierCounts, people };
 }

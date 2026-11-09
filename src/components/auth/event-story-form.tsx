@@ -2,7 +2,7 @@
 
 import { Field, FIELD_INPUT_CLASS } from "@/components/ui/field";
 import { EVENT_STORY_MAX_LENGTH } from "@/lib/profile-mutations";
-import { EventThumb, type RecommendableEvent } from "./recommended-events-picker";
+import { EventEditionDate, EventThumb, type RecommendableEvent } from "./recommended-events-picker";
 
 interface EventStoryFormProps {
   event: RecommendableEvent;
@@ -31,6 +31,7 @@ export function EventStoryForm({
         <span className="min-w-0 flex-1 break-words text-[13px] font-medium text-foreground">
           {event.nomEvent || "Événement"}
         </span>
+        <EventEditionDate event={event} />
       </div>
 
       <Field label="Lien vers ton récit (facultatif)" htmlFor="signup-story-url">

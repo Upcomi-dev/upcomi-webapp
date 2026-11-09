@@ -219,10 +219,10 @@ décompte.
 
 Côté migrations :
 
-- `20260904120000_score_adequation.sql` — **la moitié fait double emploi** avec
+- `20261021120000_score_adequation.sql` — **la moitié fait double emploi** avec
   ce qui est déjà passé dans `preprod` (recopie du niveau, fonctions de lecture
   des intéressées). Ne garder que la table des réponses au questionnaire.
-- `20260904170000_public_interested_levels.sql` — **à garder telle quelle** :
+- `20261021120100_public_interested_levels.sql` — **à garder telle quelle** :
   c'est le décompte par niveau, il n'existe nulle part ailleurs.
 
 Le reste (`compatibility-card`, `compatibility-path`, `lib/compatibility/*`) est
@@ -365,7 +365,7 @@ main. La commencer maintenant, avec ce premier batch.
 ```
 20260905110000_moderation_recits.sql   (dans preprod)
         ↓ crée la colonne de statut
-20260905120000_recits_valides.sql      (feat/partage-experience)
+20261021120200_recits_affichage.sql (feat/partage-experience)
 ```
 
 La seconde ne montre que les récits validés : jouée en premier, elle cherche une

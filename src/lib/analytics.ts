@@ -20,11 +20,15 @@ export type AnalyticsEventName =
   | "Signup Submitted"
   | "Signup Completed"
   | "Onboarding Completed"
+  | "Event Story Submitted"
+  | "Event Story Prompt Dismissed"
   | "Logout Clicked"
   | "Feedback Opened"
   | "Feedback Submitted"
   | "Interested People Opened"
-  | "Promo Code Gate Opened";
+  | "Promo Code Gate Opened"
+  | "Compatibility Started"
+  | "Compatibility Completed";
 
 export type AnalyticsProps = Record<
   string,

@@ -3,14 +3,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { Calendar, ChevronLeft, Euro, ExternalLink, Flag, MapPin } from "lucide-react";
 import type { createClient } from "@/lib/supabase/server";
-import { getLocalDateKey } from "@/lib/utils/event-dates";
+import { getLocalDateKey, isEventPast } from "@/lib/utils/event-dates";
 import { getEventKeyDates } from "@/lib/utils/event-key-dates";
 import { findNearestStation } from "@/lib/utils/stations";
 import { fetchEventInclusionMeasures } from "@/lib/events/inclusion-measures";
 import { fetchEventRegistrationMeasures } from "@/lib/events/registration-measures";
 import { fetchEventPromoCode } from "@/lib/events/promo-code";
 import { getEventFactTags } from "@/lib/events/facts";
+import { buildCompatEvent } from "@/lib/compatibility/event-input";
 import { getEventBySlug } from "@/lib/events/get-event-by-slug";
+import { fetchEventStories, fetchEventStoryCount } from "@/lib/events/stories";
 import { getEventTypeColor } from "@/lib/types/database";
 import { getAppStorageImage, getAppStorageImageUrl } from "@/lib/storage/urls";
 import type { SousEvent } from "@/lib/types/database";
@@ -21,8 +23,10 @@ import { EventCard } from "@/components/events/event-card";
 import { StickyActionBar } from "@/components/events/sticky-action-bar";
 import { EventKeyDates } from "@/components/events/event-key-dates";
 import { EventViewTracker } from "@/components/events/event-view-tracker";
+import { EventStories } from "@/components/events/event-stories";
 import { InterestedPeopleProvider } from "@/components/events/interested-people-context";
 import { InterestedBlock } from "@/components/events/interested-block";
+import { CompatibilityCard } from "@/components/events/compatibility-card";
 import { InclusionMeasures } from "@/components/events/inclusion-measures";
 import { EventPromoCode } from "@/components/events/event-promo-code";
 import { MixiteBadge } from "@/components/events/mixite-badge";
@@ -58,7 +62,18 @@ export async function EventFiche({ slug, returnTo, inModal = false }: EventFiche
   // Le compteur d'intéressé·es n'est plus lu ici : il fait partie du bloc
   // « qui est intéressé », traité dans sa propre brique.
   // Tout ne dépend que de l'id : une seule vague de requêtes en parallèle.
-  const [sousEventsResult, relatedEvents, inclusionMeasures, registrationMeasures, promoCode] =
+  // Les récits ne sont lisibles que par les personnes connectées
+  // (`get_event_stories` n'est exécutable que par `authenticated`) ; le
+  // compteur, lui, est ouvert et sert le teaser affiché aux autres.
+  const [
+    sousEventsResult,
+    relatedEvents,
+    inclusionMeasures,
+    registrationMeasures,
+    promoCode,
+    stories,
+    storyCount,
+  ] =
     await Promise.all([
       supabase
         .from("sous_events")
@@ -71,6 +86,10 @@ export async function EventFiche({ slug, returnTo, inModal = false }: EventFiche
       fetchEventInclusionMeasures(supabase, event.id),
       fetchEventRegistrationMeasures(supabase, event.id),
       fetchEventPromoCode(supabase, event.id),
+      supabase.auth
+        .getUser()
+        .then(({ data: { user } }) => (user ? fetchEventStories(supabase, event.id) : [])),
+      fetchEventStoryCount(supabase, event.id),
     ]);
   const sousEvents = (sousEventsResult.data as SousEvent[] | null) ?? [];
 
@@ -81,6 +100,10 @@ export async function EventFiche({ slug, returnTo, inModal = false }: EventFiche
     station: nearestStation,
     registrationMeasures,
   });
+
+  // L'évènement tel que le score d'adéquation le lit : les `sous_events`
+  // tiennent lieu de « parcours », la durée se déduit des deux dates.
+  const compatEvent = buildCompatEvent(event, sousEvents);
 
   const formattedDate = event.dateEvent
     ? new Date(event.dateEvent).toLocaleDateString("fr-FR", {
@@ -156,7 +179,8 @@ export async function EventFiche({ slug, returnTo, inModal = false }: EventFiche
   return (
     // Les personnes intéressées sont chargées une seule fois pour toute la
     // fiche : le bloc du haut, celui de la colonne de droite, celui de la barre
-    // collante et la feuille de personnes lisent la même liste.
+    // collante, le score d'adéquation et la feuille de personnes lisent la même
+    // liste.
     <InterestedPeopleProvider eventId={event.id}>
       <div className={inModal ? "flex flex-col" : "flex min-h-screen flex-col"}>
       <EventViewTracker
@@ -446,6 +470,30 @@ export async function EventFiche({ slug, returnTo, inModal = false }: EventFiche
                 </div>
               )}
             </div>
+
+            {/* Score d'adéquation — après « Qui organise ? », à la place que
+                lui donne le proto (`compat-slot-inline`). Un seul emplacement,
+                dans la colonne de lecture : le proto n'en rend pas d'autre. */}
+            <CompatibilityCard
+              eventId={event.id}
+              event={compatEvent}
+              eventDate={event.dateEvent}
+            />
+
+            {/* Les retours d'expérience ferment la colonne, comme dans le
+                prototype : on les lit après avoir compris de quoi il s'agit
+                et qui organise. */}
+            <EventStories
+              event={{
+                id: event.id,
+                nomEvent: event.nomEvent,
+                image: event.image,
+                slug: eventSlug,
+              }}
+              stories={stories}
+              storyCount={storyCount}
+              isPast={isEventPast(event)}
+            />
           </div>
 
           {/* Colonne de droite — le bloc d'action quitte la barre collante du

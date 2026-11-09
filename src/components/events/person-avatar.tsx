@@ -30,12 +30,16 @@ export function AvatarStack({
   size = 26,
   className,
 }: {
-  /** Nombre de personnes intéressées — décide de l'affichage, pas du contenu. */
-  count: number;
+  /**
+   * Nombre de personnes intéressées — décide de l'affichage, pas du contenu.
+   * Absent là où des visages ont toujours un sens (la ligne d'arrivée du
+   * chemin d'adéquation).
+   */
+  count?: number;
   size?: number;
   className?: string;
 }) {
-  if (count < 1) return null;
+  if (count !== undefined && count < 1) return null;
 
   return (
     <div className={cn("flex w-max flex-none items-center", className)} aria-hidden>

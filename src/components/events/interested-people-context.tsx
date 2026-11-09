@@ -4,18 +4,20 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/auth-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
 import { getInterestedPeople } from "@/components/events/get-interested-people";
-import type { InterestedPerson } from "@/lib/events/interested-people";
+import type { InterestedPerson, InterestedTierCounts } from "@/lib/events/interested-people";
 
 /**
  * Les personnes intéressées par l'évènement affiché, chargées **une fois** pour
  * toute la fiche : le bloc du haut, celui de la colonne de droite, celui de la
  * barre collante et la feuille de personnes lisent tous la même liste.
  *
- * Les deux lectures ne viennent pas de la même source, et c'est volontaire : le
- * **nombre** est public (`get_event_interested_count`), les **personnes** ne le
- * sont pas (`get_event_interested_people`, réservée aux comptes connectés). Une
- * personne déconnectée voit donc combien elles sont, jamais qui elles sont.
- * Les deux passent par le serveur (`getInterestedPeople`) : le navigateur ne
+ * Les trois lectures ne viennent pas de la même source, et c'est volontaire :
+ * les **nombres** sont publics (`get_event_interested_count` pour le total,
+ * `get_event_interested_levels` pour la répartition par palier), les
+ * **personnes** ne le sont pas (`get_event_interested_people`, réservée aux
+ * comptes connectés). Une personne déconnectée voit donc combien elles sont et
+ * combien lui ressemblent, jamais qui elles sont.
+ * Les trois passent par le serveur (`getInterestedPeople`) : le navigateur ne
  * lit que ses propres favoris.
  */
 
@@ -24,6 +26,8 @@ interface InterestedPeopleContextValue {
   count: number;
   /** Les **autres** : on ne se présente pas à soi-même dans la liste. */
   people: InterestedPerson[];
+  /** Les autres, par palier d'expérience — renseigné même sans compte. */
+  tierCounts: InterestedTierCounts;
   /** `true` tant que le premier chargement n'est pas terminé. */
   loading: boolean;
 }
@@ -33,6 +37,7 @@ const InterestedPeopleContext = createContext<InterestedPeopleContextValue | nul
 interface Snapshot {
   count: number;
   people: InterestedPerson[];
+  tierCounts: InterestedTierCounts;
   /** Mon propre intérêt était-il déjà là au moment de la lecture ? */
   includesMe: boolean;
   loading: boolean;
@@ -50,6 +55,7 @@ export function InterestedPeopleProvider({
   const [snapshot, setSnapshot] = useState<Snapshot>({
     count: 0,
     people: [],
+    tierCounts: new Map(),
     includesMe: false,
     loading: true,
   });
@@ -63,14 +69,21 @@ export function InterestedPeopleProvider({
     let cancelled = false;
 
     void (async () => {
-      // Le nombre se charge toujours ; seules les personnes attendent un compte.
-      const { count, people } = await getInterestedPeople(eventId, Boolean(userId)).catch(
-        () => ({ count: 0, people: [] as InterestedPerson[] })
-      );
+      // Les nombres se chargent toujours ; seules les personnes attendent un
+      // compte.
+      const { count, tierCounts, people } = await getInterestedPeople(
+        eventId,
+        Boolean(userId)
+      ).catch(() => ({
+        count: 0,
+        tierCounts: new Map() as InterestedTierCounts,
+        people: [] as InterestedPerson[],
+      }));
       if (cancelled) return;
       setSnapshot({
         count,
         people: people.filter((person) => person.uid !== userId),
+        tierCounts,
         includesMe: people.some((person) => person.uid === userId),
         loading: false,
       });
@@ -86,11 +99,15 @@ export function InterestedPeopleProvider({
   // soit partie, et une relecture déclenchée sur ce basculement rapporte
   // l'ancien compte. L'écart est connu — c'est moi, et une seule personne —,
   // autant le corriger sans requête.
+  //
+  // `tierCounts` échappe à ce rattrapage : la fonction SQL m'exclut déjà, et
+  // ces paliers-là comptent les autres.
   const value = useMemo<InterestedPeopleContextValue>(() => {
     const delta = favorited === snapshot.includesMe ? 0 : favorited ? 1 : -1;
     return {
       count: Math.max(0, snapshot.count + delta),
       people: snapshot.people,
+      tierCounts: snapshot.tierCounts,
       loading: snapshot.loading,
     };
   }, [favorited, snapshot]);

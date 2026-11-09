@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Search, X } from "lucide-react";
 import { getAppStorageImage } from "@/lib/storage/urls";
+import { formatEventEdition } from "@/lib/utils/event-dates";
 import {
   searchRecommendableEvents,
   type RecommendableEvent,
@@ -129,6 +130,7 @@ export function RecommendedEventsPicker({
               <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
                 {event.nomEvent || "Événement"}
               </span>
+              <EventEditionDate event={event} />
               <button
                 type="button"
                 onClick={() => removeEvent(event.id)}
@@ -181,6 +183,7 @@ export function RecommendedEventsPicker({
                   <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
                     {event.nomEvent || "Événement"}
                   </span>
+                  <EventEditionDate event={event} />
                 </button>
               ))
             ) : (
@@ -193,6 +196,13 @@ export function RecommendedEventsPicker({
         )}
     </div>
   );
+}
+
+/** Mois et année de l'édition, à droite du nom. */
+export function EventEditionDate({ event }: { event: RecommendableEvent }) {
+  const edition = formatEventEdition(event.dateEvent);
+  if (!edition) return null;
+  return <span className="flex-none text-[12px] tabular-nums text-foreground/55">{edition}</span>;
 }
 
 export function EventThumb({ event }: { event: RecommendableEvent }) {
