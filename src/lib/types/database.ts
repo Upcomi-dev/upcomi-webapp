@@ -163,6 +163,7 @@ export type EventTypeColor = {
 
 export const EVENT_TYPE_COLORS: EventTypeColor = {
   Course: "#9ab0ec",
+  Cyclosportive: "#e0457b",
   Aventure: "#ff7d59",
   Brevet: "#f5a60b",
   Ultra: "#5b6922",
@@ -173,6 +174,7 @@ export const EVENT_TYPE_COLORS: EventTypeColor = {
 
 export const EVENT_TYPE_LEGEND = [
   { label: "Course", color: EVENT_TYPE_COLORS.Course },
+  { label: "Cyclosportive", color: EVENT_TYPE_COLORS.Cyclosportive },
   { label: "Aventure", color: EVENT_TYPE_COLORS.Aventure },
   { label: "Brevet", color: EVENT_TYPE_COLORS.Brevet },
   { label: "Ultra", color: EVENT_TYPE_COLORS.Ultra },
