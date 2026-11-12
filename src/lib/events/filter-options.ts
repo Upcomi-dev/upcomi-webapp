@@ -1,5 +1,6 @@
 export const DEFAULT_EVENT_TYPES = [
   "Course",
+  "Cyclosportive",
   "Aventure",
   "Brevet",
   "Ultra",
