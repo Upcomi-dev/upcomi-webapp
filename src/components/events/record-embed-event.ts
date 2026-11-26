@@ -18,6 +18,9 @@ export async function recordEmbedEvent(
   kind: EmbedEventKind,
   partner?: string
 ): Promise<void> {
+  // Hors production (dev local branché sur la vraie base, prévisualisations)
+  // on ne compte rien : les essais ne doivent pas se mêler aux vrais usages.
+  if (process.env.VERCEL_ENV !== "production") return;
   if (!Number.isSafeInteger(eventId) || eventId <= 0) return;
   if (!EMBED_EVENT_KINDS.includes(kind)) return;
 
