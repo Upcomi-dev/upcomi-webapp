@@ -1094,7 +1094,7 @@ async function EmbedsTab({
                       <span className="font-semibold text-foreground">{row.event_name ?? "Sans nom"}</span>
                       <span className="ml-2 text-[12px] text-foreground/40">#{row.event_id}</span>
                     </td>
-                    <td className="py-2.5 pr-4 text-foreground/65">{row.partner ?? "Upcomi (arrivées)"}</td>
+                    <td className="py-2.5 pr-4 text-foreground/65">{row.partner ?? "Origine non identifiée"}</td>
                     <td className="py-2.5 pr-4 text-right">{row.views}</td>
                     <td className="py-2.5 pr-4 text-right">
                       {row.starts} <span className="text-[12px] text-foreground/40">{percent(row.starts, row.views)}</span>
