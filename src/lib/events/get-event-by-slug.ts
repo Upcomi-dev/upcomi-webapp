@@ -21,8 +21,9 @@ export const getEventById = cache(async (id: number) => {
 
 /**
  * Lecture de l'évènement partagée par le layout, `generateMetadata` et la page
- * (`cache` : une seule requête par rendu). Un ancien slug `<id>-<nom>` est
- * résolu par id ; `isLegacy` signale qu'il faut rediriger vers le slug canonique.
+ * (`cache` : une seule requête par rendu). Une ancienne adresse — slug d'avant
+ * un renommage, ou ancien format `<id>-<nom>` — est résolue par id ; `isLegacy`
+ * signale qu'il faut rediriger vers le slug canonique.
  */
 export const getEventBySlug = cache(async (slug: string) => {
   const supabase = await createClient();
@@ -35,7 +36,15 @@ export const getEventBySlug = cache(async (slug: string) => {
 
   if (data) return { supabase, event: data as Event, isLegacy: false };
 
-  const legacyId = parseLegacyEventId(slug);
+  // Slug introuvable : c'est peut-être une ancienne adresse de la fiche
+  // (renommée depuis — table `event_slug_history`, tenue par un trigger), ou
+  // l'ancien format `<id>-<nom>`. Cette lecture ne coûte que sur ce chemin-là.
+  const { data: former } = await supabase
+    .from("event_slug_history")
+    .select("event_id")
+    .eq("slug", slug)
+    .maybeSingle();
+  const legacyId = (former as { event_id: number } | null)?.event_id ?? parseLegacyEventId(slug);
   if (legacyId == null) return { supabase, event: null, isLegacy: false };
 
   const { data: legacyEvent } = await supabase
