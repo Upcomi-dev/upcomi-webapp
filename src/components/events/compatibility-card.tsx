@@ -20,8 +20,10 @@ import { getTierForScore } from "@/lib/compatibility/levels";
 import {
   getCompatQuestions,
   ITINERARY_QUESTION_KEY,
+  sanitizeCompatAnswers,
   type CompatAnswers,
   type CompatQuestion,
+  type CompatRoute,
 } from "@/lib/compatibility/questions";
 import { computeCompatibility, getProfileScore } from "@/lib/compatibility/scoring";
 import type { CompatEventInput } from "@/lib/compatibility/scoring";
@@ -122,7 +124,7 @@ export function CompatibilityCard({
       // Arrivée depuis le bloc embarqué chez un partenaire : les réponses
       // données là-bas voyagent dans l'adresse, on ne refait pas répondre.
       // Elles viennent d'être données : elles passent devant le profil gardé.
-      const carried = readCarriedAnswers();
+      const carried = readCarriedAnswers(event.routes);
       const saved = !carried && user ? await fetchCompatAnswers(createClient(), user) : null;
       if (cancelled) return;
       const initial = carried ?? saved;
@@ -139,7 +141,7 @@ export function CompatibilityCard({
     return () => {
       cancelled = true;
     };
-  }, [authReady, user, eventId, recordEmbed]);
+  }, [authReady, user, eventId, event.routes, recordEmbed]);
 
   const questions = useMemo(
     () =>
@@ -213,7 +215,7 @@ export function CompatibilityCard({
     setAnswers(null);
     setState({ kind: "stepping", step: 0, answers: {} });
     // Sinon les réponses transmises par l'adresse reviendraient à la connexion.
-    if (readCarriedAnswers()) {
+    if (window.location.hash.startsWith(`#${CARRIED_PREFIX}`)) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
     if (user) void clearCompatAnswers(createClient(), user);
@@ -385,14 +387,19 @@ const CARRIED_PREFIX = "pret=";
 /**
  * Les réponses transmises par le bloc embarqué, lues dans le fragment de
  * l'adresse (`#pret=…`) : jamais envoyé au serveur, donc ni loggé ni mis en
- * cache. Une valeur inconnue est simplement ignorée par le calcul.
+ * cache.
+ *
+ * Contenu **non fiable** — un lien se fabrique à la main, et ces réponses sont
+ * enregistrées dans le profil de la personne connectée : on n'en garde que les
+ * vraies réponses à de vraies questions (`sanitizeCompatAnswers`).
  */
-function readCarriedAnswers(): CompatAnswers | null {
+function readCarriedAnswers(routes: CompatRoute[]): CompatAnswers | null {
   const hash = window.location.hash.slice(1);
   if (!hash.startsWith(CARRIED_PREFIX)) return null;
   try {
-    const carried = Object.fromEntries(
-      new URLSearchParams(decodeURIComponent(hash.slice(CARRIED_PREFIX.length)))
+    const carried = sanitizeCompatAnswers(
+      Object.fromEntries(new URLSearchParams(decodeURIComponent(hash.slice(CARRIED_PREFIX.length)))),
+      routes
     );
     return Object.keys(carried).length > 0 ? carried : null;
   } catch {

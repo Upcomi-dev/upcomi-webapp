@@ -259,3 +259,39 @@ export function resolveCompatAnswer(
   if (question.type === "slider") return question.resolve(value);
   return question.options.find((o) => o.value === value) ?? null;
 }
+
+/**
+ * Ne garde d'un lot de réponses **non fiable** que ce qui est une vraie
+ * réponse à une vraie question. Sert aux réponses lues dans l'adresse
+ * (`#pret=…`, bloc embarqué) : n'importe qui peut fabriquer un tel lien, et ce
+ * qu'il contient finit enregistré dans le profil de la personne connectée.
+ *
+ * - question inconnue : ignorée ;
+ * - choix hors de la liste proposée : ignoré ;
+ * - curseur : un entier seulement, ramené dans ses bornes ;
+ * - itinéraire : seulement un parcours de cet évènement.
+ */
+export function sanitizeCompatAnswers(
+  raw: Record<string, unknown>,
+  routes: CompatRoute[]
+): CompatAnswers {
+  const clean: CompatAnswers = {};
+
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value !== "string") continue;
+
+    if (key === ITINERARY_QUESTION_KEY) {
+      if (routes.some((route) => route.name === value)) clean[key] = value;
+      continue;
+    }
+
+    const question = findCompatQuestion(key);
+    if (!question) continue;
+    if (question.type === "slider" && !/^\d{1,4}$/.test(value)) continue;
+
+    const resolved = resolveCompatAnswer(question, value);
+    if (resolved) clean[key] = resolved.value;
+  }
+
+  return clean;
+}
