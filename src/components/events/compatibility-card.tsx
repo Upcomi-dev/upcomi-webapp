@@ -8,6 +8,7 @@ import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
 import { CompatibilityPath } from "@/components/events/compatibility-path";
 import { AppLogo } from "@/components/layout/app-logo";
+import { recordEmbedEvent, type EmbedEventKind } from "@/components/events/record-embed-event";
 import { PeopleSheet } from "@/components/events/people-sheet";
 import { useInterestedPeople } from "@/components/events/interested-people-context";
 import {
@@ -85,9 +86,21 @@ export function CompatibilityCard({
     [eventId, externalUrl]
   );
 
+  // Le même décompte, gardé chez nous pour l'onglet « Embeds » de /admin.
+  const recordEmbed = useCallback(
+    (kind: EmbedEventKind) => {
+      if (externalUrl || kind === "arrival") {
+        void recordEmbedEvent(eventId, kind, externalUrl ? getReferrerHost() : undefined);
+      }
+    },
+    [eventId, externalUrl]
+  );
+
   useEffect(() => {
-    if (externalUrl) trackAnalyticsEvent("Embed Viewed", tracking());
-  }, [externalUrl, tracking]);
+    if (!externalUrl) return;
+    trackAnalyticsEvent("Embed Viewed", tracking());
+    recordEmbed("view");
+  }, [externalUrl, tracking, recordEmbed]);
   const [arrivedWithAnswers, setArrivedWithAnswers] = useState(false);
 
   // On arrive du bloc embarqué pour voir son résultat : on l'amène à l'écran,
@@ -118,6 +131,7 @@ export function CompatibilityCard({
       if (carried) {
         setArrivedWithAnswers(true);
         trackAnalyticsEvent("Embed Arrival", { event_id: eventId, authenticated: Boolean(user) });
+        recordEmbed("arrival");
         if (user) void saveCompatAnswers(createClient(), user, carried);
       }
     })();
@@ -125,7 +139,7 @@ export function CompatibilityCard({
     return () => {
       cancelled = true;
     };
-  }, [authReady, user, eventId]);
+  }, [authReady, user, eventId, recordEmbed]);
 
   const questions = useMemo(
     () =>
@@ -186,12 +200,13 @@ export function CompatibilityCard({
         ...tracking(),
         authenticated: Boolean(user),
       });
+      recordEmbed("complete");
       // Le résultat est dû dès que les questions sont répondues, avec ou sans
       // compte : en test, ne rien voir s'afficher à la fin du questionnaire
       // était pris pour un bug. Déconnectée, il n'est simplement pas gardé.
       void persist(nextAnswers);
     },
-    [state, event.name, event.routes, tracking, user, persist]
+    [state, event.name, event.routes, tracking, recordEmbed, user, persist]
   );
 
   const restart = useCallback(() => {
@@ -208,7 +223,8 @@ export function CompatibilityCard({
     const carried = answers ? `#${CARRIED_PREFIX}${encodeURIComponent(new URLSearchParams(answers).toString())}` : "";
     window.open(`${externalUrl}${carried}`, "_blank", "noopener");
     trackAnalyticsEvent("Embed Upcomi Opened", { ...tracking(), answered: Boolean(answers) });
-  }, [externalUrl, answers, tracking]);
+    recordEmbed("open");
+  }, [externalUrl, answers, tracking, recordEmbed]);
 
   const handleInterest = useCallback(async () => {
     if (externalUrl) return openOnUpcomi();
@@ -285,6 +301,7 @@ export function CompatibilityCard({
             onClick={() => {
               setState({ kind: "stepping", step: 0, answers: {} });
               trackAnalyticsEvent("Compatibility Started", tracking());
+              recordEmbed("start");
             }}
           >
             Je situe mon niveau →
@@ -331,9 +348,10 @@ export function CompatibilityCard({
             rel="noopener"
             aria-label="Voir l'évènement sur Upcomi"
             className="pointer-events-auto"
-            onClick={() =>
-              trackAnalyticsEvent("Embed Upcomi Opened", { ...tracking(), answered: Boolean(answers), via: "logo" })
-            }
+            onClick={() => {
+              trackAnalyticsEvent("Embed Upcomi Opened", { ...tracking(), answered: Boolean(answers), via: "logo" });
+              recordEmbed("open");
+            }}
           >
             <AppLogo sizes="130px" imageClassName="h-8 brightness-0 invert" />
           </a>

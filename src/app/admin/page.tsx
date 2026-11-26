@@ -147,6 +147,13 @@ const ADMIN_TABS = [
     title: "Retours utilisateurs",
     description: "Consultez les idées, bugs et feedbacks remontés directement depuis l'app.",
   },
+  {
+    id: "embeds",
+    label: "Embeds",
+    eyebrow: "Partenaires",
+    title: "Blocs embarqués",
+    description: "Suivez l'usage du bloc « Suis-je prêt·e » affiché sur les sites partenaires.",
+  },
 ] as const;
 
 type AdminTabId = (typeof ADMIN_TABS)[number]["id"];
@@ -233,6 +240,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         {activeTab === "users" && <UsersTab supabase={supabase} currentAdminId={user.id} />}
         {activeTab === "stories" && <StoriesTab supabase={supabase} />}
         {activeTab === "feedback" && <FeedbackTab supabase={supabase} />}
+        {activeTab === "embeds" && <EmbedsTab supabase={supabase} days={params.jours} />}
       </Suspense>
     </div>
   );
@@ -264,7 +272,7 @@ function countRows(query: PromiseLike<{ count: number | null }>) {
 
 async function loadTabCounts(supabase: AdminSupabase): Promise<Record<AdminTabId, number>> {
   const head = { count: "exact", head: true } as const;
-  const [events, collections, users, feedback, proposals, stories] = await Promise.all([
+  const [events, collections, users, feedback, proposals, stories, embeds] = await Promise.all([
     countRows(supabase.from("events").select("id", head)),
     countRows(supabase.from("collections").select("id", head)),
     countRows(supabase.from("users").select("uid", head)),
@@ -273,6 +281,7 @@ async function loadTabCounts(supabase: AdminSupabase): Promise<Record<AdminTabId
       supabase.from("event_submission_contacts").select("event_id", head).eq("review_status", "pending")
     ),
     countRows(supabase.from("user_event_stories").select("event_id", head).eq("status", "pending")),
+    countRows(supabase.from("embed_events").select("id", head).eq("kind", "view")),
   ]);
 
   return {
@@ -283,6 +292,7 @@ async function loadTabCounts(supabase: AdminSupabase): Promise<Record<AdminTabId
     users,
     stories,
     feedback,
+    embeds,
   };
 }
 
@@ -979,6 +989,135 @@ async function FeedbackTab({ supabase }: { supabase: AdminSupabase }) {
   );
 }
 
+interface EmbedStatRow {
+  event_id: number;
+  event_name: string | null;
+  partner: string | null;
+  views: number;
+  starts: number;
+  completes: number;
+  opens: number;
+  arrivals: number;
+  last_seen: string | null;
+}
+
+const EMBED_PERIODS = [7, 30, 90] as const;
+
+const percent = (part: number, total: number) =>
+  total > 0 ? `${Math.round((part / total) * 100)} %` : "–";
+
+/**
+ * L'entonnoir du bloc embarqué, par évènement et par site partenaire :
+ * affiché → commencé → terminé → clic vers Upcomi → arrivée sur la fiche.
+ * Les compteurs sont agrégés en base (`get_embed_stats`).
+ */
+async function EmbedsTab({
+  supabase,
+  days,
+}: {
+  supabase: AdminSupabase;
+  days: string | string[] | undefined;
+}) {
+  const requested = Number(Array.isArray(days) ? days[0] : days);
+  const period = EMBED_PERIODS.find((value) => value === requested) ?? 30;
+
+  const { data, error } = await supabase.rpc("get_embed_stats", { p_days: period });
+  const rows = ((data as EmbedStatRow[] | null) ?? []).map((row) => ({
+    ...row,
+    views: Number(row.views),
+    starts: Number(row.starts),
+    completes: Number(row.completes),
+    opens: Number(row.opens),
+    arrivals: Number(row.arrivals),
+  }));
+  const total = (key: "views" | "starts" | "completes" | "opens" | "arrivals") =>
+    rows.reduce((sum, row) => sum + row[key], 0);
+
+  return (
+    <AdminSectionShell
+      eyebrow="Partenaires"
+      title="Blocs embarqués"
+      description={`Usage du bloc « Suis-je prêt·e » sur les sites partenaires, sur les ${period} derniers jours.`}
+      stats={[
+        { label: "Affichages", value: total("views").toString() },
+        { label: "Commencés", value: total("starts").toString() },
+        { label: "Terminés", value: total("completes").toString() },
+        { label: "Clics Upcomi", value: total("opens").toString() },
+        { label: "Arrivées", value: total("arrivals").toString() },
+      ]}
+    >
+      <div className="rounded-[28px] border border-white/60 bg-white/70 p-6 shadow-[var(--shadow-sm)]">
+        <div className="mb-4 flex flex-wrap gap-2">
+          {EMBED_PERIODS.map((value) => (
+            <Link
+              key={value}
+              href={`/admin?tab=embeds&jours=${value}`}
+              aria-current={value === period ? "page" : undefined}
+              className={`rounded-full border px-4 py-1.5 text-[13px] font-semibold ${
+                value === period
+                  ? "border-coral/25 bg-coral/10 text-foreground"
+                  : "border-foreground/10 bg-white/70 text-foreground/60 hover:bg-white"
+              }`}
+            >
+              {value} jours
+            </Link>
+          ))}
+        </div>
+
+        {error ? (
+          <p className="py-8 text-center text-[14px] text-foreground/55">
+            Statistiques indisponibles : la migration `embed_events` n&apos;est pas encore appliquée.
+          </p>
+        ) : rows.length === 0 ? (
+          <p className="py-8 text-center text-[14px] text-foreground/55">
+            Aucun usage enregistré sur cette période.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[14px]">
+              <thead className="text-[11px] uppercase tracking-[0.14em] text-foreground/40">
+                <tr>
+                  <th className="py-2 pr-4 font-semibold">Évènement</th>
+                  <th className="py-2 pr-4 font-semibold">Site partenaire</th>
+                  <th className="py-2 pr-4 text-right font-semibold">Affichages</th>
+                  <th className="py-2 pr-4 text-right font-semibold">Commencés</th>
+                  <th className="py-2 pr-4 text-right font-semibold">Terminés</th>
+                  <th className="py-2 pr-4 text-right font-semibold">Clics Upcomi</th>
+                  <th className="py-2 pr-4 text-right font-semibold">Arrivées</th>
+                  <th className="py-2 text-right font-semibold">Dernier usage</th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums">
+                {rows.map((row) => (
+                  <tr key={`${row.event_id}-${row.partner ?? ""}`} className="border-t border-foreground/8">
+                    <td className="py-2.5 pr-4">
+                      <span className="font-semibold text-foreground">{row.event_name ?? "Sans nom"}</span>
+                      <span className="ml-2 text-[12px] text-foreground/40">#{row.event_id}</span>
+                    </td>
+                    <td className="py-2.5 pr-4 text-foreground/65">{row.partner ?? "Upcomi (arrivées)"}</td>
+                    <td className="py-2.5 pr-4 text-right">{row.views}</td>
+                    <td className="py-2.5 pr-4 text-right">
+                      {row.starts} <span className="text-[12px] text-foreground/40">{percent(row.starts, row.views)}</span>
+                    </td>
+                    <td className="py-2.5 pr-4 text-right">
+                      {row.completes} <span className="text-[12px] text-foreground/40">{percent(row.completes, row.views)}</span>
+                    </td>
+                    <td className="py-2.5 pr-4 text-right">
+                      {row.opens} <span className="text-[12px] text-foreground/40">{percent(row.opens, row.views)}</span>
+                    </td>
+                    <td className="py-2.5 pr-4 text-right">{row.arrivals}</td>
+                    <td className="py-2.5 text-right text-foreground/55">{formatAdminDate(row.last_seen)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </AdminSectionShell>
+  );
+}
+
 function AdminSectionShell({
   eyebrow,
   title,
@@ -1156,7 +1295,8 @@ function parseAdminTab(value: string | string[] | undefined): AdminTabId {
     normalized === "events" ||
     normalized === "users" ||
     normalized === "stories" ||
-    normalized === "feedback"
+    normalized === "feedback" ||
+    normalized === "embeds"
   ) {
     return normalized;
   }
