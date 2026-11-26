@@ -48,7 +48,44 @@ export interface CompatEventInput {
   name: string;
   /** Durée de l'évènement en jours, départ et arrivée inclus. */
   durationDays: number | null;
+  /**
+   * `events.type_event` vaut « Brevet » : l'épreuve se court contre un délai
+   * officiel, pas sur un nombre de jours. Voir `getBrevetTimeLimitHours`.
+   */
+  isBrevet?: boolean;
   routes: CompatRoute[];
+}
+
+/**
+ * Délais officiels des brevets, en heures, par distance homologuée. Source :
+ * Audax Club Parisien pour les BRM (13h30, 20h, 27h, 40h, 75h) et
+ * paris-brest-paris.org pour le 1200 (90h, le délai le plus large).
+ */
+const BREVET_TIME_LIMITS: [km: number, hours: number][] = [
+  [200, 13.5],
+  [300, 20],
+  [400, 27],
+  [600, 40],
+  [1000, 75],
+  [1200, 90],
+];
+
+/**
+ * Le délai d'un brevet d'après la distance de son parcours. Un tracé est
+ * souvent un peu plus long que sa distance homologuée (un « 600 » de 612 km) :
+ * on tolère 10 % au-dessus, jamais en dessous. Hors de ces distances on ne
+ * sait rien, et on ne devine pas.
+ */
+export function getBrevetTimeLimitHours(distanceKm: number | null): number | null {
+  if (!distanceKm) return null;
+  const match = BREVET_TIME_LIMITS.find(([km]) => distanceKm >= km && distanceKm < km * 1.1);
+  return match ? match[1] : null;
+}
+
+/** « 13 h 30 », « 40 h ». */
+function formatHours(hours: number): string {
+  const minutes = Math.round((hours % 1) * 60);
+  return minutes ? `${Math.floor(hours)} h ${minutes}` : `${hours} h`;
 }
 
 export interface EventCompatProfile {
@@ -58,6 +95,17 @@ export interface EventCompatProfile {
   isVtt: boolean;
   terrainTier: number;
   kmPerDay: number;
+  /**
+   * `false` quand la fiche n'a ni date de fin ni délai de brevet : on compte
+   * alors une seule journée faute de mieux, et `kmPerDay` est en réalité la
+   * distance totale. Sert à ne pas annoncer « 1200 km/j » pour une épreuve de
+   * plusieurs jours.
+   */
+  durationKnown: boolean;
+  /** Distance du parcours retenu, en kilomètres (0 si elle manque). */
+  distanceKm: number;
+  /** Délai officiel du brevet en heures, `null` hors brevet homologué. */
+  timeLimitHours: number | null;
   /**
    * Ce que l'évènement demande d'endurance, sur l'échelle de la question
    * « ta plus longue sortie d'une traite » (1 = moins de 4 h, 5 = plusieurs
@@ -109,7 +157,15 @@ export function getEventCompatProfile(
     : null;
   const route = chosen ?? event.routes[event.routes.length - 1] ?? null;
 
-  const days = event.durationDays && event.durationDays > 0 ? event.durationDays : 1;
+  // Un brevet se court d'une traite contre un délai : c'est lui qui donne le
+  // rythme, pas les dates de la fiche. 600 km en 40 h, c'est 360 km par 24 h —
+  // et dès que le délai dépasse 24 h, il faut enchaîner (palier « plusieurs
+  // jours »), ce que `days > 1` suffit à dire plus bas.
+  const timeLimitHours = event.isBrevet ? getBrevetTimeLimitHours(route?.distanceKm ?? null) : null;
+  const hasDates = Boolean(event.durationDays && event.durationDays > 0);
+  const durationKnown = timeLimitHours !== null || hasDates;
+  const days =
+    timeLimitHours !== null ? Math.max(1, timeLimitHours / 24) : hasDates ? event.durationDays! : 1;
 
   const elevationPerDay = (route?.elevationM ?? 0) / days;
   const denivele =
@@ -131,6 +187,9 @@ export function getEventCompatProfile(
     isVtt,
     terrainTier,
     kmPerDay,
+    durationKnown,
+    distanceKm: route?.distanceKm ?? 0,
+    timeLimitHours,
     durationTier: getDurationTier(days, kmPerDay),
   };
 }
@@ -167,11 +226,25 @@ function levelScore(userLevel: number, eventTier: number): number {
  * entière », « plusieurs jours » — plutôt que de renvoyer à un kilométrage :
  * c'est le temps passé en selle qui manque, pas les kilomètres.
  */
-function durationGapText(tier: number): string {
+function durationGapText(tier: number, timeLimitHours: number | null): string {
+  // Un brevet de plus de 24 h ne s'étale pas sur plusieurs étapes : on roule
+  // de nuit. Le conseil « deux sorties sur deux jours » passerait à côté.
+  if (timeLimitHours !== null && timeLimitHours > 24) {
+    return "Une nuit ou plus sur le vélo : entraîne-toi à rouler de nuit et à enchaîner deux longues sorties.";
+  }
   if (tier >= 5) return "Plusieurs jours d'affilée : entraîne-toi à enchaîner deux sorties sur deux jours.";
   if (tier === 4) return "Une longue journée en selle : entraîne-toi à rouler du matin au soir.";
   if (tier === 3) return "Une journée entière en selle : entraîne-toi à rouler sur la journée complète.";
   return "Une demi-journée en selle : allonge un peu tes sorties.";
+}
+
+/** Ce que l'évènement demande en distance, dit comme il se court. */
+function distanceLabel(profile: EventCompatProfile): string {
+  if (profile.timeLimitHours !== null) {
+    const limit = `${profile.distanceKm} km à boucler en ${formatHours(profile.timeLimitHours)} maximum`;
+    return profile.timeLimitHours > 24 ? `${limit}, soit ${profile.kmPerDay} km par 24 h env.` : limit;
+  }
+  return profile.durationKnown ? `${profile.kmPerDay} km/j env.` : `${profile.kmPerDay} km au total`;
 }
 
 export function computeCompatibility(
@@ -246,13 +319,13 @@ export function computeCompatibility(
       key: "distance",
       label: "Distance",
       score: distanceScore,
-      gapText: `${profile.kmPerDay} km/j env. : allonge tes sorties pour t'habituer à cette distance.`,
+      gapText: `${distanceLabel(profile)} : allonge tes sorties pour t'habituer à cette distance.`,
     },
     {
       key: "duree",
       label: "Durée",
       score: durationScore,
-      gapText: durationGapText(profile.durationTier),
+      gapText: durationGapText(profile.durationTier, profile.timeLimitHours),
     },
   ];
 
