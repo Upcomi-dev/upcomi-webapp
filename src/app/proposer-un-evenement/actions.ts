@@ -164,7 +164,7 @@ export async function submitEventProposal(formData: FormData): Promise<EventProp
     const organizerInput = getRequiredText(formData, "organisateur", "L'organisateur", 180);
     const description = getRequiredText(formData, "description", "La description", DESCRIPTION_MAX_LENGTH);
     const eventUrl = getOptionalHttpUrl(formData);
-    let slug = await getUniqueEventSlug(supabase, eventName);
+    let slug = await getUniqueEventSlug(supabase, eventName, dateEvent);
     const imageData = await getImage(formData);
 
     const { data: organizerName, error: organizerError } = await supabase.rpc("ensure_organisateur", { organizer_name: organizerInput });
@@ -232,7 +232,7 @@ export async function submitEventProposal(formData: FormData): Promise<EventProp
       }
       eventError = result.error;
       if (!isDuplicateEventSlugError(result.error)) break;
-      slug = await getUniqueEventSlug(supabase, eventName);
+      slug = await getUniqueEventSlug(supabase, eventName, dateEvent);
     }
 
     if (eventError || !event?.id) {
