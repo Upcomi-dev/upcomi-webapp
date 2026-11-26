@@ -4,6 +4,22 @@ import { parseLegacyEventId } from "@/lib/utils/slugify";
 import type { Event } from "@/lib/types/database";
 
 /**
+ * Lecture par identifiant, pour les adresses qui doivent survivre à un
+ * renommage ou à un changement de règle de slug (bloc embarqué chez un
+ * partenaire) : l'id ne change jamais, le slug si.
+ */
+export const getEventById = cache(async (id: number) => {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("events")
+    .select("*")
+    .eq("id", id)
+    .eq("verifie", true)
+    .maybeSingle();
+  return { supabase, event: (data as Event | null) ?? null };
+});
+
+/**
  * Lecture de l'évènement partagée par le layout, `generateMetadata` et la page
  * (`cache` : une seule requête par rendu). Un ancien slug `<id>-<nom>` est
  * résolu par id ; `isLegacy` signale qu'il faut rediriger vers le slug canonique.

@@ -55,6 +55,7 @@ export function buildCompatEvent(event: Event, sousEvents: SousEvent[]): CompatE
   return {
     name: event.nomEvent || "cet évènement",
     durationDays: getDurationDays(event.dateEvent, event.dateFin),
+    isBrevet: event.type_event === "Brevet",
     routes,
   };
 }

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { CompatibilityCard } from "@/components/events/compatibility-card";
 import { InterestedPeopleProvider } from "@/components/events/interested-people-context";
 import { buildCompatEvent } from "@/lib/compatibility/event-input";
-import { getEventBySlug } from "@/lib/events/get-event-by-slug";
+import { getEventById, getEventBySlug } from "@/lib/events/get-event-by-slug";
 import { getEventUrl } from "@/lib/seo";
 import type { SousEvent } from "@/lib/types/database";
 
@@ -19,14 +19,21 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
  * monde y est déconnecté. Le questionnaire et le résultat fonctionnent sans
  * compte ; ce qui en demande un renvoie vers la fiche Upcomi, réponses
  * transmises (`externalUrl`).
+ *
+ * `ref` est l'**identifiant** de l'évènement (`/embed/pret/5052`) : c'est lui
+ * qu'on donne aux partenaires, parce qu'une iframe posée chez eux doit tenir
+ * même si la fiche est renommée ou si la règle des slugs change. Un slug reste
+ * accepté, pour dépanner.
  */
 export default async function EmbedPretPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ ref: string }>;
 }) {
-  const { slug } = await params;
-  const { supabase, event } = await getEventBySlug(slug);
+  const { ref } = await params;
+  const { supabase, event } = /^\d+$/.test(ref)
+    ? await getEventById(Number(ref))
+    : await getEventBySlug(ref);
   if (!event) notFound();
 
   const { data } = await supabase

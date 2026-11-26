@@ -142,7 +142,7 @@ async function persistProposal(eventId: number, formData: FormData, status: Revi
 
   const { data: current, error: currentError } = await admin
     .from("events")
-    .select("image, verifie, latitude, longitude, villeDepart, paysDepart")
+    .select("image, verifie, latitude, longitude, villeDepart, paysDepart, nomEvent, dateEvent, slug")
     .eq("id", eventId)
     .single();
   if (currentError) throw new Error(currentError.message);
@@ -160,7 +160,12 @@ async function persistProposal(eventId: number, formData: FormData, status: Revi
   const image = await parseImage(formData);
   const { data: organizer, error: organizerError } = await admin.rpc("ensure_organisateur", { organizer_name: organizerInput });
   if (organizerError || typeof organizer !== "string") throw new Error("Impossible d’enregistrer l’organisateur.");
-  const slug = await getUniqueEventSlug(admin, name, eventId);
+  const slug = await getUniqueEventSlug(admin, name, startDate, {
+    id: eventId,
+    nomEvent: current.nomEvent,
+    dateEvent: current.dateEvent,
+    slug: current.slug,
+  });
   let uploadedPath: string | null = null;
   let imageUrl = oldImage;
 

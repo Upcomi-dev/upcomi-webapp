@@ -7,6 +7,7 @@ import { assertAdmin } from "@/lib/auth/assert-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getUniqueEventSlug,
+  type ExistingEventSlug,
   isDuplicateEventSlugError,
 } from "@/lib/events/slugs";
 import { EVENT_PROPOSALS_FEATURE_KEY } from "@/lib/features";
@@ -307,7 +308,7 @@ export async function reorderCollections(orderedIds: string[]) {
 export async function createEvent(formData: FormData) {
   const { supabase } = await assertAdmin();
   const payload = buildEventPayload(formData);
-  let slug = await getUniqueEventSlug(supabase, payload.nomEvent);
+  let slug = await getUniqueEventSlug(supabase, payload.nomEvent, payload.dateEvent);
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const { error } = await supabase.from("events").insert({ ...payload, slug } as never);
@@ -318,7 +319,7 @@ export async function createEvent(formData: FormData) {
     if (!isDuplicateEventSlugError(error)) {
       throw new Error(error.message);
     }
-    slug = await getUniqueEventSlug(supabase, payload.nomEvent);
+    slug = await getUniqueEventSlug(supabase, payload.nomEvent, payload.dateEvent);
   }
 
   throw new Error("Impossible de générer une URL unique pour cet événement.");
@@ -327,7 +328,16 @@ export async function createEvent(formData: FormData) {
 export async function updateEvent(id: number, formData: FormData) {
   const { supabase } = await assertAdmin();
   const payload = buildEventPayload(formData);
-  let slug = await getUniqueEventSlug(supabase, payload.nomEvent, id);
+  // L'adresse de la fiche ne change que si son nom ou sa date change : sinon
+  // corriger un champ quelconque renommait la page et cassait ses liens.
+  const { data: current, error: currentError } = await supabase
+    .from("events")
+    .select("id, nomEvent, dateEvent, slug")
+    .eq("id", id)
+    .single();
+  if (currentError) throw new Error(currentError.message);
+  const existing = current as ExistingEventSlug;
+  let slug = await getUniqueEventSlug(supabase, payload.nomEvent, payload.dateEvent, existing);
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const { error } = await supabase
@@ -341,7 +351,7 @@ export async function updateEvent(id: number, formData: FormData) {
     if (!isDuplicateEventSlugError(error)) {
       throw new Error(error.message);
     }
-    slug = await getUniqueEventSlug(supabase, payload.nomEvent, id);
+    slug = await getUniqueEventSlug(supabase, payload.nomEvent, payload.dateEvent, { ...existing, slug: null });
   }
 
   throw new Error("Impossible de générer une URL unique pour cet événement.");
