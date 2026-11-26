@@ -28,7 +28,10 @@ export type AnalyticsEventName =
   | "Interested People Opened"
   | "Promo Code Gate Opened"
   | "Compatibility Started"
-  | "Compatibility Completed";
+  | "Compatibility Completed"
+  | "Embed Viewed"
+  | "Embed Upcomi Opened"
+  | "Embed Arrival";
 
 export type AnalyticsProps = Record<
   string,

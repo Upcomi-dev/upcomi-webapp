@@ -8,6 +8,7 @@ import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
 import { CompatibilityPath } from "@/components/events/compatibility-path";
 import { AppLogo } from "@/components/layout/app-logo";
+import { recordEmbedEvent, type EmbedEventKind } from "@/components/events/record-embed-event";
 import { PeopleSheet } from "@/components/events/people-sheet";
 import { useInterestedPeople } from "@/components/events/interested-people-context";
 import {
@@ -72,6 +73,34 @@ export function CompatibilityCard({
   const [answers, setAnswers] = useState<CompatAnswers | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+
+  // Suivi d'audience : d'où le bloc est utilisé. `partner` est le site qui
+  // l'affiche en iframe (`www.audax-club-parisien.com`), lu dans le référent —
+  // c'est ce qui permet de compter les usages partenaire par partenaire.
+  const tracking = useCallback(
+    () => ({
+      event_id: eventId,
+      source: externalUrl ? "embed" : "fiche",
+      partner: externalUrl ? getReferrerHost() : undefined,
+    }),
+    [eventId, externalUrl]
+  );
+
+  // Le même décompte, gardé chez nous pour l'onglet « Embeds » de /admin.
+  const recordEmbed = useCallback(
+    (kind: EmbedEventKind) => {
+      if (externalUrl || kind === "arrival") {
+        void recordEmbedEvent(eventId, kind, externalUrl ? getReferrerHost() : undefined);
+      }
+    },
+    [eventId, externalUrl]
+  );
+
+  useEffect(() => {
+    if (!externalUrl) return;
+    trackAnalyticsEvent("Embed Viewed", tracking());
+    recordEmbed("view");
+  }, [externalUrl, tracking, recordEmbed]);
   const [arrivedWithAnswers, setArrivedWithAnswers] = useState(false);
 
   // On arrive du bloc embarqué pour voir son résultat : on l'amène à l'écran,
@@ -101,6 +130,8 @@ export function CompatibilityCard({
       setState(initial ? { kind: "result" } : { kind: "idle" });
       if (carried) {
         setArrivedWithAnswers(true);
+        trackAnalyticsEvent("Embed Arrival", { event_id: eventId, authenticated: Boolean(user) });
+        recordEmbed("arrival");
         if (user) void saveCompatAnswers(createClient(), user, carried);
       }
     })();
@@ -108,7 +139,7 @@ export function CompatibilityCard({
     return () => {
       cancelled = true;
     };
-  }, [authReady, user]);
+  }, [authReady, user, eventId, recordEmbed]);
 
   const questions = useMemo(
     () =>
@@ -166,15 +197,16 @@ export function CompatibilityCard({
       setAnswers(nextAnswers);
       setState({ kind: "result" });
       trackAnalyticsEvent("Compatibility Completed", {
-        event_id: eventId,
+        ...tracking(),
         authenticated: Boolean(user),
       });
+      recordEmbed("complete");
       // Le résultat est dû dès que les questions sont répondues, avec ou sans
       // compte : en test, ne rien voir s'afficher à la fin du questionnaire
       // était pris pour un bug. Déconnectée, il n'est simplement pas gardé.
       void persist(nextAnswers);
     },
-    [state, event.name, event.routes, eventId, user, persist]
+    [state, event.name, event.routes, tracking, recordEmbed, user, persist]
   );
 
   const restart = useCallback(() => {
@@ -190,7 +222,9 @@ export function CompatibilityCard({
   const openOnUpcomi = useCallback(() => {
     const carried = answers ? `#${CARRIED_PREFIX}${encodeURIComponent(new URLSearchParams(answers).toString())}` : "";
     window.open(`${externalUrl}${carried}`, "_blank", "noopener");
-  }, [externalUrl, answers]);
+    trackAnalyticsEvent("Embed Upcomi Opened", { ...tracking(), answered: Boolean(answers) });
+    recordEmbed("open");
+  }, [externalUrl, answers, tracking, recordEmbed]);
 
   const handleInterest = useCallback(async () => {
     if (externalUrl) return openOnUpcomi();
@@ -266,7 +300,8 @@ export function CompatibilityCard({
             className="btn-secondary w-full"
             onClick={() => {
               setState({ kind: "stepping", step: 0, answers: {} });
-              trackAnalyticsEvent("Compatibility Started", { event_id: eventId });
+              trackAnalyticsEvent("Compatibility Started", tracking());
+              recordEmbed("start");
             }}
           >
             Je situe mon niveau →
@@ -313,6 +348,10 @@ export function CompatibilityCard({
             rel="noopener"
             aria-label="Voir l'évènement sur Upcomi"
             className="pointer-events-auto"
+            onClick={() => {
+              trackAnalyticsEvent("Embed Upcomi Opened", { ...tracking(), answered: Boolean(answers), via: "logo" });
+              recordEmbed("open");
+            }}
           >
             <AppLogo sizes="130px" imageClassName="h-8 brightness-0 invert" />
           </a>
@@ -330,6 +369,15 @@ export function CompatibilityCard({
       />
     </div>
   );
+}
+
+/** Le site qui affiche l'iframe, `undefined` si le navigateur ne le dit pas. */
+function getReferrerHost(): string | undefined {
+  try {
+    return new URL(document.referrer).host;
+  } catch {
+    return undefined;
+  }
 }
 
 const CARRIED_PREFIX = "pret=";
