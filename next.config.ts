@@ -1,6 +1,23 @@
 import type { NextConfig } from "next";
 
+// Les sites autorisés à afficher les pages `/embed/*` dans une iframe. Ajouter
+// un partenaire = ajouter son origine ici.
+const EMBED_HOSTS = ["https://www.audax-club-parisien.com", "https://audax-club-parisien.com"];
+
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: "/embed/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: `frame-ancestors 'self' ${EMBED_HOSTS.join(" ")}`,
+          },
+        ],
+      },
+    ];
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "7mb",
