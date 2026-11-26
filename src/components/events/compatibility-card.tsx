@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Heart, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/auth-context";
 import { useAuthModal } from "@/components/auth/auth-modal-context";
 import { useFavorites } from "@/components/favorites/favorites-context";
 import { CompatibilityPath } from "@/components/events/compatibility-path";
+import { AppLogo } from "@/components/layout/app-logo";
 import { PeopleSheet } from "@/components/events/people-sheet";
 import { useInterestedPeople } from "@/components/events/interested-people-context";
 import {
@@ -47,12 +48,19 @@ export function CompatibilityCard({
   eventId,
   event,
   eventDate,
+  externalUrl,
   className,
 }: {
   eventId: number;
   event: CompatEventInput;
   /** Date de départ (`events.dateEvent`), pour le délai de préparation. */
   eventDate: string | null;
+  /**
+   * Renseigné quand le bloc est embarqué sur un autre site (`/embed/pret`) :
+   * l'adresse de la fiche Upcomi. Ce qui demande un compte s'y ouvre dans un
+   * nouvel onglet, réponses transmises, au lieu d'ouvrir la connexion ici.
+   */
+  externalUrl?: string;
   className?: string;
 }) {
   const { user, ready: authReady } = useAuth();
@@ -63,6 +71,14 @@ export function CompatibilityCard({
   const [state, setState] = useState<CardState>({ kind: "idle" });
   const [answers, setAnswers] = useState<CompatAnswers | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [arrivedWithAnswers, setArrivedWithAnswers] = useState(false);
+
+  // On arrive du bloc embarqué pour voir son résultat : on l'amène à l'écran,
+  // une fois rendu (la carte n'a sa hauteur finale qu'alors).
+  useEffect(() => {
+    if (arrivedWithAnswers) cardRef.current?.scrollIntoView({ block: "center" });
+  }, [arrivedWithAnswers]);
 
   // Réponses déjà enregistrées : le bloc s'ouvre alors directement sur le
   // résultat, sur cette fiche comme sur toutes les autres — le profil est
@@ -74,10 +90,19 @@ export function CompatibilityCard({
     void (async () => {
       // Déconnectée : rien à charger, et rien à garder d'une session
       // précédente — le bloc repart de son accroche.
-      const saved = user ? await fetchCompatAnswers(createClient(), user) : null;
+      // Arrivée depuis le bloc embarqué chez un partenaire : les réponses
+      // données là-bas voyagent dans l'adresse, on ne refait pas répondre.
+      // Elles viennent d'être données : elles passent devant le profil gardé.
+      const carried = readCarriedAnswers();
+      const saved = !carried && user ? await fetchCompatAnswers(createClient(), user) : null;
       if (cancelled) return;
-      setAnswers(saved);
-      setState(saved ? { kind: "result" } : { kind: "idle" });
+      const initial = carried ?? saved;
+      setAnswers(initial);
+      setState(initial ? { kind: "result" } : { kind: "idle" });
+      if (carried) {
+        setArrivedWithAnswers(true);
+        if (user) void saveCompatAnswers(createClient(), user, carried);
+      }
     })();
 
     return () => {
@@ -155,10 +180,20 @@ export function CompatibilityCard({
   const restart = useCallback(() => {
     setAnswers(null);
     setState({ kind: "stepping", step: 0, answers: {} });
+    // Sinon les réponses transmises par l'adresse reviendraient à la connexion.
+    if (readCarriedAnswers()) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
     if (user) void clearCompatAnswers(createClient(), user);
   }, [user]);
 
+  const openOnUpcomi = useCallback(() => {
+    const carried = answers ? `#${CARRIED_PREFIX}${encodeURIComponent(new URLSearchParams(answers).toString())}` : "";
+    window.open(`${externalUrl}${carried}`, "_blank", "noopener");
+  }, [externalUrl, answers]);
+
   const handleInterest = useCallback(async () => {
+    if (externalUrl) return openOnUpcomi();
     if (!favoritesReady) return;
     if (!user) {
       openAuthModal({
@@ -173,9 +208,10 @@ export function CompatibilityCard({
       authenticated: true,
       source: "compatibility_card",
     });
-  }, [favoritesReady, user, openAuthModal, event.name, toggleFavorite, eventId, favorited]);
+  }, [externalUrl, openOnUpcomi, favoritesReady, user, openAuthModal, event.name, toggleFavorite, eventId, favorited]);
 
   const openSheet = useCallback(() => {
+    if (externalUrl) return openOnUpcomi();
     if (!user) {
       openAuthModal({
         title: "Rejoins la communauté Upcomi pour voir qui est déjà intéressé·e",
@@ -183,7 +219,7 @@ export function CompatibilityCard({
       return;
     }
     setSheetOpen(true);
-  }, [user, openAuthModal]);
+  }, [externalUrl, openOnUpcomi, user, openAuthModal]);
 
   // Position du personnage : au tout début tant qu'aucune question **notée**
   // n'a de réponse. L'itinéraire ne note rien par lui-même, et certains
@@ -202,6 +238,7 @@ export function CompatibilityCard({
 
   return (
     <div
+      ref={cardRef}
       className={cn(
         "compat-card relative mb-5 overflow-hidden scroll-mt-24 rounded-[var(--radius)] bg-violet p-7 text-white",
         className
@@ -260,6 +297,28 @@ export function CompatibilityCard({
         />
       )}
 
+      {/* Embarqué chez un partenaire : la signature Upcomi, en bas à droite
+          de l'encart. Le logo orange est passé en blanc pour tenir sur le
+          lila ; face au résultat, il partage la ligne de « Recommencer ». */}
+      {externalUrl && (
+        <div
+          className={cn(
+            "pointer-events-none flex justify-end",
+            state.kind === "result" ? "-mt-7" : "mt-4"
+          )}
+        >
+          <a
+            href={externalUrl}
+            target="_blank"
+            rel="noopener"
+            aria-label="Voir l'évènement sur Upcomi"
+            className="pointer-events-auto"
+          >
+            <AppLogo sizes="130px" imageClassName="h-8 brightness-0 invert" />
+          </a>
+        </div>
+      )}
+
       {/* La même feuille que partout ailleurs sur la fiche : toutes les
           personnes intéressées, jamais la sélection « expérience similaire ».
           Celle-ci ne sert qu'à compter. */}
@@ -271,6 +330,26 @@ export function CompatibilityCard({
       />
     </div>
   );
+}
+
+const CARRIED_PREFIX = "pret=";
+
+/**
+ * Les réponses transmises par le bloc embarqué, lues dans le fragment de
+ * l'adresse (`#pret=…`) : jamais envoyé au serveur, donc ni loggé ni mis en
+ * cache. Une valeur inconnue est simplement ignorée par le calcul.
+ */
+function readCarriedAnswers(): CompatAnswers | null {
+  const hash = window.location.hash.slice(1);
+  if (!hash.startsWith(CARRIED_PREFIX)) return null;
+  try {
+    const carried = Object.fromEntries(
+      new URLSearchParams(decodeURIComponent(hash.slice(CARRIED_PREFIX.length)))
+    );
+    return Object.keys(carried).length > 0 ? carried : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 export function AmbientOrbs() {
   return (
-    <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+    <div className="ambient-orbs pointer-events-none fixed inset-0 z-0 overflow-hidden">
       <div
         className="absolute -right-24 -top-28 h-[620px] w-[620px] rounded-full"
         style={{
